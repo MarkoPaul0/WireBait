@@ -27,11 +27,12 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         m_buffer = buffer;
         m_position = position or 0;
         m_end_position = (position or 0) + buffer:len();
-        m_parent = parent or self;
+        m_parent = parent;
+        m_is_root = not parent;
     }
     
-    local getParent = function()
-        return m_wirebait_tree.m_parent;
+    local getParent = function(self)
+        return wirebait_tree.m_parent or self;
     end
     
     local getWiresharkTree = function ()
@@ -43,10 +44,16 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     end
 
     local getPosition = function()
+        
         return wirebait_tree.m_position;
     end
 
     local skip = function(self, byte_count)
+        --print("skipping on " .. tostring(wirebait_tree) .. "  " .. tostring(self))
+        if not wirebait_tree.m_is_root then
+            --print("yo " .. tostring(getParent()))
+            getParent():skip(byte_count);
+        end
         assert(wirebait_tree.m_position + byte_count <= wirebait_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
         wirebait_tree.m_position = wirebait_tree.m_position + byte_count;
     end
@@ -65,7 +72,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         --newWireBaitTree()
     end
 
-    return {
+    local public_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
         __wirebait_type_name = "WirebaitTree",
         position = getPosition,
@@ -74,13 +81,17 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         __buffer = getBuffer,
         parent = getParent
     }
+    
+    --print("Public address: " .. tostring(public_interface));
+    return public_interface;
 end
 
 
 local function newWirebaitTree_overload(arg1, ...)
+    --for i in pairs(arg1) do print(i) end
     if arg1.__is_wirebait_struct then
         wirebait_tree = arg1;
-        return newWirebaitTree(wirebait_tree.wiresharkTree(),wirebait_tree.__buffer(), wirebait_tree.position(), wirebait_tree.parent())
+        return newWirebaitTree(wirebait_tree.wiresharkTree(),wirebait_tree.__buffer(), wirebait_tree.position(), wirebait_tree)
     else
         return newWirebaitTree(arg1, unpack({...}));
     end
@@ -130,7 +141,7 @@ wirebait = {
 --TEST
 local buffer = {
     len = function()
-        return 10;
+        return 512;
     end
 }
 
@@ -144,8 +155,23 @@ local buffer = {
 
 ws_test_tree = { tree = true}
 
-tree = wirebait.tree.new(ws_test_tree, buffer, 1);
+root_tree = wirebait.tree.new(ws_test_tree, buffer, 0);
+print("root address " .. tostring(root_tree) .. " parent " .. tostring(root_tree:parent()))
 
-print("old position " .. tree:position())
-tree:skip(2)
-print("new position " .. tree:position())
+--print("parent of root tree: " .. tostring(root_tree.parent()))
+
+--print("old position " .. root_tree:position())
+root_tree:skip(1)
+
+child_tree = wirebait.tree.new(root_tree)
+print("child address " .. tostring(child_tree) .. "\n")
+
+print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
+
+--child_tree.parent();
+child_tree:skip(3)
+print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
+root_tree:skip(4)
+print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
+child_tree:skip(3)
+print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
