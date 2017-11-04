@@ -25,6 +25,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     local wirebait_tree = {
         m_wireshark_tree = wireshark_tree;
         m_buffer = buffer;
+        m_start_position = position or 0;
         m_position = position or 0;
         m_end_position = (position or 0) + buffer:len();
         m_parent = parent;
@@ -44,23 +45,35 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     end
 
     local getPosition = function()
-        
         return wirebait_tree.m_position;
     end
 
     local skip = function(self, byte_count)
-        --print("skipping on " .. tostring(wirebait_tree) .. "  " .. tostring(self))
         if not wirebait_tree.m_is_root then
-            --print("yo " .. tostring(getParent()))
-            getParent():skip(byte_count);
+            self:parent():skip(byte_count);
         end
         assert(wirebait_tree.m_position + byte_count <= wirebait_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
         wirebait_tree.m_position = wirebait_tree.m_position + byte_count;
     end
-
+    
     local setLength = function(self, L)
         wirebait_tree.m_wireshark_tree:setLength(L);
     end
+    
+    local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
+        position =  self:position();
+        --print(position);
+        assert(position > wirebait_tree.m_start_position, "Current position is before start position!");
+        length = position - wirebait_tree.m_start_position
+        setLength(length);
+        print("Length for " .. tostring(self) .. " is " .. length .. " bytes.");
+        if is_recursive and not wirebait_tree.m_is_root then
+            self:parent():autoFitHighlight(is_recursive);
+        end
+        
+    end
+
+
 
     local addField = function (self, wirebait_field)
 
@@ -75,11 +88,13 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     local public_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
         __wirebait_type_name = "WirebaitTree",
-        position = getPosition,
-        skip = skip,
-        wiresharkTree = getWiresharkTree,
         __buffer = getBuffer,
-        parent = getParent
+        parent = getParent,
+        wiresharkTree = getWiresharkTree,
+        position = getPosition,
+        length = getLength,
+        skip = skip,
+        autoFitHighlight = autoFitHighlight
     }
     
     --print("Public address: " .. tostring(public_interface));
@@ -143,6 +158,8 @@ local buffer = {
     len = function()
         return 512;
     end
+    
+    
 }
 
 --local ws_test_tree = {
@@ -153,7 +170,17 @@ local buffer = {
 
 --print(ws_test_tree:len())
 
-ws_test_tree = { tree = true}
+ws_test_tree = { 
+    L = 0,
+    
+    setLength = function(n)
+        L = n;
+    end,
+    getLength = function()
+        return L
+    end
+    
+}
 
 root_tree = wirebait.tree.new(ws_test_tree, buffer, 0);
 print("root address " .. tostring(root_tree) .. " parent " .. tostring(root_tree:parent()))
@@ -175,3 +202,4 @@ root_tree:skip(4)
 print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
 child_tree:skip(3)
 print("old position root: " .. root_tree:position() .. " child " .. child_tree:position())
+child_tree:autoFitHighlight(true)
