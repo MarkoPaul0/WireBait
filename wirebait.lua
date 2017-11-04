@@ -19,6 +19,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--dofile("wireshark_mock.lua")
+local wireshark = require("wireshark_mock")
+
 
 -- # Wirebait Tree
 local function newWirebaitTree(wireshark_tree, buffer, position, parent)
