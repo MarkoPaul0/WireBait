@@ -18,16 +18,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { protofield = {}, treeitem = {}, buffer = {} };
+local wireshark_mock = { Protofield = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
 
-function wireshark_mock.protofield.new(name, abbr, _type)
+function wireshark_mock.Protofield.new(name, abbr, _type)
     assert(name and abbr and _type, "Protofiled argument should not be nil!")
     local protofield = {
-            m_name = name;
-            m_abbr = abbr;
-            m_type = _type;
-        }
-        
+        m_name = name;
+        m_abbr = abbr;
+        m_type = _type;
+    }
+
     return protofield;
 end
 
@@ -41,7 +41,7 @@ function wireshark_mock.treeitem.new()
     function treeitem:set_len(L)
         self.m_length = L;
     end
-    
+
     function treeitem:add(protofield)
         print("Added protofield " .. protofield.m_name .. ".");
         index = self.m_subtrees_count;
@@ -54,14 +54,24 @@ function wireshark_mock.treeitem.new()
 end
 
 function wireshark_mock.buffer.new(size)
-    return {
-        m_length = size or 0,
-
-        len = function()
-            return m_length
-        end
+    local buffer = {
+        m_length = size or 0;
     }
+
+    function buffer:len()
+        return self.m_length
+    end
+    --------------------------------------------------------------------------
+    function buffer:__call(...)
+        return self;            --allows buffer to be called as a function 
+    end
+    setmetatable(buffer, buffer)
+    ---------------------------------------------------------------------------
+    return buffer;
 end
+
+--mapping diffent types to the same mock constructor
+wireshark_mock.Protofield.uint8 = wireshark_mock.Protofield.new;
 
 return wireshark_mock;
 

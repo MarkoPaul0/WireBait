@@ -24,15 +24,59 @@ local function createWirebaitDissector()
     local wirebait_dissector = {
 
     }
+
+    local public_wb_dissector = {
+        __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
+        __wirebait_type_name = "WirebaitDissector",
+        
+    }
+
+    return public_wb_dissector;
+end
+
+-- # Wirebait Field
+local function newWirebaitField(filter, name, size, ws_field)
+    --TODO: checks
+    --checks('string', 'string', 'number', 'userdata')
+    local wb_field = {
+        m_filter = filter,
+        m_name = name,
+        m_size = size,
+        m_wireshark_field = ws_field;
+    }
+
+    local getFilter = function()
+        return wb_field.m_filter;
+    end
+
+    local getName = function()
+        return wb_field.m_name;
+    end
+
+    local getSize = function()
+        return wb_field.m_size
+    end
+
+    local getWiresharkProtofield = function()
+        return wb_field.m_wireshark_field;
+    end
+
+    return {
+        filter = getFilter,
+        name = getName,
+        size = getSize,
+        wsProtofield = getWiresharkProtofield
+    };
 end
 
 
 
 -- # Wirebait Tree
-local function newWirebaitTree(wireshark_tree, buffer, position, parent)
-    print("WS TREE ITEM is at: " .. tostring(wireshark_tree))
+local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
+    print("WS TREE ITEM is at: " .. tostring(ws_tree))
     local wirebait_tree = {
-        m_wireshark_tree = wireshark_tree;
+        m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields to keep track of new fields and register them
+        m_ws_tree = ws_tree;
         m_buffer = buffer;
         m_start_position = position or 0;
         m_position = position or 0;
@@ -46,7 +90,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     end
 
     local getWiresharkTree = function ()
-        return wirebait_tree.m_wireshark_tree;
+        return wirebait_tree.m_ws_tree;
     end
 
     local getBuffer = function()
@@ -66,7 +110,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
     end
 
     local setLength = function(self, L)
-        wirebait_tree.m_wireshark_tree:set_len(L);
+        wirebait_tree.m_ws_tree:set_len(L);
     end
 
     local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
@@ -82,17 +126,27 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
 
     end
 
-
-
-    local addField = function (self, wirebait_field)
+    local add = function(self, path, filter)
 
     end
 
-    local addTree = function (self, length)
-        sub_ws_tree = wirebait_tree.m_wireshark_tree:add(self.m_position, length or 1);
+    local addUint8 = function (self, filter, name, b, display_val_map) --display_val_map translated raw value on the wire into display value
+        b = b or base.DEC;
+        field_key = "f_"..name:gsub('%W','') -- takes the name, remove all non alpha-num characters and prefix it with 'f_'. For instance "2 Packets" becomes "f_2Packets"
 
-        --newWireBaitTree()
+        if not wirebait_tree.m_wb_fields_map[field_key] then --adding new wb protofield if it doesn't exist
+            wirebait_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, 1, Protofield.uint8(filter, name, b, display_val_map));
+        end
+        wb_proto_field = wirebait_tree.m_wb_fields_map[field_key];
+
+        --creating a new wireshart tree item and using it to create a new wb tree
+        new_ws_tree = wirebait_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wirebait_tree.m_buffer(wirebait_tree.m_position, wb_proto_field.size()));
+        return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self)
     end
+
+--    local addTree = function (self, length)
+--        sub_ws_tree = wirebait_tree.m_ws_tree:add(self.m_position, length or 1);
+--    end
 
     local public_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
@@ -103,7 +157,8 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         position = getPosition,
         length = getLength,
         skip = skip,
-        autoFitHighlight = autoFitHighlight
+        autoFitHighlight = autoFitHighlight,
+        addUint8 = addUint8
     }
 
     --print("Public address: " .. tostring(public_interface));
@@ -111,44 +166,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
 end
 
 
-local function newWirebaitTree_overload(arg1, arg2, ...)
-    --for i in pairs(arg1) do print(i) end
-    if arg1.__is_wirebait_struct then
-        parent_wirebait_tree = arg1;
-        assert(arg2, "Missing proto field to create new treeitem!")
-        proto_field = arg2; --//proto field for new subtree;
-        ws_tree_item = parent_wirebait_tree:wiresharkTree():add(proto_field);
-        wirebait.field.new(proto_field);
 
-        return newWirebaitTree(ws_tree_item or parent_wirebait_tree.wiresharkTree(), parent_wirebait_tree.__buffer(), parent_wirebait_tree.position(), parent_wirebait_tree)
-    else
-        return newWirebaitTree(arg1, arg2, unpack({...}));
-    end
-end
-
-
--- # Wirebait Field
-local function newWirebaitField(ws_field)
-    local wirebait_field = {
-        m_wireshark_field = ws_field;
-        m_name,
-        m_size
-    }
-
-    local getName = function()
-        return wirebait_field.m_name;
-    end
-
-    local getSize = function()
-        return wirebait_field.m_size
-    end
-
-
-    return {
-        name = getName,
-        size = getSize
-    };
-end
 
 
 --[[ Using a function to create the wirebait module so that it can have 
@@ -157,39 +175,50 @@ so as to register them automatically)
 ]]--
 local function encapsulatedWirebait() 
     local wirebait = { --wirebait state data which needs to be private
-        created_proto_fields = {};
-        size = 0,
-        dissector = nil
+        m_created_proto_fields = {};
+        m_size = 0,
+        m_dissector = nil
     }
 
-    function wirebait.createProtofield(...)
-        new_pf = newWirebaitField(unpack({...}))
-        wirebait.created_proto_fields[wirebait.size] = new_pf
-        wirebait.size = wirebait.size + 1;
+    function wirebait.createProtofield(filter, name, size, ws_protofield)
+        new_pf = newWirebaitField(filter, name, size, ws_protofield)
+        wirebait.m_created_proto_fields[wirebait.m_size] = new_pf
+        wirebait.m_size = wirebait.m_size + 1;
         print("Added #### PROTO FIELD TO COLLECTION!")
         return new_pf
     end
 
---    function wirebait:createTreeitem(...)
---        return newWirebaitTree_overload
---    end
-    function wirebait.createDissectorSingleton()
-        if not wirebait.dissector then
-            -- TODO: create dissector
+    function wirebait.createTreeitem(arg1, arg2, ...)
+        if arg1.__is_wirebait_struct then
+            parent_wirebait_tree = arg1;
+            assert(arg2, "Missing proto field to create new treeitem!")
+            proto_field = arg2; --//proto field for new subtree;
+            ws_tree_item = parent_wirebait_tree:wiresharkTree():add(proto_field);
+            wirebait.field.new(proto_field);
+            return newWirebaitTree(ws_tree_item or parent_wirebait_tree.wiresharkTree(), parent_wirebait_tree.__buffer(), parent_wirebait_tree.position(), parent_wirebait_tree)
         else
-            return wirebait.dissector;
+            return newWirebaitTree(wirebait.m_created_proto_fields, arg1, arg2, unpack({...}));
         end
     end
-    
+
+    function wirebait.createDissectorSingleton(name, abbrev_name)
+        --checks('string', 'string');
+        if not wirebait.m_dissector then
+            wirebait.m_dissector = Proto(abbrev_name, name);
+        else
+            return wirebait.m_dissector;
+        end
+    end
+
     function getCreatedProtofieldCount()
-        return wirebait.size;
+        return wirebait.m_size;
     end
 
     return { --All functions available in wirebait package are named here
-            field = { new = wirebait.createProtofield, createdCount = getCreatedProtofieldCount },
-            tree = { new = newWirebaitTree_overload },
-            dissector = { new = wirebait.createDissectorSingleton }
-        }
+        field = { new = wirebait.createProtofield, count = getCreatedProtofieldCount },
+        tree = { new = wirebait.createTreeitem },
+        dissector = { newSingleton = wirebait.createDissectorSingleton }
+    }
 end
 
 

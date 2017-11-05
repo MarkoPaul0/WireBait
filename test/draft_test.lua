@@ -23,14 +23,10 @@
 local wireshark = require("wirebait.test.wireshark_mock")
 local wirebait = require("wirebait.wirebait")
 
---TEST
-local buffer = {
-    len = function()
-        return 512;
-    end
+base = wireshark.base --make available base as a global variable
+Protofield = wireshark.Protofield; --make available Protofield globally
 
-
-}
+buffer = wireshark.buffer.new(128);
 
 --local ws_test_tree = {
 --        len = function ()
@@ -53,8 +49,10 @@ print("root address " .. tostring(root_tree) .. " parent " .. tostring(root_tree
 --print("old position " .. root_tree:position())
 root_tree:skip(1)
 
-proto_field1  = wireshark.protofield.new("proto_fied1", "test.pf1", {});
-child_tree_1 = wirebait.tree.new(root_tree, proto_field1)
+--proto_field1  = wireshark.Protofield.new("proto_fied1", "test.pf1", {});
+child_tree_1 = root_tree:addUint8("smp.child_tree1", "Child Tree 1");
+
+--child_tree_1 = wirebait.tree.new(root_tree, proto_field1)
 --print("child address " .. tostring(child_tree) .. "\n")
 
 print("old position root: " .. root_tree:position() .. " child " .. child_tree_1:position())
@@ -72,7 +70,7 @@ print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_le
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 
 
-child_tree_2 = wirebait.tree.new(root_tree, proto_field1)
+child_tree_2 = root_tree:addUint8("smp.child_tree2", "Child Tree 2");
 --print("child address " .. tostring(child_tree) .. "\n")
 child_tree_2:skip(11);
 
