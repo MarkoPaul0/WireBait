@@ -83,6 +83,7 @@ child_tree_2:autoFitHighlight(false)
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 print("Length for child_tree2 item is " .. tostring(child_tree_2:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_2:wiresharkTree()));
+child_tree_2:skip(48)
 child_tree_2:autoFitHighlight(true)
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));

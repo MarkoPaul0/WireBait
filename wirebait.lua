@@ -72,7 +72,7 @@ end
 
 
 -- # Wirebait Tree
-local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent, size)
+local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, parent_wb_tree)
     local wirebait_tree = {
         m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields to keep track of new fields and register them
         m_ws_tree = ws_tree;
@@ -80,12 +80,12 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent,
         m_start_position = position or 0;
         m_position = (position or 0) + (size or 0);
         m_end_position = (position or 0) + buffer:len();
-        m_parent = parent;
-        m_is_root = not parent;
+        m_parent = parent_wb_tree;
+        m_is_root = not parent_wb_tree;
     }
 
-    local getParent = function(self)
-        return wirebait_tree.m_parent or self;
+    local getParent = function()
+        return wirebait_tree.m_parent;
     end
 
     local getWiresharkTree = function ()
@@ -108,15 +108,11 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent,
         wirebait_tree.m_position = wirebait_tree.m_position + byte_count;
     end
 
-    local setLength = function(self, L)
-        wirebait_tree.m_ws_tree:set_len(L);
-    end
-
     local autoFitHighlight = function(self, is_recursive, position) --makes highlighting fit the data that was added or skipped in the tree
         position =  position or self:position();
         assert(position >= wirebait_tree.m_start_position, "Current position is before start position!");
         length = position - wirebait_tree.m_start_position
-        setLength(self,length);
+        wirebait_tree.m_ws_tree:set_len(length);
         if is_recursive and not wirebait_tree.m_is_root then
             self:parent():autoFitHighlight(is_recursive, position);
         end
@@ -136,7 +132,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent,
         new_ws_tree = wirebait_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wirebait_tree.m_buffer(wirebait_tree.m_position, wb_proto_field.size()));
         --start_position = wirebait_tree.m_position;
         --wirebait_tree.m_position = wirebait_tree.m_position + size;
-        return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self, size)
+        return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, size, self)
     end
     
     local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
@@ -164,18 +160,18 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent,
     end
     
     local addString = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        size = size or 1; -- using 1 if size of string is not provided
         value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):string();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
 
-    local public_interface = {
+    local public_wirebait_tree_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
         __wirebait_type_name = "WirebaitTree",
         __buffer = getBuffer,
         parent = getParent,
         wiresharkTree = getWiresharkTree,
         position = getPosition,
-        length = getLength,
         skip = skip,
         autoFitHighlight = autoFitHighlight,
         addUint8 = addUint8,
@@ -185,8 +181,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent,
         addString = addString
     }
 
-    --print("Public address: " .. tostring(public_interface));
-    return public_interface;
+    return public_wirebait_tree_interface;
 end
 
 
@@ -208,7 +203,6 @@ local function encapsulatedWirebait()
         new_pf = newWirebaitField(filter, name, size, ws_protofield)
         wirebait.m_created_proto_fields[wirebait.m_size] = new_pf
         wirebait.m_size = wirebait.m_size + 1;
-        print("Added #### PROTO FIELD TO COLLECTION!")
         return new_pf
     end
 
