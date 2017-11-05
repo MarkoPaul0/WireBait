@@ -139,19 +139,27 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
     end
     
     local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        return addTree(self, filter, name, "uint8", 1, base, display_val_map);
+        size = 1;
+        value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):le_uint();
+        return addTree(self, filter, name, "uint8", size, base, display_val_map), value;
     end
     
     local addUint16 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        return addTree(self, filter, name, "uint16", 2, base, display_val_map);
+        size = 2;
+        value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):le_uint();
+        return addTree(self, filter, name, "uint16", size, base, display_val_map), value;
     end
     
     local addUint32 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        return addTree(self, filter, name, "uint32", 4, base, display_val_map);
+        size = 4;
+        value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):le_uint();
+        return addTree(self, filter, name, "uint32", size, base, display_val_map), value;
     end
     
     local addUint64 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        return addTree(self, filter, name, "uint64", 8, base, display_val_map);
+        size = 8;
+        value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):le_uint64();
+        return addTree(self, filter, name, "uint64", size, base, display_val_map), value;
     end
 
     local public_interface = {

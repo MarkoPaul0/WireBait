@@ -61,6 +61,14 @@ function wireshark_mock.buffer.new(size)
     function buffer:len()
         return self.m_length
     end
+    
+    function buffer:le_uint()
+        return 42;
+    end
+    
+    function buffer:le_uint64()
+        return 60;
+    end;
     --------------------------------------------------------------------------
     function buffer:__call(...)
         return self;            --allows buffer to be called as a function 
