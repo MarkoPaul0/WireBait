@@ -153,22 +153,52 @@ local function newWirebaitField(ws_field)
     };
 end
 
---All functions available in wirebait package are named here
-wirebait = {
-    created_proto_fields = {}, --TODO: this is accessible publicly, and it shouldn't
-    pf_count = 0, --count of created_proto_fields
-    field = {
-        new = function (...)
-            new_pf = newWirebaitField(unpack({...}))
-            wirebait.created_proto_fields[wirebait.pf_count] = new_pf
-            --print("Added PROTO FIELD TO COLLECTION!")
-            return new_pf
-        end
-    },
-    tree = {
-        new = newWirebaitTree_overload
+
+--[[ Using a function to create the wirebait module so that it can have 
+private state data ( 1 dissector per wirebait, and wirebait keeps track of protofields
+so as to register them automatically)
+]]--
+local function encapsulatedWirebait() 
+    local wirebait = { --wirebait state data which needs to be private
+        created_proto_fields = {};
+        size = 0,
+        dissector = nil
     }
-}
+
+    function wirebait.createProtofield(...)
+        new_pf = newWirebaitField(unpack({...}))
+        wirebait.created_proto_fields[wirebait.size] = new_pf
+        wirebait.size = wirebait.size + 1;
+        print("Added #### PROTO FIELD TO COLLECTION!")
+        return new_pf
+    end
+
+--    function wirebait:createTreeitem(...)
+--        return newWirebaitTree_overload
+--    end
+    function wirebait.createDissectorSingleton()
+        if not wirebait.dissector then
+            -- TODO: create dissector
+        else
+            return wirebait.dissector;
+        end
+    end
+    
+    function getCreatedProtofieldCount()
+        return wirebait.size;
+    end
+
+    return { --All functions available in wirebait package are named here
+            field = { new = wirebait.createProtofield, createdCount = getCreatedProtofieldCount },
+            tree = { new = newWirebaitTree_overload },
+            dissector = { new = wirebait.createDissectorSingleton }
+        }
+end
+
+
+
+wirebait = encapsulatedWirebait() 
+
 
 
 
