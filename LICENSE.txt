@@ -1,3 +1,5 @@
+All the files in that repository are licensed under GNU GPL v2
+                    
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
 
