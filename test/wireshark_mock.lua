@@ -72,6 +72,9 @@ end
 
 --mapping diffent types to the same mock constructor
 wireshark_mock.Protofield.uint8 = wireshark_mock.Protofield.new;
+wireshark_mock.Protofield.uint16 = wireshark_mock.Protofield.new;
+wireshark_mock.Protofield.uint32 = wireshark_mock.Protofield.new;
+wireshark_mock.Protofield.uint64 = wireshark_mock.Protofield.new;
 
 return wireshark_mock;
 

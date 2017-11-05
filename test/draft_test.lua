@@ -70,9 +70,9 @@ print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_le
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 
 
-child_tree_2 = root_tree:addUint8("smp.child_tree2", "Child Tree 2");
+child_tree_2 = root_tree:addUint32("smp.child_tree2", "Child Tree 2");
 --print("child address " .. tostring(child_tree) .. "\n")
-child_tree_2:skip(11);
+--child_tree_2:skip(11);
 
 print("old position root: " .. root_tree:position() .. " child2 " .. child_tree_2:position())
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));

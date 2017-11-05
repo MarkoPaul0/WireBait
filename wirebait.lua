@@ -28,7 +28,7 @@ local function createWirebaitDissector()
     local public_wb_dissector = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
         __wirebait_type_name = "WirebaitDissector",
-        
+
     }
 
     return public_wb_dissector;
@@ -73,7 +73,6 @@ end
 
 -- # Wirebait Tree
 local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
-    print("WS TREE ITEM is at: " .. tostring(ws_tree))
     local wirebait_tree = {
         m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields to keep track of new fields and register them
         m_ws_tree = ws_tree;
@@ -115,10 +114,8 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
 
     local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
         position =  self:position();
-        --print(position);
         assert(position > wirebait_tree.m_start_position, "Current position is before start position!");
         length = position - wirebait_tree.m_start_position
-        --print("Length for " .. tostring(self) .. " is " .. length .. " bytes.");
         setLength(self,length);
         if is_recursive and not wirebait_tree.m_is_root then
             self:parent():autoFitHighlight(is_recursive);
@@ -126,16 +123,12 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
 
     end
 
-    local add = function(self, path, filter)
-
-    end
-
-    local addUint8 = function (self, filter, name, b, display_val_map) --display_val_map translated raw value on the wire into display value
+    local addTree = function (self, filter, name, type_key, size, b, display_map)
         b = b or base.DEC;
-        field_key = "f_"..name:gsub('%W','') -- takes the name, remove all non alpha-num characters and prefix it with 'f_'. For instance "2 Packets" becomes "f_2Packets"
+        field_key = "f_"..name:gsub('%W','') --Removes all non alpha-num chars from name and prepend 'f_'. For instance "2 Packets" becomes "f_2Packets"
 
         if not wirebait_tree.m_wb_fields_map[field_key] then --adding new wb protofield if it doesn't exist
-            wirebait_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, 1, Protofield.uint8(filter, name, b, display_val_map));
+            wirebait_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, size, Protofield[type_key](filter, name, b, display_val_map));
         end
         wb_proto_field = wirebait_tree.m_wb_fields_map[field_key];
 
@@ -143,10 +136,22 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
         new_ws_tree = wirebait_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wirebait_tree.m_buffer(wirebait_tree.m_position, wb_proto_field.size()));
         return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self)
     end
-
---    local addTree = function (self, length)
---        sub_ws_tree = wirebait_tree.m_ws_tree:add(self.m_position, length or 1);
---    end
+    
+    local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        return addTree(self, filter, name, "uint8", 1, base, display_val_map);
+    end
+    
+    local addUint16 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        return addTree(self, filter, name, "uint16", 2, base, display_val_map);
+    end
+    
+    local addUint32 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        return addTree(self, filter, name, "uint32", 4, base, display_val_map);
+    end
+    
+    local addUint64 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        return addTree(self, filter, name, "uint64", 8, base, display_val_map);
+    end
 
     local public_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
@@ -158,7 +163,10 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
         length = getLength,
         skip = skip,
         autoFitHighlight = autoFitHighlight,
-        addUint8 = addUint8
+        addUint8 = addUint8,
+        addUint16 = addUint16,
+        addUint32 = addUint32,
+        addUint64 = addUint64
     }
 
     --print("Public address: " .. tostring(public_interface));
