@@ -18,20 +18,34 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { treeitem = {}, buffer = {} };
+local wireshark_mock = { protofield = {}, treeitem = {}, buffer = {} };
+
+function wireshark_mock.protofield.new(name, abbr, _type)
+    assert(name and abbr and _type, "Protofiled argument should not be nil!")
+    local protofield = {
+            m_name = name;
+            m_abbr = abbr;
+            m_type = _type;
+        }
+        
+    return protofield;
+end
 
 function wireshark_mock.treeitem.new() 
     local treeitem = {
-        m_length = 0
+        m_length = 0;
+        m_subtrees = {};
+        m_subtrees_count = 0;
     }
 
     function treeitem:set_len(L)
         self.m_length = L;
     end
-
-    --Not available in the API, here for testing
-    function treeitem:get_len()
-        return self.m_length
+    
+    function treeitem:add(protofield)
+        print("Added protofield " .. protofield.m_name .. ".");
+        self.m_subtrees[self.m_subtrees_count] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new() };
+        return self.m_subtrees[self.m_subtrees_count].treeitem;
     end
 
     return treeitem;
