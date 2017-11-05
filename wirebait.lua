@@ -25,7 +25,7 @@ local wireshark = require("Wirebait.wireshark_mock")
 -- # wirebait dissector
 local function createWirebaitDissector()
     local wirebait_dissector = {
-        
+
     }
 end
 
@@ -43,15 +43,15 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         m_parent = parent;
         m_is_root = not parent;
     }
-    
+
     local getParent = function(self)
         return wirebait_tree.m_parent or self;
     end
-    
+
     local getWiresharkTree = function ()
         return wirebait_tree.m_wireshark_tree;
     end
-    
+
     local getBuffer = function()
         return wirebait_tree.m_buffer;
     end
@@ -67,11 +67,11 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         assert(wirebait_tree.m_position + byte_count <= wirebait_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
         wirebait_tree.m_position = wirebait_tree.m_position + byte_count;
     end
-    
+
     local setLength = function(self, L)
         wirebait_tree.m_wireshark_tree:set_len(L);
     end
-    
+
     local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
         position =  self:position();
         --print(position);
@@ -82,7 +82,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         if is_recursive and not wirebait_tree.m_is_root then
             self:parent():autoFitHighlight(is_recursive);
         end
-        
+
     end
 
 
@@ -108,7 +108,7 @@ local function newWirebaitTree(wireshark_tree, buffer, position, parent)
         skip = skip,
         autoFitHighlight = autoFitHighlight
     }
-    
+
     --print("Public address: " .. tostring(public_interface));
     return public_interface;
 end
@@ -122,7 +122,7 @@ local function newWirebaitTree_overload(arg1, arg2, ...)
         proto_field = arg2; --//proto field for new subtree;
         ws_tree_item = parent_wirebait_tree:wiresharkTree():add(proto_field);
         wirebait.field.new(proto_field);
-        
+
         return newWirebaitTree(ws_tree_item or parent_wirebait_tree.wiresharkTree(), parent_wirebait_tree.__buffer(), parent_wirebait_tree.position(), parent_wirebait_tree)
     else
         return newWirebaitTree(arg1, arg2, unpack({...}));
@@ -153,17 +153,15 @@ local function newWirebaitField(ws_field)
     };
 end
 
-
-
 --All functions available in wirebait package are named here
 wirebait = {
-    created_proto_fields = {},
+    created_proto_fields = {}, --TODO: this is accessible publicly, and it shouldn't
     pf_count = 0, --count of created_proto_fields
     field = {
         new = function (...)
             new_pf = newWirebaitField(unpack({...}))
             wirebait.created_proto_fields[wirebait.pf_count] = new_pf
-            print("Added PROTO FIELD TO COLLECTION!")
+            --print("Added PROTO FIELD TO COLLECTION!")
             return new_pf
         end
     },
@@ -182,8 +180,8 @@ local buffer = {
     len = function()
         return 512;
     end
-    
-    
+
+
 }
 
 --local ws_test_tree = {
