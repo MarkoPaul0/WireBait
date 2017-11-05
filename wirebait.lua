@@ -22,6 +22,14 @@
 --dofile("./Wirebait/wireshark_mock.lua")
 local wireshark = require("Wirebait.wireshark_mock")
 
+-- # wirebait dissector
+local function createWirebaitDissector()
+    local wirebait_dissector = {
+        
+    }
+end
+
+
 
 -- # Wirebait Tree
 local function newWirebaitTree(wireshark_tree, buffer, position, parent)
@@ -113,7 +121,7 @@ local function newWirebaitTree_overload(arg1, arg2, ...)
         assert(arg2, "Missing proto field to create new treeitem!")
         proto_field = arg2; --//proto field for new subtree;
         ws_tree_item = parent_wirebait_tree:wiresharkTree():add(proto_field);
-        
+        wirebait.field.new(proto_field);
         
         return newWirebaitTree(ws_tree_item or parent_wirebait_tree.wiresharkTree(), parent_wirebait_tree.__buffer(), parent_wirebait_tree.position(), parent_wirebait_tree)
     else
@@ -123,9 +131,9 @@ end
 
 
 -- # Wirebait Field
-local function newWirebaitField()
+local function newWirebaitField(ws_field)
     local wirebait_field = {
-        m_wireshark_field,
+        m_wireshark_field = ws_field;
         m_name,
         m_size
     }
@@ -140,8 +148,8 @@ local function newWirebaitField()
 
 
     return {
-        name = getName(),
-        size = getSize()
+        name = getName,
+        size = getSize
     };
 end
 
@@ -149,8 +157,15 @@ end
 
 --All functions available in wirebait package are named here
 wirebait = {
+    created_proto_fields = {},
+    pf_count = 0, --count of created_proto_fields
     field = {
-        new = newWirebaitField
+        new = function (...)
+            new_pf = newWirebaitField(unpack({...}))
+            wirebait.created_proto_fields[wirebait.pf_count] = new_pf
+            print("Added PROTO FIELD TO COLLECTION!")
+            return new_pf
+        end
     },
     tree = {
         new = newWirebaitTree_overload

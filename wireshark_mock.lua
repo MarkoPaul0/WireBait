@@ -44,8 +44,10 @@ function wireshark_mock.treeitem.new()
     
     function treeitem:add(protofield)
         print("Added protofield " .. protofield.m_name .. ".");
-        self.m_subtrees[self.m_subtrees_count] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new() };
-        return self.m_subtrees[self.m_subtrees_count].treeitem;
+        index = self.m_subtrees_count;
+        self.m_subtrees[index] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new() };
+        self.m_subtrees_count = self.m_subtrees_count + 1;
+        return self.m_subtrees[index].treeitem;
     end
 
     return treeitem;
