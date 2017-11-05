@@ -19,9 +19,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
---dofile("./Wirebait/wireshark_mock.lua")
---local wireshark = require("Wirebait.wireshark_mock")
-
 -- # wirebait dissector
 local function createWirebaitDissector()
     local wirebait_dissector = {
