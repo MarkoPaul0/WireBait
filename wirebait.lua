@@ -72,13 +72,13 @@ end
 
 
 -- # Wirebait Tree
-local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
+local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent, size)
     local wirebait_tree = {
         m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields to keep track of new fields and register them
         m_ws_tree = ws_tree;
         m_buffer = buffer;
         m_start_position = position or 0;
-        m_position = position or 0;
+        m_position = (position or 0) + (size or 0);
         m_end_position = (position or 0) + buffer:len();
         m_parent = parent;
         m_is_root = not parent;
@@ -112,13 +112,13 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
         wirebait_tree.m_ws_tree:set_len(L);
     end
 
-    local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
-        position =  self:position();
+    local autoFitHighlight = function(self, is_recursive, position) --makes highlighting fit the data that was added or skipped in the tree
+        position =  position or self:position();
         assert(position >= wirebait_tree.m_start_position, "Current position is before start position!");
         length = position - wirebait_tree.m_start_position
         setLength(self,length);
         if is_recursive and not wirebait_tree.m_is_root then
-            self:parent():autoFitHighlight(is_recursive);
+            self:parent():autoFitHighlight(is_recursive, position);
         end
 
     end
@@ -134,8 +134,9 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
 
         --creating a new wireshart tree item and using it to create a new wb tree
         new_ws_tree = wirebait_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wirebait_tree.m_buffer(wirebait_tree.m_position, wb_proto_field.size()));
-        wirebait_tree.m_position = wirebait_tree.m_position + size;
-        return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self)
+        --start_position = wirebait_tree.m_position;
+        --wirebait_tree.m_position = wirebait_tree.m_position + size;
+        return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self, size)
     end
     
     local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
@@ -161,6 +162,11 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
         value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):le_uint64();
         return addTree(self, filter, name, "uint64", size, base, display_val_map), value;
     end
+    
+    local addString = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        value = wirebait_tree.m_buffer(wirebait_tree.m_position, size):string();
+        return addTree(self, filter, name, "string", size, base, display_val_map), value;
+    end
 
     local public_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
@@ -175,7 +181,8 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
         addUint8 = addUint8,
         addUint16 = addUint16,
         addUint32 = addUint32,
-        addUint64 = addUint64
+        addUint64 = addUint64,
+        addString = addString
     }
 
     --print("Public address: " .. tostring(public_interface));

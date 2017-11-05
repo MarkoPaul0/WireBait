@@ -69,6 +69,10 @@ function wireshark_mock.buffer.new(size)
     function buffer:le_uint64()
         return 60;
     end;
+    
+    function buffer:string()
+        return "some buffer data";
+    end
     --------------------------------------------------------------------------
     function buffer:__call(...)
         return self;            --allows buffer to be called as a function 
@@ -83,6 +87,7 @@ wireshark_mock.Protofield.uint8 = wireshark_mock.Protofield.new;
 wireshark_mock.Protofield.uint16 = wireshark_mock.Protofield.new;
 wireshark_mock.Protofield.uint32 = wireshark_mock.Protofield.new;
 wireshark_mock.Protofield.uint64 = wireshark_mock.Protofield.new;
+wireshark_mock.Protofield.string = wireshark_mock.Protofield.new;
 
 return wireshark_mock;
 
