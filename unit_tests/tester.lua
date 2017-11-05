@@ -21,7 +21,7 @@
 local tester = { test_count = 0, fail_count = 0, success_count = 0};
 
 --runs the provided function, prints OK is a success, FAIL! otherwise with a detail of the error
-function tester.test(func) 
+function tester.runTest(func) 
     tester.test_count = tester.test_count + 1;
     status,err = pcall(func)
     if status then
@@ -33,11 +33,26 @@ function tester.test(func)
     end
 end
 
+function tester.test(...)
+        unit_tests = ...;
+        for test_name,test_func in pairs(unit_tests) do 
+            if type(test_func) == 'function' then
+                tester.runTest(test_func);
+            end
+        end
+end
+
+
 function tester.printReport()
     print("\n------------- UNIT TESTS RESULTS -------------")
     print("  Tests run: " .. tester.test_count)
     print("   Tests ok: " .. tester.success_count)
-    print("Tests fails: " .. tester.fail_count)
+    if tester.fail_count > 0 then 
+        warning_appendix = "\t\t\t  /!\\/!\\"
+    else
+        warning_appendix = "";
+    end
+    print("Tests fails: " .. tester.fail_count .. warning_appendix)
     assert(tester.test_count == (tester.success_count + tester.fail_count), "Tests counts do not add up!")
     print("----------------------------------------------")
 end

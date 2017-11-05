@@ -25,24 +25,14 @@ local function createTests() --keeping everything in a local scope to prevent in
     wireshark = require("wirebait.test.wireshark_mock")
     wirebait = require("wirebait.wirebait")
     tester = tester or require("wirebait.unit_tests.tester")
-
     base = wireshark.base --make available base as a global variable
     Protofield = wireshark.Protofield; --make available Protofield globally
 
-    --Creating the unit tests
+    --Creating unit tests
     unit_tests = {};
     
     unit_tests[0] = function()
-        io.stdout:write("Testing wirebait tree creation...")
-    end
-    
-    unit_tests[1] = function()
-        io.stdout:write("Testing wirebait tree:skip()...")
-        assert(false, "ZER IZ A PROBLEM")
-    end
-    
-    unit_tests[2] = function()
-        io.stdout:write("Testing wirebait tree:addUint8()...")
+        io.stdout:write("Testing wirebait field creation...")
     end
     
     return unit_tests;

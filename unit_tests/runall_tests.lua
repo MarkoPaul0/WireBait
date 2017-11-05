@@ -22,8 +22,9 @@
 
 --# UNIT TESTING 
 tester = require("wirebait.unit_tests.tester")
-wirebait_tree_unit_tests = require("wirebait.unit_tests.wirebait_tree_unit_test")
-wirebait_tree_unit_tests.run();
+
+tester.test(require("wirebait.unit_tests.wirebait_tree_unit_test"))
+tester.test(require("wirebait.unit_tests.wirebait_field_unit_test"))
 
 tester.printReport();
 
