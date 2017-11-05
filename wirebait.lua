@@ -114,7 +114,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
 
     local autoFitHighlight = function(self, is_recursive) --makes highlighting fit the data that was added or skipped in the tree
         position =  self:position();
-        assert(position > wirebait_tree.m_start_position, "Current position is before start position!");
+        assert(position >= wirebait_tree.m_start_position, "Current position is before start position!");
         length = position - wirebait_tree.m_start_position
         setLength(self,length);
         if is_recursive and not wirebait_tree.m_is_root then
@@ -134,6 +134,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, parent)
 
         --creating a new wireshart tree item and using it to create a new wb tree
         new_ws_tree = wirebait_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wirebait_tree.m_buffer(wirebait_tree.m_position, wb_proto_field.size()));
+        wirebait_tree.m_position = wirebait_tree.m_position + size;
         return newWirebaitTree(wirebait_tree.m_wb_fields_map, new_ws_tree, wirebait_tree.m_buffer, wirebait_tree.m_position, self)
     end
     
