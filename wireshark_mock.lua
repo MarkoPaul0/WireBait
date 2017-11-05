@@ -18,20 +18,32 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { tree = {} };
+local wireshark_mock = { treeitem = {}, buffer = {} };
 
-function wireshark_mock.tree.new() 
+function wireshark_mock.treeitem.new() 
+    local treeitem = {
+        m_length = 0
+    }
+
+    function treeitem:set_len(L)
+        self.m_length = L;
+    end
+
+    --Not available in the API, here for testing
+    function treeitem:get_len()
+        return self.m_length
+    end
+
+    return treeitem;
+end
+
+function wireshark_mock.buffer.new(size)
     return {
-        m_length = 0,
-        
-        set_len = function(L)
-            m_length = L;
-        end,
-        
-        get_length = function()
+        m_length = size or 0,
+
+        len = function()
             return m_length
         end
-
     }
 end
 
