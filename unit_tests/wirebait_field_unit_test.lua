@@ -39,6 +39,7 @@ local function createTests() --keeping everything in a local scope to prevent in
 end
 
 local unit_tests = createTests();
+print("\nWirebait Field Unit tests...");
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();
