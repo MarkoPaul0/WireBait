@@ -134,7 +134,9 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
 
         --creating a new wireshart tree item and using it to create a new wb tree
         new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
-        return newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self)
+        new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self)
+        wb_tree.m_position = wb_tree.m_position + size;
+        return new_wb_tree;
     end
 
     local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
@@ -166,6 +168,12 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         value = wb_tree.m_buffer(wb_tree.m_position, size):string();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
+    
+    local addStringz = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
+        size = size or 1; -- using 1 if size of string is not provided
+        value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
+        return addTree(self, filter, name, "string", size, base, display_val_map), value;
+    end
 
     local public_wirebait_tree_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
@@ -180,7 +188,8 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         addUint16 = addUint16,
         addUint32 = addUint32,
         addUint64 = addUint64,
-        addString = addString
+        addString = addString,
+        addStringz = addStringz
     }
 
     return public_wirebait_tree_interface;

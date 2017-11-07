@@ -106,7 +106,24 @@ function wireshark_mock.buffer.new(data_as_hex_string)
     end;
 
     function buffer:string()
-        return "some buffer data";
+        str = ""
+        for i=1,self:len()-1 do
+            byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+            str = str .. string.char(tonumber(byte_, 16))
+        end
+        return str
+    end
+    
+    function buffer:stringz()
+        str = ""
+        for i=1,self:len()-1 do
+            byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+            if byte_ == '00' then
+                return str
+            end
+            str = str .. string.char(tonumber(byte_, 16))
+        end
+        return str
     end
     
     function buffer:__call(start, length) --allows buffer to be called as a function 
