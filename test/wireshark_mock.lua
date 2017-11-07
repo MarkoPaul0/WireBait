@@ -38,8 +38,8 @@ function wireshark_mock.treeitem.new()
         m_subtrees_count = 0;
     }
 
-    function treeitem:set_len(L)
-        self.m_length = L;
+    function treeitem:set_len(length)
+        self.m_length = length;
     end
 
     function treeitem:add(protofield)

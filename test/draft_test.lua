@@ -64,7 +64,7 @@ print("old position root: " .. root_tree:position() .. " child " .. child_tree_1
 print("old position root: " .. root_tree:position() .. " child " .. child_tree_1:position())
 child_tree_1:skip(3)
 print("old position root: " .. root_tree:position() .. " child " .. child_tree_1:position())
-child_tree_1:autoFitHighlight(true)
+child_tree_1:fitHighlight(true)
 
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
@@ -79,12 +79,12 @@ print("old position root: " .. root_tree:position() .. " child2 " .. child_tree_
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 print("Length for child_tree2 item is " .. tostring(child_tree_2:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_2:wiresharkTree()));
-child_tree_2:autoFitHighlight(false)
+child_tree_2:fitHighlight(false)
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 print("Length for child_tree2 item is " .. tostring(child_tree_2:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_2:wiresharkTree()));
 child_tree_2:skip(48)
-child_tree_2:autoFitHighlight(true)
+child_tree_2:fitHighlight(true)
 print("Length for root_tree item is " .. tostring(root_tree:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(root_tree:wiresharkTree()));
 print("Length for child_tree item is " .. tostring(child_tree_1:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_1:wiresharkTree()));
 print("Length for child_tree2 item is " .. tostring(child_tree_2:wiresharkTree().m_length) .. " bytes. tree item is at " .. tostring(child_tree_2:wiresharkTree()));

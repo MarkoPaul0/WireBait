@@ -109,13 +109,13 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         wb_tree.m_position = wb_tree.m_position + byte_count;
     end
 
-    local autoFitHighlight = function(self, is_recursive, position) --makes highlighting fit the data that was added or skipped in the tree
+    local fitHighlight = function(self, is_recursive, position) --makes highlighting fit the data from m_start_position to position or m_position
         position =  position or self:position();
         assert(position >= wb_tree.m_start_position, "Current position is before start position!");
         length = position - wb_tree.m_start_position
         wb_tree.m_ws_tree:set_len(length);
         if is_recursive and not wb_tree.m_is_root then
-            self:parent():autoFitHighlight(is_recursive, position);
+            self:parent():fitHighlight(is_recursive, position);
         end
     end
 
@@ -175,7 +175,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         wiresharkTree = getWiresharkTree,
         position = getPosition,
         skip = skip,
-        autoFitHighlight = autoFitHighlight,
+        fitHighlight = fitHighlight,
         addUint8 = addUint8,
         addUint16 = addUint16,
         addUint32 = addUint32,
