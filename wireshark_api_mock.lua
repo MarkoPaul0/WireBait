@@ -136,6 +136,8 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         end
         return str
     end
+    
+    --c.f. [wireshark tvbrange](https://wiki.wireshark.org/LuaAPI/Tvb) for missing implementations such as float() le_float() etc..
 
     function buffer:__call(start, length) --allows buffer to be called as a function 
         assert(start >= 0, "Start position is positive!");
