@@ -19,7 +19,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark = require("wirebait.test.wireshark_mock")
+local wireshark = require("wirebait.wireshark_api_mock")
 local wirebait = require("wirebait.wirebait")
 
 

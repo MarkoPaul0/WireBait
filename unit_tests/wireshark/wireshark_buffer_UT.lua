@@ -22,34 +22,21 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 
 local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
-    wireshark = require("wirebait.test.wireshark_mock")
-    wirebait = require("wirebait.wirebait")
+    wireshark = require("wirebait.wireshark_api_mock")
     tester = tester or require("wirebait.unit_tests.tester")
 
-    base = wireshark.base --make available base as a global variable
-    Protofield = wireshark.Protofield; --make available Protofield globally
-
-    --Creating the unit tests
+    --Creating unit tests
     unit_tests = {};
     
     unit_tests[0] = function()
-        io.stdout:write("Testing wirebait tree creation...")
-    end
-    
-    unit_tests[1] = function()
-        io.stdout:write("Testing wirebait tree:skip()...")
-        assert(false, "ZER IZ A PROBLEM")
-    end
-    
-    unit_tests[2] = function()
-        io.stdout:write("Testing wirebait tree:addUint8()...")
+        io.stdout:write("Testing wireshark buffer construction...")
     end
     
     return unit_tests;
 end
 
 local unit_tests = createTests();
-print("\nWirebait Tree Unit tests...");
+print("\nWireshark Buffer Unit tests...");
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();

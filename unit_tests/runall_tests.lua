@@ -23,8 +23,12 @@
 --# UNIT TESTING 
 tester = require("wirebait.unit_tests.tester")
 
-tester.test(require("wirebait.unit_tests.wirebait_tree_unit_test"))
-tester.test(require("wirebait.unit_tests.wirebait_field_unit_test"))
+--# WIREBAIT TESTS
+tester.test(require("wirebait.unit_tests.wirebait.wirebait_tree_UT"))
+tester.test(require("wirebait.unit_tests.wirebait.wirebait_field_UT"))
+
+--# WIRESHARK-API-MOCK TESTS
+tester.test(require("wirebait.unit_tests.wireshark.wireshark_buffer_UT"))
 
 tester.printReport();
 

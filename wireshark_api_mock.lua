@@ -148,6 +148,11 @@ wireshark_mock.Protofield.uint32 = wireshark_mock.Protofield.new;
 wireshark_mock.Protofield.uint64 = wireshark_mock.Protofield.new;
 wireshark_mock.Protofield.string = wireshark_mock.Protofield.new;
 
+function wireshark_mock.setupWiresharkEnvironment() --sets up variable in current scope
+    base = wireshark_mock.base;
+    Protofield = wireshark_mock.Protofield;
+end
+
 return wireshark_mock;
 
 
