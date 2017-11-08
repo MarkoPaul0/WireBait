@@ -41,6 +41,9 @@ function tester.runTest(func)
         io.stdout:write("\tOK\n")
         tester.success_count = tester.success_count + 1;
     else
+        if err and err:find(": _%[") then --if err comes from tester.assert
+            err = err:sub(err:find(": _%[")+3,-1)
+        end
         io.stdout:write("\tFAIL! " .. (err or "") .."\n")
         tester.fail_count = tester.fail_count + 1;
     end
@@ -58,7 +61,18 @@ function tester.test(unit_tests_set) --iterate through a set of unit tests
 end
 
 function tester.assert(val, expected_val, msg)
-    assert(val == expected_val, "Expected '" .. expected_val .. "' but got '" .. val .. "'. (" .. msg .. ")")
+    if val ~= expected_val then 
+        debug_info = debug.getinfo(2)
+        filename = debug_info.source:match("^.+/(.+)$")
+        line_no = debug_info.currentline     
+
+        if msg then
+            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. expected_val .. "' but got '" .. val .. "'. (" .. msg .. ")";
+        else
+            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. expected_val .. "' but got '" .. val .. "'";
+        end
+        assert(false, err_msg)
+    end
 end
 
 
