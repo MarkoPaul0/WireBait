@@ -91,6 +91,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
     end
 
     function buffer:le_uint64()
+        --TODO: this is not working (32 bit overflow)
         size = math.min(#self.m_data_as_hex_str,16)
         return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
     end;
@@ -101,6 +102,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
     end
 
     function buffer:uint64()
+        --TODO: this is not working (32 bit overflow)
         size = math.min(#self.m_data_as_hex_str,16)
         return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
     end;

@@ -43,13 +43,23 @@ local function createTests() --keeping everything in a local scope to prevent in
             b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
             tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
         end)
-    
+
     unit_tests:addTest("Testing wireshark buffer(pos,len)", function()
             b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
             tester.assert(b(6,5):len(), 5, "Wrong size.");
             tester.assert(b(6,5):string(), "WORLD");
-            tester.assert(b(0,5):len(), 3, "Wrong size.");
+            tester.assert(b(0,5):len(), 5, "Wrong size.");
             tester.assert(b(0,5):string(), "HELLO");
+        end)
+
+    unit_tests:addTest("Testing wireshark buffer:uint() (Big-Endian)", function()
+            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+            tester.assert(b:uint(), 1212501068);
+        end)
+
+    unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
+            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+            tester.assert(b:le_uint(), 1280066888);
         end)
 
     return unit_tests;
