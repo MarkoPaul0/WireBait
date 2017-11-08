@@ -107,7 +107,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
 
     function buffer:string()
         str = ""
-        for i=1,self:len()-1 do
+        for i=1,self:len() do
             byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
             str = str .. string.char(tonumber(byte_, 16))
         end

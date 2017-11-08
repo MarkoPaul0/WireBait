@@ -22,6 +22,7 @@
 
 --# UNIT TESTING 
 tester = require("wirebait.unit_tests.tester")
+print("\nRunning all unit tests")
 
 --# WIREBAIT TESTS
 tester.test(require("wirebait.unit_tests.wirebait.wirebait_tree_UT"))

@@ -29,17 +29,15 @@ local function createTests() --keeping everything in a local scope to prevent in
     Protofield = wireshark.Protofield; --make available Protofield globally
 
     --Creating unit tests
-    unit_tests = {};
+    unit_tests = tester.newUnitTestsSet("Wirbait Field Unit Tests");
     
-    unit_tests[0] = function()
-        io.stdout:write("Testing wirebait field creation...")
-    end
+    unit_tests:addTest("Testing wirebait field construction", function()
+    end)
     
     return unit_tests;
 end
 
 local unit_tests = createTests();
-print("\nWirebait Field Unit tests...");
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();

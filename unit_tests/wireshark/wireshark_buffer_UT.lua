@@ -26,17 +26,28 @@ local function createTests() --keeping everything in a local scope to prevent in
     tester = tester or require("wirebait.unit_tests.tester")
 
     --Creating unit tests
-    unit_tests = {};
+    unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
     
-    unit_tests[0] = function()
-        io.stdout:write("Testing wireshark buffer construction...")
-    end
+    unit_tests:addTest("Testing wireshark buffer construction", function()
+        b = wireshark.buffer.new("A0102FB1");
+        assert(b.m_data_as_hex_str == "A0102FB1", "Wrong underlying data");
+        assert(b:len() == 4, "Wrong size after construction")
+    end);
+    
+    unit_tests:addTest("Testing wireshark buffer:string()", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C44");
+        tester.assert(b:string(),"HELLO WORLD", "Wrong result.");
+    end)
+    
+    unit_tests:addTest("Testing wireshark buffer:string()", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+        tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
+    end)
     
     return unit_tests;
 end
 
 local unit_tests = createTests();
-print("\nWireshark Buffer Unit tests...");
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();

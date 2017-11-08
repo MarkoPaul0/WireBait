@@ -20,6 +20,19 @@
 
 local tester = { test_count = 0, fail_count = 0, success_count = 0};
 
+function tester.newUnitTestsSet(set_name)
+    local unit_tests_set = { 
+        name = set_name or "Unknown unit tests", 
+        tests = {} 
+    }
+
+    function unit_tests_set:addTest(test_name, test_func)
+        self.tests[#self.tests+1] = {name = test_name, func=test_func};
+    end
+
+    return unit_tests_set;
+end
+
 --runs the provided function, prints OK is a success, FAIL! otherwise with a detail of the error
 function tester.runTest(func) 
     tester.test_count = tester.test_count + 1;
@@ -33,13 +46,19 @@ function tester.runTest(func)
     end
 end
 
-function tester.test(...)
-        unit_tests = ...;
-        for test_name,test_func in pairs(unit_tests) do 
-            if type(test_func) == 'function' then
-                tester.runTest(test_func);
-            end
+--runs all unit tests in a unit test set
+function tester.test(unit_tests_set) --iterate through a set of unit tests
+    io.stdout:write("\n>>>> " .. string.upper(unit_tests_set.name) .. "\n");
+    for test_number,test in pairs(unit_tests_set.tests) do 
+        if type(test.func) == 'function' then
+            io.stdout:write(string.format("%-77s", test.name))
+            tester.runTest(test.func);
         end
+    end
+end
+
+function tester.assert(val, expected_val, msg)
+    assert(val == expected_val, "Expected '" .. expected_val .. "' but got '" .. val .. "'. (" .. msg .. ")")
 end
 
 
