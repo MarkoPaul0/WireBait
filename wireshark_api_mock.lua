@@ -65,24 +65,35 @@ function wireshark_mock.buffer.new(data_as_hex_string)
     function buffer:len()
         return string.len(self.m_data_as_hex_str)/2;
     end
-    
+
     function hexStringToUint64(hex_str)
         assert(#hex_str > 0, "Requires strict positive number of bytes!");
         assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
-        hex_str = string.format("%016s",hex_str) --left pad with zeros
-        return tonumber(hex_str,16);
+        if #hex_str <= 8 then
+            return tonumber(hex_str,16);
+        else
+            hex_str = string.format("%016s",hex_str) --left pad with zeros
+            byte_size=#hex_str/2
+            value = 0;
+            for i=1,byte_size do
+                value = value + tonumber(hex_str:sub(-2*i+1,-2*i),16)*16^(2*(i-1))
+            end
+            return value;
+        end
     end
-    
+
     function le_hexStringToUint64(hex_str) --little endian version
         assert(#hex_str > 0, "Requires strict positive number of bytes!");
         assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
         hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
-        le_string = "";
+
+        --reading byte in inverted byte order
         byte_size=#hex_str/2
+        value = 0;
         for i=1,byte_size do
-           le_string = hex_str:sub(2*i-1,2*i) .. le_string;
+            value = value + tonumber(hex_str:sub(2*i-1,2*i),16)*16^(2*(i-1))
         end
-        return tonumber(le_string,16);
+        return value;
     end
 
     function buffer:le_uint()
@@ -91,18 +102,16 @@ function wireshark_mock.buffer.new(data_as_hex_string)
     end
 
     function buffer:le_uint64()
-        --TODO: this is not working (32 bit overflow)
         size = math.min(#self.m_data_as_hex_str,16)
         return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
     end;
-    
+
     function buffer:uint()
         size = math.min(#self.m_data_as_hex_str,8)
         return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
     end
 
     function buffer:uint64()
-        --TODO: this is not working (32 bit overflow)
         size = math.min(#self.m_data_as_hex_str,16)
         return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
     end;
@@ -115,7 +124,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         end
         return str
     end
-    
+
     function buffer:stringz()
         str = ""
         for i=1,self:len()-1 do
@@ -127,19 +136,19 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         end
         return str
     end
-    
+
     function buffer:__call(start, length) --allows buffer to be called as a function 
         assert(start >= 0, "Start position is positive!");
         assert(length > 0, "Length is strictly positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
         return wireshark_mock.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
     end
-    
+
     function buffer:__tostring()
-       return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
+        return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
     end
     setmetatable(buffer, buffer)
-    
+
     return buffer;
 end
 

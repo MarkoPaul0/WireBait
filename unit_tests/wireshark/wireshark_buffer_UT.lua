@@ -61,6 +61,11 @@ local function createTests() --keeping everything in a local scope to prevent in
             b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
             tester.assert(b:le_uint(), 1280066888);
         end)
+    
+    unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
+            b = wireshark.buffer.new("48454C4C285200000000000000");
+            tester.assert(b:le_uint64(), 90333032236360);
+        end)
 
     return unit_tests;
 end

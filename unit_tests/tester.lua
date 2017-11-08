@@ -42,7 +42,7 @@ function tester.runTest(func)
         tester.success_count = tester.success_count + 1;
     else
         if err and err:find(": _%[") then --if err comes from tester.assert
-            err = err:sub(err:find(": _%[")+3,-1)
+            err = err:sub(err:find(": _%[")+3)
         end
         io.stdout:write("\tFAIL! " .. (err or "") .."\n")
         tester.fail_count = tester.fail_count + 1;
