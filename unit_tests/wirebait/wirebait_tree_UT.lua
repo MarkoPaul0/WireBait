@@ -32,7 +32,11 @@ local function createTests() --keeping everything in a local scope to prevent in
     --Creating the unit tests
     unit_tests = tester.newUnitTestsSet("Wirebait Tree Unit Tests");
     
-    unit_tests:addTest("Testing wirebait tree construction", function()
+    unit_tests:addTest("Testing wirebait root tree construction", function()
+            wb_field_map = {};
+            ws_tree = wireshark.treeitem.new();
+            buffer = wireshark.buffer.new("A12B01");
+            wb_tree = wirebait.tree.new(ws_tree, buffer, 0, 3);
     end)
     
     unit_tests:addTest("Testing wirebait tree:skip()", function()
