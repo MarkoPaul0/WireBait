@@ -55,7 +55,7 @@ local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]d
         m_name = name,
         m_size = size,
         m_type = ws_type_key,
-        m_wireshark_field = Protofield[ws_type_key](filter, name, base, display_val_map);
+        m_wireshark_field = Protofield[ws_type_key](filter, name, size, base, display_val_map);
     }
 
     local getFilter = function()
@@ -98,11 +98,13 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         m_ws_tree = ws_tree;
         m_buffer = buffer;
         m_start_position = position or 0;
-        m_position = (position or 0) + (size or 0);
-        m_end_position = (position or 0) + buffer:len();
+        m_position = (position or 0), --+ (size or 0);
+        m_end_position = (position or 0) + (size or buffer:len());
         m_parent = parent_wb_tree;
         m_is_root = not parent_wb_tree;
     }
+    if size then assert(buffer:len() >= size, "Buffer is smaller than specified size!") end
+    
 
     local getParent = function()
         return wb_tree.m_parent;
@@ -120,10 +122,10 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         return wb_tree.m_position;
     end
 
-    local skip = function(self, byte_count)
-        if not wb_tree.m_is_root then
-            self:parent():skip(byte_count);
-        end
+    local skip = function(self, byte_count) --skip only affects the current tree and cannot go beyon the end_position
+        --if not wb_tree.m_is_root then
+        --   self:parent():skip(byte_count);
+        --end
         assert(wb_tree.m_position + byte_count <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
         wb_tree.m_position = wb_tree.m_position + byte_count;
     end
