@@ -67,9 +67,9 @@ function tester.assert(val, expected_val, msg)
         line_no = debug_info.currentline     
 
         if msg then
-            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. expected_val .. "' but got '" .. val .. "'. (" .. msg .. ")";
+            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. tostring(expected_val) .. "' but got '" .. tostring(val) .. "'. (" .. msg .. ")";
         else
-            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. expected_val .. "' but got '" .. val .. "'";
+            err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. tostring(expected_val) .. "' but got '" .. tostring(val) .. "'";
         end
         assert(false, err_msg)
     end

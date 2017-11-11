@@ -19,6 +19,19 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+
+local function verifyArgsType(...)  --TODO: ability to check optional args
+    level = 2;
+    i = 1;
+    while true do
+        expected_type = select(i, ...);
+        if not expected_type then break end;
+        var_name, var_val =  debug.getlocal(level,i);
+        assert(type(var_val) == expected_type, "\nFunction " .. debug.getinfo(2).name .."() expected arg #".. i .." to be of type '" .. tostring(expected_type) .. "' but got '" .. type(var_val) .. "'!")
+        i = i + 1;
+    end
+end
+
 -- # wirebait dissector
 local function createWirebaitDissector()
     local wirebait_dissector = {
@@ -35,13 +48,14 @@ local function createWirebaitDissector()
 end
 
 -- # Wirebait Field
-local function newWirebaitField(filter, name, size, ws_field)
-    --TODO: checks('string', 'string', 'number', 'userdata')
+local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]display_val_map)
+    verifyArgsType('string', 'string', 'number', 'string')
     local wb_field = { --private data
         m_filter = filter,
         m_name = name,
         m_size = size,
-        m_wireshark_field = ws_field;
+        m_type = ws_type_key,
+        m_wireshark_field = Protofield[ws_type_key](filter, name, base, display_val_map);
     }
 
     local getFilter = function()
@@ -59,12 +73,17 @@ local function newWirebaitField(filter, name, size, ws_field)
     local getWiresharkProtofield = function()
         return wb_field.m_wireshark_field;
     end
+    
+    local getType = function()
+        return wb_field.m_type;
+    end
 
     local pulic_wirebait_field_interface = {
         filter = getFilter,
         name = getName,
         size = getSize,
-        wsProtofield = getWiresharkProtofield
+        wsProtofield = getWiresharkProtofield,
+        type = getType,
     };
 
     return pulic_wirebait_field_interface;
@@ -121,7 +140,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
 
     local findOrAddProto = function(field_key, filter, name, type_key, size, base, display_val_map);
         if not wb_tree.m_wb_fields_map[field_key] then --adding new wb protofield if it doesn't exist
-            wb_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, size, Protofield[type_key](filter, name, base, display_val_map));
+            wb_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, size, type_key, display_val_map);
         end
         return wb_tree.m_wb_fields_map[field_key];
     end
