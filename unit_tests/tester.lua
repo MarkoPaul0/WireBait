@@ -71,7 +71,7 @@ function tester.assert(val, expected_val, msg)
         else
             err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. tostring(expected_val) .. "' but got '" .. tostring(val) .. "'";
         end
-        assert(false, err_msg)
+        error(err_msg)
     end
 end
 

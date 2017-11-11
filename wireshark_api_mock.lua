@@ -20,20 +20,22 @@
 
 local wireshark_mock = { Protofield = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
 
-function wireshark_mock.Protofield.new(name, abbr, _type)
+function wireshark_mock.Protofield.new(name, abbr, _type, size)
     assert(name and abbr and _type, "Protofiled argument should not be nil!")
+    local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
     local protofield = {
         m_name = name;
         m_abbr = abbr;
         m_type = _type;
+        m_size = size_by_type[_type] or size or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
     }
 
     return protofield;
 end
 
-function wireshark_mock.treeitem.new() 
+function wireshark_mock.treeitem.new(length) 
     local treeitem = {
-        m_length = 0;
+        m_length = length or 0;
         m_subtrees = {};
         m_subtrees_count = 0;
     }
@@ -43,9 +45,8 @@ function wireshark_mock.treeitem.new()
     end
 
     function treeitem:add(protofield)
-        print("Added protofield " .. protofield.m_name .. ".");
         index = self.m_subtrees_count;
-        self.m_subtrees[index] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new() };
+        self.m_subtrees[index] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new(protofield.m_size) };
         self.m_subtrees_count = self.m_subtrees_count + 1;
         return self.m_subtrees[index].treeitem;
     end
@@ -155,11 +156,11 @@ function wireshark_mock.buffer.new(data_as_hex_string)
 end
 
 --mapping diffent types to the same mock constructor
-wireshark_mock.Protofield.uint8 = wireshark_mock.Protofield.new;
-wireshark_mock.Protofield.uint16 = wireshark_mock.Protofield.new;
-wireshark_mock.Protofield.uint32 = wireshark_mock.Protofield.new;
-wireshark_mock.Protofield.uint64 = wireshark_mock.Protofield.new;
-wireshark_mock.Protofield.string = wireshark_mock.Protofield.new;
+wireshark_mock.Protofield.uint8 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint8") end
+wireshark_mock.Protofield.uint16 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint16") end
+wireshark_mock.Protofield.uint32 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint32") end
+wireshark_mock.Protofield.uint64 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint64") end
+wireshark_mock.Protofield.string = function(name, abbr, size) return wireshark_mock.Protofield.new(name, abbr, "string", size) end
 
 function wireshark_mock.setupWiresharkEnvironment() --sets up variable in current scope
     base = wireshark_mock.base;

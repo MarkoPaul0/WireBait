@@ -33,6 +33,21 @@ local function createTests() --keeping everything in a local scope to prevent in
             tester.assert(tree_item.m_length, 0, "Wrong length!")
             tester.assert(tree_item.m_subtrees_count, 0, "Wrong subtrees count!")
         end);
+    
+    unit_tests:addTest("Testing wireshark treeitem:set_len()", function()
+            tree_item = wireshark.treeitem.new();
+            tree_item:set_len(4);
+            tester.assert(tree_item.m_length, 4, "Wrong length!")
+            tree_item:set_len(42);
+            tester.assert(tree_item.m_length, 42, "Wrong length!")
+        end);
+    
+    unit_tests:addTest("Testing wireshark treeitem:add()", function()
+            tree_item = wireshark.treeitem.new();
+            ws_protfield = wireshark.Protofield.new("Some Field", "smp.someField", "uint16")
+            sub_treeitem = tree_item:add(ws_protfield)
+            tester.assert(sub_treeitem.m_length, 2, "Wrong length!")
+        end);
 
     return unit_tests;
 end

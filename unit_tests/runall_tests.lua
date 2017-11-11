@@ -29,7 +29,9 @@ tester.test(require("wirebait.unit_tests.wirebait.wirebait_tree_UT"))
 tester.test(require("wirebait.unit_tests.wirebait.wirebait_field_UT"))
 
 --# WIRESHARK-API-MOCK TESTS
+tester.test(require("wirebait.unit_tests.wireshark.wireshark_protofield_UT"))
 tester.test(require("wirebait.unit_tests.wireshark.wireshark_buffer_UT"))
+tester.test(require("wirebait.unit_tests.wireshark.wireshark_treeitem_UT"))
 
 tester.printReport();
 
