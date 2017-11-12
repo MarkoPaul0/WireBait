@@ -22,8 +22,8 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 
 local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
-    wireshark = require("wirebait.wireshark_api_mock")
-    wirebait = require("wirebait.wirebait")
+    local wireshark = require("wirebait.wireshark_api_mock")
+    local wirebait = require("wirebait.wirebait")
     tester = tester or require("wirebait.unit_tests.tester")
 
     base = wireshark.base --make available base as a global variable
@@ -31,19 +31,53 @@ local function createTests() --keeping everything in a local scope to prevent in
 
     --Creating the unit tests
     unit_tests = tester.newUnitTestsSet("Wirebait Tree Unit Tests");
-    
+
     unit_tests:addTest("Testing wirebait root tree construction", function()
+            ws_tree = wireshark.treeitem.new();
+            packet = string.gsub("6d 61 72 6b 75 73 2e 6c 65 62 61 6c 6c 65 75 78 00 00 00 00 00 00 00 00 00 00 00 00", "%s+", "") --gsub to remove whitespaces
+            buffer = wireshark.buffer.new(packet);
+            wb_tree = wirebait.tree.new(ws_tree, buffer, 2, 26);
+            tester.assert(wb_tree.__buffer():len(), 28, "Wrong length!");
+            tester.assert(wb_tree:position(), 2, "Wrong position!");
+        end)
+
+    unit_tests:addTest("Testing wirebait root tree construction with buffer too small", function()
+            ws_tree = wireshark.treeitem.new();
+            packet = string.gsub("6d 61 72 6b 75 73 2e 6c 65 62 61 6c 6c 65 75 78 00 00 00 00 00 00 00 00 00 00 00 00", "%s+", "") --gsub to remove whitespaces
+            buffer = wireshark.buffer.new(packet); 
+            success,error_msg = pcall(wirebait.tree.new, ws_tree, buffer, 4, 25);
+            tester.assert(success, false, "This call should fail!")
+        end)
+
+    unit_tests:addTest("Testing wirebait tree:skip()", function()
+            ws_tree = wireshark.treeitem.new();
+            packet = string.gsub("6d 61 72 6b 75 73 2e 6c 65 62 61 6c 6c 65 75 78 00 00 00 00 00 00 00 00 00 00 00 00", "%s+", "") -- gsub to remove whitespaces
+            buffer = wireshark.buffer.new(packet);
+            wb_tree = wirebait.tree.new(ws_tree, buffer, 0);
+            wb_tree:skip(3);
+            tester.assert(wb_tree:position(), 3, "Wrong position!");
+        end)
+
+    unit_tests:addTest("Testing wirebait tree:skip() more bytes than managed", function()
             ws_tree = wireshark.treeitem.new();
             buffer = wireshark.buffer.new("A12B01");
             wb_tree = wirebait.tree.new(ws_tree, buffer, 0, 3);
-    end)
-    
-    unit_tests:addTest("Testing wirebait tree:skip()", function()
-    end)
-    
-    unit_tests:addTest("Testing wirebait tree:addUint8()", function()
-    end)
-    
+            success,error_msg = pcall(wb_tree.skip, wb_tree, 4);
+            tester.assert(success, false, "This call should fail!")
+        end)
+
+    unit_tests:addTest("Testing wirebait tree:add()", function()
+            ws_tree = wireshark.treeitem.new();
+            packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+            buffer = wireshark.buffer.new(packet);
+            parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+            child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
+            tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
+            child_tree2,value2 = wb_tree:addString("smp.someField2", "Some Field2", 14);
+            tester.assert(value, "this.is.Wirebait", "Wrong value was decoded!");
+            tester.assert(value2, ".for.Wireshark", "Wrong value2 was decoded!");
+        end)
+
     return unit_tests;
 end
 

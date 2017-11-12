@@ -103,7 +103,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         m_parent = parent_wb_tree;
         m_is_root = not parent_wb_tree;
     }
-    if size then assert(buffer:len() >= size, "Buffer is smaller than specified size!") end
+    if size then assert(buffer:len() >= (position or 0) + size, "Buffer is smaller than specified size!") end
     
 
     local getParent = function()
@@ -131,9 +131,9 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
     end
 
     local fitHighlight = function(self, is_recursive, position) --makes highlighting fit the data from m_start_position to position or m_position
-        position =  position or self:position();
+        local position =  position or self:position();
         assert(position >= wb_tree.m_start_position, "Current position is before start position!");
-        length = position - wb_tree.m_start_position
+        local length = position - wb_tree.m_start_position
         wb_tree.m_ws_tree:set_len(length);
         if is_recursive and not wb_tree.m_is_root then
             self:parent():fitHighlight(is_recursive, position);
@@ -149,50 +149,50 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
 
     local addTree = function (self, filter, name, type_key, size, b, display_map)
         base = base or base.DEC;
-        field_key = "f_"..name:gsub('%W','') --Removes all non alpha-num chars from name and prepend 'f_'. For instance "2 Packets" becomes "f_2Packets"
+        local field_key = "f_"..name:gsub('%W','') --Removes all non alpha-num chars from name and prepend 'f_'. For instance "2 Packets" becomes "f_2Packets"
 
         wb_proto_field = findOrAddProto(field_key, filter, name, type_key, size, base, display_val_map);
 
         --creating a new wireshart tree item and using it to create a new wb tree
-        new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
-        new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self)
+        local new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
+        local new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self)
         wb_tree.m_position = wb_tree.m_position + size;
         return new_wb_tree;
     end
 
     local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = 1;
-        value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
+        local size = 1;
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
         return addTree(self, filter, name, "uint8", size, base, display_val_map), value;
     end
 
     local addUint16 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = 2;
-        value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
+        local size = 2;
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
         return addTree(self, filter, name, "uint16", size, base, display_val_map), value;
     end
 
     local addUint32 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = 4;
-        value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
+        local size = 4;
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
         return addTree(self, filter, name, "uint32", size, base, display_val_map), value;
     end
 
     local addUint64 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = 8;
-        value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint64();
+        local size = 8;
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint64();
         return addTree(self, filter, name, "uint64", size, base, display_val_map), value;
     end
 
     local addString = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = size or 1; -- using 1 if size of string is not provided
-        value = wb_tree.m_buffer(wb_tree.m_position, size):string();
+        local size = size or 1; -- using 1 if size of string is not provided
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):string();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
     
     local addStringz = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        size = size or 1; -- using 1 if size of string is not provided
-        value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
+        local size = size or 1; -- using 1 if size of string is not provided
+        local value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
 
@@ -229,7 +229,7 @@ local function publicWirebaitInterface()
     }
 
     function wirebait.createProtofield(filter, name, size, ws_protofield)
-        new_pf = newWirebaitField(filter, name, size, ws_protofield)
+        local new_pf = newWirebaitField(filter, name, size, ws_protofield)
         wirebait.m_created_proto_fields[wirebait.m_size] = new_pf
         wirebait.m_size = wirebait.m_size + 1;
         return new_pf

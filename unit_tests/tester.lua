@@ -35,8 +35,8 @@ end
 
 --runs the provided function, prints OK is a success, FAIL! otherwise with a detail of the error
 function tester.runTest(func) 
-    tester.test_count = tester.test_count + 1;
-    status,err = pcall(func)
+    tester.test_count = tester.test_count + 1
+    local status,err = pcall(func)
     if status then
         io.stdout:write("\tOK\n")
         tester.success_count = tester.success_count + 1;
@@ -62,10 +62,11 @@ end
 
 function tester.assert(val, expected_val, msg)
     if val ~= expected_val then 
-        debug_info = debug.getinfo(2)
-        filename = debug_info.source:match("^.+/(.+)$")
-        line_no = debug_info.currentline     
+        local debug_info = debug.getinfo(2)
+        local filename = debug_info.source:match("^.+/(.+)$")
+        local line_no = debug_info.currentline     
 
+        local err_msg = "";
         if msg then
             err_msg = "_[" .. filename .. ":" .. line_no .. "] Expected '" .. tostring(expected_val) .. "' but got '" .. tostring(val) .. "'. (" .. msg .. ")";
         else
@@ -80,6 +81,7 @@ function tester.printReport()
     print("\n------------- UNIT TESTS RESULTS -------------")
     print("  Tests run: " .. tester.test_count)
     print("   Tests ok: " .. tester.success_count)
+    local warning_appending = "";
     if tester.fail_count > 0 then 
         warning_appendix = "\t\t\t  /!\\/!\\"
     else
