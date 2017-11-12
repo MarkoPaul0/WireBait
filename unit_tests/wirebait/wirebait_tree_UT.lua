@@ -68,7 +68,37 @@ unit_tests:addTest("Testing wirebait tree:skip() more bytes than managed", funct
         tester.assert(success, false, "This call should fail!")
     end)
 
-unit_tests:addTest("Testing wirebait tree:add()", function()
+unit_tests:addTest("Testing wirebait tree:add() parent position", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        parent_tree:addString("smp.someField", "Some Field", 16);
+        tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
+    end)
+
+unit_tests:addTest("Testing wirebait tree:add() children values", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
+        child_tree2,value2 = parent_tree:addString("smp.someField2", "Some Field2", 14);
+        tester.assert(value, "this.is.Wirebait", "Wrong value was decoded!");
+        tester.assert(value2, ".for.Wireshark", "Wrong value2 was decoded!");
+    end)
+
+unit_tests:addTest("Testing wirebait tree:add() buffer smaller than specified size", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        success,error_msg = pcall(wirebait.tree.new, ws_tree, buffer, 2, 28);
+        tester.assert(success, true, "This call should NOT fail!")
+        success,error_msg = pcall(wirebait.tree.new, ws_tree, buffer, 2, 29);
+        tester.assert(success, false, "This call should fail!")
+    end)
+
+unit_tests:addTest("Testing wirebait tree:add() sub tree position", function()
         ws_tree = wireshark.treeitem.new();
         packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
         buffer = wireshark.buffer.new(packet);
@@ -76,8 +106,45 @@ unit_tests:addTest("Testing wirebait tree:add()", function()
         child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
         tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
         child_tree2,value2 = parent_tree:addString("smp.someField2", "Some Field2", 14);
-        tester.assert(value, "this.is.Wirebait", "Wrong value was decoded!");
-        tester.assert(value2, ".for.Wireshark", "Wrong value2 was decoded!");
+        tester.assert(child_tree:position(), 0, "Wrong child_tree position!");
+        tester.assert(child_tree2:position(), 16, "Wrong child_tree2 position!");
+    end)
+
+
+unit_tests:addTest("Testing wirebait tree:add() sub tree position after add", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
+        tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
+        tester.assert(child_tree:position(), 0, "Wrong child_tree position!");
+        
+        --this is what we really test here
+        child_tree:skip(4);
+        sub_child_tree,sub_value = child_tree:addString("smp.someSubField", "Some Sub Field", 3);
+        tester.assert(sub_value, ".is", "Wrong value was decoded!");
+        tester.assert(child_tree:position(), 7, "Wrong child_tree position!");
+        tester.assert(parent_tree:position(), 16, "Wrong child_tree position!");
+    end)
+
+unit_tests:addTest("Testing wirebait tree:add() complex sub tree position after add", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
+        tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
+        child_tree_2,value_2 = parent_tree:addString("smp.someField2", "Some Field2", 14);
+        tester.assert(child_tree:position(), 0, "Wrong child_tree position!");
+        tester.assert(child_tree_2:position(), 16, "Wrong child_tree2 position!");
+        
+        --this is what we really test here
+        child_tree:skip(4);
+        sub_child_tree,sub_value = child_tree:addString("smp.someSubField", "Some Sub Field", 3);
+        tester.assert(sub_value, ".is", "Wrong value was decoded!");
+        tester.assert(child_tree:position(), 7, "Wrong child_tree position!");
+        tester.assert(parent_tree:position(), 30, "Wrong child_tree position!");
     end)
 
 if is_standalone_test then
