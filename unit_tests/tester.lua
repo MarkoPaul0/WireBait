@@ -27,6 +27,9 @@ function tester.newUnitTestsSet(set_name)
     }
 
     function unit_tests_set:addTest(test_name, test_func)
+        local newgt = {}        -- create new environment
+        setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
+        setfenv(test_func, newgt)    -- set the new environment for the test function so as to prevent the test function to "contaminate" the global namespace
         self.tests[#self.tests+1] = {name = test_name, func=test_func};
     end
 

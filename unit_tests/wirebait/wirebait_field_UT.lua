@@ -22,7 +22,11 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("wirebait.unit_tests.tester")
 
-local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
+--[[ All variables here need to be kept local, however the unit test framework will run
+each individual test function added with UnitTestsSet:addTest() in its own environment,
+therefore forgetting the local keywork will not have a negative impact.
+]]--
+local function createTests() 
     local wireshark = require("wirebait.wireshark_api_mock")
     local wirebait = require("wirebait.wirebait")
 
@@ -44,8 +48,6 @@ local function createTests() --keeping everything in a local scope to prevent in
 
 --    unit_tests:addTest("Testing wirebait field construction", function()
 --        end)
-
-    
     return unit_tests;
 end
 
