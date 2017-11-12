@@ -20,16 +20,16 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
+local tester = tester or require("wirebait.unit_tests.tester")
 
 local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
-    wireshark = require("wirebait.wireshark_api_mock")
-    wirebait = require("wirebait.wirebait")
-    tester = tester or require("wirebait.unit_tests.tester")
-    base = wireshark.base --make available base as a global variable
+    local wireshark = require("wirebait.wireshark_api_mock")
+    local wirebait = require("wirebait.wirebait")
+
     Protofield = wireshark.Protofield; --make available Protofield globally
 
     --Creating unit tests
-    unit_tests = tester.newUnitTestsSet("Wirebait Field Unit Tests");
+    local unit_tests = tester.newUnitTestsSet("Wirebait Field Unit Tests");
     
     unit_tests:addTest("Testing wirebait field construction", function()
             wb_field = wirebait.field.new("smp.someUint32Field", "Some Uint32 Field", 4, "uint32");

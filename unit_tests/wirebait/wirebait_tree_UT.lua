@@ -20,17 +20,17 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
+local tester = tester or require("wirebait.unit_tests.tester")
+
 
 local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
     local wireshark = require("wirebait.wireshark_api_mock")
     local wirebait = require("wirebait.wirebait")
-    tester = tester or require("wirebait.unit_tests.tester")
-
     base = wireshark.base --make available base as a global variable
     Protofield = wireshark.Protofield; --make available Protofield globally
 
     --Creating the unit tests
-    unit_tests = tester.newUnitTestsSet("Wirebait Tree Unit Tests");
+    local unit_tests = tester.newUnitTestsSet("Wirebait Tree Unit Tests");
 
     unit_tests:addTest("Testing wirebait root tree construction", function()
             ws_tree = wireshark.treeitem.new();
@@ -73,7 +73,7 @@ local function createTests() --keeping everything in a local scope to prevent in
             parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
             child_tree,value = parent_tree:addString("smp.someField", "Some Field", 16);
             tester.assert(parent_tree:position(), 16, "After adding a child, the parent's position should be moved by the child's size!");
-            child_tree2,value2 = wb_tree:addString("smp.someField2", "Some Field2", 14);
+            child_tree2,value2 = parent_tree:addString("smp.someField2", "Some Field2", 14);
             tester.assert(value, "this.is.Wirebait", "Wrong value was decoded!");
             tester.assert(value2, ".for.Wireshark", "Wrong value2 was decoded!");
         end)

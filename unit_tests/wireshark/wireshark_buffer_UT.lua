@@ -20,13 +20,13 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
+local tester = tester or require("wirebait.unit_tests.tester")
 
 local function createTests() --keeping everything in a local scope to prevent interferences if multiple unit test files are run
-    wireshark = require("wirebait.wireshark_api_mock")
-    tester = tester or require("wirebait.unit_tests.tester")
+    local wireshark = require("wirebait.wireshark_api_mock")
 
     --Creating unit tests
-    unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
+    local unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
 
     unit_tests:addTest("Testing wireshark buffer construction", function()
             b = wireshark.buffer.new("A0102FB1");
