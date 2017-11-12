@@ -22,7 +22,7 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("wirebait.unit_tests.tester")
 local wireshark = require("wirebait.wireshark_api_mock")
-local wirebait = require("wirebait.wirebait")
+local wirebait = require("wirebait.wirebait") 
 Protofield = wireshark.Protofield; --make available Protofield globally
 
 
@@ -30,9 +30,6 @@ Protofield = wireshark.Protofield; --make available Protofield globally
 each individual test function added with UnitTestsSet:addTest() in its own environment,
 therefore forgetting the local keywork will not have a negative impact.
 ]]--
-
-
-
 --Creating unit tests
 local unit_tests = tester.newUnitTestsSet("Wirebait Field Unit Tests");
 
