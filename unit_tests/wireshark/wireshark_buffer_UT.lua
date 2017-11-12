@@ -21,60 +21,55 @@
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("wirebait.unit_tests.tester")
+local wireshark = require("wirebait.wireshark_api_mock")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
 therefore forgetting the local keywork will not have a negative impact.
 ]]--
-local function createTests()
-    local wireshark = require("wirebait.wireshark_api_mock")
+--Creating unit tests
+local unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
 
-    --Creating unit tests
-    local unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
+unit_tests:addTest("Testing wireshark buffer construction", function()
+        b = wireshark.buffer.new("A0102FB1");
+        assert(b.m_data_as_hex_str == "A0102FB1", "Wrong underlying data");
+        assert(b:len() == 4, "Wrong size after construction")
+    end);
 
-    unit_tests:addTest("Testing wireshark buffer construction", function()
-            b = wireshark.buffer.new("A0102FB1");
-            assert(b.m_data_as_hex_str == "A0102FB1", "Wrong underlying data");
-            assert(b:len() == 4, "Wrong size after construction")
-        end);
+unit_tests:addTest("Testing wireshark buffer:string()", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C44");
+        tester.assert(b:string(),"HELLO WORLD", "Wrong result.");
+    end)
 
-    unit_tests:addTest("Testing wireshark buffer:string()", function()
-            b = wireshark.buffer.new("48454C4C4F20574F524C44");
-            tester.assert(b:string(),"HELLO WORLD", "Wrong result.");
-        end)
+unit_tests:addTest("Testing wireshark buffer:string()", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+        tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
+    end)
 
-    unit_tests:addTest("Testing wireshark buffer:string()", function()
-            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
-            tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
-        end)
+unit_tests:addTest("Testing wireshark buffer(pos,len)", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+        tester.assert(b(6,5):len(), 5, "Wrong size.");
+        tester.assert(b(6,5):string(), "WORLD");
+        tester.assert(b(0,5):len(), 5, "Wrong size.");
+        tester.assert(b(0,5):string(), "HELLO");
+    end)
 
-    unit_tests:addTest("Testing wireshark buffer(pos,len)", function()
-            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
-            tester.assert(b(6,5):len(), 5, "Wrong size.");
-            tester.assert(b(6,5):string(), "WORLD");
-            tester.assert(b(0,5):len(), 5, "Wrong size.");
-            tester.assert(b(0,5):string(), "HELLO");
-        end)
+unit_tests:addTest("Testing wireshark buffer:uint() (Big-Endian)", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+        tester.assert(b:uint(), 1212501068);
+    end)
 
-    unit_tests:addTest("Testing wireshark buffer:uint() (Big-Endian)", function()
-            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
-            tester.assert(b:uint(), 1212501068);
-        end)
+unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
+        b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+        tester.assert(b:le_uint(), 1280066888);
+    end)
 
-    unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
-            b = wireshark.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
-            tester.assert(b:le_uint(), 1280066888);
-        end)
-    
-    unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
-            b = wireshark.buffer.new("48454C4C285200000000000000");
-            tester.assert(b:le_uint64(), 90333032236360);
-        end)
+unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
+        b = wireshark.buffer.new("48454C4C285200000000000000");
+        tester.assert(b:le_uint64(), 90333032236360);
+    end)
 
-    return unit_tests;
-end
 
-local unit_tests = createTests();
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();
