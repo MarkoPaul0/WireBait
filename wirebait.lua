@@ -129,6 +129,16 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         assert(wb_tree.m_position + byte_count <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
         wb_tree.m_position = wb_tree.m_position + byte_count;
     end
+    
+    local skipTo = function(self, position)
+        assert(position <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
+        wb_tree.m_position = position;
+    end
+    
+    local expandTo = function(self, position)
+        assert(position <= wb_tree.m_buffer:len(), "Trying to expand tree to be larger than underlying buffer!") --TODO: off by 1
+        wb_tree.m_end_position = position;
+    end
 
     local fitHighlight = function(self, is_recursive, position) --makes highlighting fit the data from m_start_position to position or m_position
         local position =  position or self:position();
@@ -204,6 +214,8 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         wiresharkTree = getWiresharkTree,
         position = getPosition,
         skip = skip,
+        skipTo = skipTo,
+        expandTo = expandTo,
         fitHighlight = fitHighlight,
         addUint8 = addUint8,
         addUint16 = addUint16,

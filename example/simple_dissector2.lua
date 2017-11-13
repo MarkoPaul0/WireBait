@@ -43,18 +43,21 @@ function dissectionFunction(buffer, packet_info, tree)
     root_tree = wirebait.tree.new(tree, buffer);
     
     --Dissecting packet header
-    packet_header_tree = root_tree:addString("smp.packetHeader", "Packet Header");
-    _,seq_no = packet_header_tree:addUint8("smp.pkt_seq_no", "Packet Sequence Number");
+    packet_header_tree = root_tree:addString("smp.packetHeader", "Packet Header", 8);
+    _,seq_no = packet_header_tree:addUint64("smp.pkt_seq_no", "Packet Sequence Number");
     print("Sequence number: " .. seq_no)
     --Dissecting packet payload
-    packet_payload_tree = root_tree:add("smp.Payload", "Packet Payload");
+    packet_payload_tree = root_tree:addString("smp.Payload", "Packet Payload");
     while packet_payload_tree:position() < buffer:len() do
         --Dissecting message header and message in same tree
-        msg_tree = packet_payload_tree:add("smp.msg", "Message");
+        msg_tree = packet_payload_tree:addString("smp.msg", "Message", 3);
         _,msg_type = msg_tree:addUint8("smp.msg_type", "Message Type", {[1] = "Login", [2] = "Transmit", [3] = "Logout"} )
+        print("Message type: " .. msg_type);
         _,msg_size = msg_tree:addUint16("smp.msg_size", "Message Size")
-        msg_tree:addUint8("smp.urgent", "Urgent", {[1] = "YES", [0] = "NO"});
-        begin_msg_position,username = msg_tree:addCharArray("smp.username", "Username", 24);
+        print("Message size: " .. msg_size);
+        _,is_urgent = msg_tree:addUint8("smp.urgent", "Urgent", {[1] = "YES", [0] = "NO"});
+        begin_position = msg_tree:position();
+        _,username = msg_tree:addString("smp.username", "Username", 16);
         
         if(msg_type == 0x01) then
             --TODO: dissect Login msg
@@ -66,7 +69,8 @@ function dissectionFunction(buffer, packet_info, tree)
             warn("Unknown message type '" .. msg_type .. "' sent by '" .. username .. "'!");
         end
         
-        msg_tree:skipTo(begin_msg_position + msg_size);
+        packet_payload_tree:expandTo(begin_position + msg_size);
+        packet_payload_tree:skipTo(begin_position + msg_size);
     end
 end
 
