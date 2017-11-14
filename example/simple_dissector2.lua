@@ -47,7 +47,7 @@ function dissectionFunction(buffer, packet_info, tree)
     _,seq_no = packet_header_tree:addUint64("smp.pkt_seq_no", "Packet Sequence Number");
     print("Sequence number: " .. seq_no)
     --Dissecting packet payload
-    packet_payload_tree = root_tree:addString("smp.Payload", "Packet Payload");
+    packet_payload_tree = root_tree:addString("smp.Payload", "Packet Payload",1);
     while packet_payload_tree:position() < buffer:len() do
         --Dissecting message header and message in same tree
         msg_tree = packet_payload_tree:addString("smp.msg", "Message", 3);

@@ -92,7 +92,7 @@ end
 
 
 -- # Wirebait Tree
-local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, parent_wb_tree)
+local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, parent_wb_tree, is_expandable)
     local wb_tree = { --private data
         m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields shared by all trees to keep track of new fields and register them
         m_ws_tree = ws_tree;
@@ -102,6 +102,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         m_end_position = (position or 0) + (size or buffer:len());
         m_parent = parent_wb_tree;
         m_is_root = not parent_wb_tree;
+        m_is_expandable = is_expandable or false; -- strings are expandable
     }
     if size then assert(buffer:len() >= (position or 0) + size, "Buffer is smaller than specified size!") end
     
@@ -157,7 +158,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         return wb_tree.m_wb_fields_map[field_key];
     end
 
-    local addTree = function (self, filter, name, type_key, size, b, display_map)
+    local addTree = function (self, filter, name, type_key, size, b, display_map, is_expandable)
         base = base or base.DEC;
         local field_key = "f_"..name:gsub('%W','') --Removes all non alpha-num chars from name and prepend 'f_'. For instance "2 Packets" becomes "f_2Packets"
 
@@ -165,7 +166,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
 
         --creating a new wireshart tree item and using it to create a new wb tree
         local new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
-        local new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self)
+        local new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self, is_expandable)
         wb_tree.m_position = wb_tree.m_position + size;
         return new_wb_tree;
     end
@@ -195,13 +196,15 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
     end
 
     local addString = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = size or 1; -- using 1 if size of string is not provided
+        assert(size and size > 0, "For now a size > 0 is required when adding a string!")
+        --local size = size or 1; -- using 1 if size of string is not provided
         local value = wb_tree.m_buffer(wb_tree.m_position, size):string();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
     
     local addStringz = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = size or 1; -- using 1 if size of string is not provided
+        assert(size and size > 0, "For now a size > 0 is required when adding a null terminated string!")
+        --local size = size or 1; -- using 1 if size of string is not provided
         local value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end

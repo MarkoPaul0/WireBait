@@ -69,6 +69,11 @@ unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", functio
         tester.assert(b:le_uint64(), 90333032236360);
     end)
 
+unit_tests:addTest("Testing wireshark buffer:len()", function() 
+        b = wireshark.buffer.new("4845");
+        tester.assert(b:len(), 2, "Wrong length");
+    end)
+
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();
