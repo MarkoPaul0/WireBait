@@ -147,6 +147,36 @@ unit_tests:addTest("Testing wirebait tree:add() complex sub tree position after 
         tester.assert(parent_tree:position(), 30, "Wrong child_tree position!");
     end)
 
+
+unit_tests:addTest("Testing wirebait test skipTo()", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        parent_tree:skipTo(9);
+        child_tree,value = parent_tree:addString("smp.someField", "Some Field", 9);
+        tester.assert(parent_tree:position(), 18, "After adding a child, the parent's position should be moved by the child's size!");
+        tester.assert(child_tree:position(), 9, "Wrong child_tree position!");
+
+end)
+
+
+unit_tests:addTest("Testing wirebait test expandTo()", function()
+        ws_tree = wireshark.treeitem.new();
+        packet = string.gsub("74 68 69 73 2e 69 73 2e 57 69 72 65 62 61 69 74 2e 66 6f 72 2e 57 69 72 65 73 68 61 72 6b", "%s+", "")
+        buffer = wireshark.buffer.new(packet);
+        parent_tree = wirebait.tree.new(ws_tree, buffer, 0, 30);
+        parent_tree:skipTo(9);
+        child_tree,value = parent_tree:addString("smp.someField", "Some Field", 5);
+        tester.assert(parent_tree:position(), 14, "After adding a child, the parent's position should be moved by the child's size!");
+        tester.assert(child_tree:position(), 9, "Wrong child_tree position!");
+        child_tree:expandTo(20); --expansion chould not change position of child_tree, but should change position of parent tree
+        tester.assert(child_tree:position(), 9, "Wrong child_tree position!");
+        tester.assert(parent_tree:position(), 20, "After child expansion, parent position did not change properly!");
+    end)
+
+
+
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();

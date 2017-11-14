@@ -103,6 +103,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         m_parent = parent_wb_tree;
         m_is_root = not parent_wb_tree;
         m_is_expandable = is_expandable or false; -- strings are expandable
+        m_last_child_ref = nil; --reference to last child added
     }
     if size then assert(buffer:len() >= (position or 0) + size, "Buffer is smaller than specified size!") end
     
@@ -136,9 +137,12 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         wb_tree.m_position = position;
     end
     
-    local expandTo = function(self, position)
+    local expandTo = function(self, position) --expand only moves the end position, not the current position
+        assert(wb_tree.m_parent.m_last_child_ref, "This should not even be possible. The parent of this element has no ref to its last child!")
+        assert(wb_tree.m_parent.m_last_child_ref == self, "Can only expand if the parent has not added another child");
         assert(position <= wb_tree.m_buffer:len(), "Trying to expand tree to be larger than underlying buffer!") --TODO: off by 1
         wb_tree.m_end_position = position;
+        wb_tree.m_parent.skipTo(self, position);
     end
 
     local fitHighlight = function(self, is_recursive, position) --makes highlighting fit the data from m_start_position to position or m_position
@@ -168,6 +172,7 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         local new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
         local new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self, is_expandable)
         wb_tree.m_position = wb_tree.m_position + size;
+        self.m_last_child_ref = new_wb_tree;
         return new_wb_tree;
     end
 
