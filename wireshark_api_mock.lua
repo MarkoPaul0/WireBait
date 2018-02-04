@@ -18,9 +18,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { Protofield = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
+local wireshark_mock = { ProtoField = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
 
-function wireshark_mock.Protofield.new(name, abbr, _type, size)
+function wireshark_mock.ProtoField.new(name, abbr, _type, size)
     assert(name and abbr and _type, "Protofiled argument should not be nil!")
     local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
     local protofield = {
@@ -156,15 +156,15 @@ function wireshark_mock.buffer.new(data_as_hex_string)
 end
 
 --mapping diffent types to the same mock constructor
-wireshark_mock.Protofield.uint8 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint8") end
-wireshark_mock.Protofield.uint16 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint16") end
-wireshark_mock.Protofield.uint32 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint32") end
-wireshark_mock.Protofield.uint64 = function(name, abbr) return wireshark_mock.Protofield.new(name, abbr, "uint64") end
-wireshark_mock.Protofield.string = function(name, abbr, size) return wireshark_mock.Protofield.new(name, abbr, "string", size) end
+wireshark_mock.ProtoField.uint8 = function(name, abbr) return wireshark_mock.ProtoField.new(name, abbr, "uint8") end
+wireshark_mock.ProtoField.uint16 = function(name, abbr) return wireshark_mock.ProtoField.new(name, abbr, "uint16") end
+wireshark_mock.ProtoField.uint32 = function(name, abbr) return wireshark_mock.ProtoField.new(name, abbr, "uint32") end
+wireshark_mock.ProtoField.uint64 = function(name, abbr) return wireshark_mock.ProtoField.new(name, abbr, "uint64") end
+wireshark_mock.ProtoField.string = function(name, abbr, size) return wireshark_mock.ProtoField.new(name, abbr, "string", size) end
 
 function wireshark_mock.setupWiresharkEnvironment() --sets up variable in current scope
     base = wireshark_mock.base;
-    Protofield = wireshark_mock.Protofield;
+    ProtoField = wireshark_mock.ProtoField;
 end
 
 return wireshark_mock;

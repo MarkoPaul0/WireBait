@@ -55,7 +55,7 @@ local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]d
         m_name = name,
         m_size = size,
         m_type = ws_type_key,
-        m_wireshark_field = Protofield[ws_type_key](filter, name, size, base, display_val_map);
+        m_wireshark_field = ProtoField[ws_type_key](filter, name, size, base, display_val_map);
     }
 
     local getFilter = function()
@@ -90,20 +90,76 @@ local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]d
 end
 
 
-
--- # Wirebait Tree
-local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, parent_wb_tree, is_expandable)
+local function newWirebaitTree()
     local wb_tree = { --private data
-        m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields shared by all trees to keep track of new fields and register them
         m_ws_tree = ws_tree;
         m_buffer = buffer;
         m_start_position = position or 0;
         m_position = (position or 0), --+ (size or 0);
-        m_end_position = (position or 0) + (size or buffer:len());
-        m_parent = parent_wb_tree;
-        m_is_root = not parent_wb_tree;
-        m_is_expandable = is_expandable or false; -- strings are expandable
-        m_last_child_ref = nil; --reference to last child added
+    }
+    
+    
+    local getParent = function()
+        return wb_tree.m_parent;
+    end
+
+    local getWiresharkTree = function ()
+        return wb_tree.m_ws_tree;
+    end
+
+    local getBuffer = function()
+        return wb_tree.m_buffer;
+    end
+
+    local getPosition = function()
+        return wb_tree.m_position;
+    end
+    
+    local getLength = function()
+        assert(wb_tree.m_position >= wb_tree.m_start_position);
+        return wb_tree.m_position - wb_tree.m_start_position;
+    end
+
+    local skip = function(self, byte_count) --skip only affects the current tree and cannot go beyon the end_position
+        --if not wb_tree.m_is_root then
+        --   self:parent():skip(byte_count);
+        --end
+        assert(wb_tree.m_position + byte_count <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
+        wb_tree.m_position = wb_tree.m_position + byte_count;
+    end
+    
+    local skipTo = function(self, position)
+        assert(position <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
+        wb_tree.m_position = position;
+    end
+    
+    local resetHighlight = function(self, length, relative_offset)
+        local L = length or 0;
+        local R = relative_offset or 0;
+        --TODO: do something witht the relative offset
+        wb_tree.m_ws_tree:set_length(length);
+    end
+    
+    
+end
+
+
+
+-- # Wirebait Tree
+local function newWirebaitTree(ws_tree, buffer, position, size, parent_wb_tree, is_expandable)
+    local wb_tree = { --private data
+        m_ws_tree = ws_tree;
+        m_buffer = buffer;
+        m_start_position = position or 0;
+        m_position = (position or 0), --+ (size or 0);
+        
+        
+        
+--        m_end_position = (position or 0) + (size or buffer:len());
+--        m_parent = parent_wb_tree;
+--        m_is_root = not parent_wb_tree;
+--        m_is_expandable = is_expandable or false; -- strings are expandable
+--        m_last_child_ref = nil; --reference to last child added
     }
     if size then assert(buffer:len() >= (position or 0) + size, "Buffer is smaller than specified size!") end
     
@@ -213,6 +269,14 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         local value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
         return addTree(self, filter, name, "string", size, base, display_val_map), value;
     end
+    
+    local add = function(self, wb_field)
+        if wb_field.type() == "uint8" then
+            local value = wb_tree.m_buffer(wb_tree.m_position, wb_field.size()):le_uint();
+        else
+            assert(false, "hahah!");
+        end
+    end
 
     local public_wirebait_tree_interface = {
         __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
@@ -230,7 +294,8 @@ local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, p
         addUint32 = addUint32,
         addUint64 = addUint64,
         addString = addString,
-        addStringz = addStringz
+        addStringz = addStringz,
+        add = add,
     }
 
     return public_wirebait_tree_interface;
