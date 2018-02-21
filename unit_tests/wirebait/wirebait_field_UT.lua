@@ -23,7 +23,7 @@ local is_standalone_test = not tester; --if only this file is being tested (not 
 local tester = tester or require("wirebait.unit_tests.tester")
 local wireshark = require("wirebait.wireshark_api_mock")
 local wirebait = require("wirebait.wirebait") 
-Protofield = wireshark.Protofield; --make available Protofield globally
+ProtoField = wireshark.ProtoField; --make available Protofield globally
 
 
 --[[ All variables here need to be kept local, however the unit test framework will run

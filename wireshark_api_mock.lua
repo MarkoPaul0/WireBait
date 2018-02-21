@@ -18,7 +18,19 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { ProtoField = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
+local wireshark_mock = { Proto = {}, ProtoField = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
+
+function wireshark_mock.Proto.new(name, abbr)
+  assert(name and abbr, "Proto argument should not be nil!")
+  local proto = {
+    m_name = name,
+    m_abbr = abbr,
+    fields = {}, --protofields
+    dissector = {}, --dissection function
+  }
+  
+  return proto;
+end
 
 function wireshark_mock.ProtoField.new(name, abbr, _type, size)
     assert(name and abbr and _type, "Protofiled argument should not be nil!")
@@ -165,6 +177,7 @@ wireshark_mock.ProtoField.string = function(name, abbr, size) return wireshark_m
 function wireshark_mock.setupWiresharkEnvironment() --sets up variable in current scope
     base = wireshark_mock.base;
     ProtoField = wireshark_mock.ProtoField;
+    Proto = wireshark_mock.Proto.new;
 end
 
 return wireshark_mock;

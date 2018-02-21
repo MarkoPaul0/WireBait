@@ -46,7 +46,7 @@ unit_tests:addTest("Testing wireshark treeitem:set_len()", function()
 
 unit_tests:addTest("Testing wireshark treeitem:add()", function()
         tree_item = wireshark.treeitem.new();
-        ws_protfield = wireshark.Protofield.new("Some Field", "smp.someField", "uint16")
+        ws_protfield = wireshark.ProtoField.new("Some Field", "smp.someField", "uint16")
         sub_treeitem = tree_item:add(ws_protfield)
         tester.assert(sub_treeitem.m_length, 2, "Wrong length!")
     end);

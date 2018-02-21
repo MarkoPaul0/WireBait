@@ -31,7 +31,7 @@ therefore forgetting the local keywork will not have a negative impact.
 local unit_tests = tester.newUnitTestsSet("Wireshark Protofield Unit Tests");
 
 unit_tests:addTest("Testing wireshark protofield construction with new()", function()
-        ws_protfield = wireshark.Protofield.new("Some Field", "smp.someField", "uint16")
+        ws_protfield = wireshark.ProtoField.new("Some Field", "smp.someField", "uint16")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 2, "Wrong size!")
@@ -39,7 +39,7 @@ unit_tests:addTest("Testing wireshark protofield construction with new()", funct
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint8()", function()
-        ws_protfield = wireshark.Protofield.uint8("Some Field", "smp.someField")
+        ws_protfield = wireshark.ProtoField.uint8("Some Field", "smp.someField")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 1, "Wrong size!")
@@ -47,7 +47,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint8()", fun
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint16()", function()
-        ws_protfield = wireshark.Protofield.uint16("Some Field", "smp.someField")
+        ws_protfield = wireshark.ProtoField.uint16("Some Field", "smp.someField")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 2, "Wrong size!")
@@ -55,7 +55,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint16()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint32()", function()
-        ws_protfield = wireshark.Protofield.uint32("Some Field", "smp.someField")
+        ws_protfield = wireshark.ProtoField.uint32("Some Field", "smp.someField")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 4, "Wrong size!")
@@ -63,7 +63,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint32()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint64()", function()
-        ws_protfield = wireshark.Protofield.uint64("Some Field", "smp.someField")
+        ws_protfield = wireshark.ProtoField.uint64("Some Field", "smp.someField")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 8, "Wrong size!")
@@ -71,7 +71,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint64()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with string()", function()
-        ws_protfield = wireshark.Protofield.string("Some Field", "smp.someField", 42)
+        ws_protfield = wireshark.ProtoField.string("Some Field", "smp.someField", 42)
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 42, "Wrong size!")
@@ -79,7 +79,7 @@ unit_tests:addTest("Testing wireshark protofield construction with string()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with string() without override size", function()
-        success,error_msg = pcall(wireshark.Protofield.string, "Some Field", "smp.someField");
+        success,error_msg = pcall(wireshark.ProtoField.string, "Some Field", "smp.someField");
         tester.assert(success, false, "This call should fail!")
     end);
 
