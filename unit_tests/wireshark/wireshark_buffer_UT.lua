@@ -20,8 +20,8 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("wirebait.unit_tests.tester")
-local wireshark = require("wirebait.wireshark_api_mock")
+local tester = tester or require("unit_tests.tester")
+local wireshark = require("wireshark_api_mock")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
