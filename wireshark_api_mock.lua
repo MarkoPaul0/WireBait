@@ -68,7 +68,7 @@ end
 
 function wireshark_mock.buffer.new(data_as_hex_string)
     assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
-    assert(string.len(data_as_hex_string:gsub('%X','')) > 0, "String should be hexadecimal!")
+    assert(string.len(data_as_hex_string:gsub('%X','')) > 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
     assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
 
     local buffer = {
