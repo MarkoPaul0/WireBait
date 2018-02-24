@@ -20,20 +20,35 @@
 
 local tester = { test_count = 0, fail_count = 0, success_count = 0};
 
+--[[For forward compatibility past lua 5.1. Indeed starting from lua 5.2, setfenv() is no longer available]]
+if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then 
+	print("Backwards compatibility")
+	function setfenv(fn, env)
+		local i = 1
+		repeat
+			local name = debug.getupvalue(fn, i)
+			if name == "_ENV" then
+				debug.upvaluejoin(fn, i, (function() return env end), 1)
+				break
+			end
+			i = i + 1
+		until name == "_ENV" or not name;
+		return fn
+	end
+end
+
 function tester.newUnitTestsSet(set_name)
-    local unit_tests_set = { 
-        name = set_name or "Unknown unit tests", 
-        tests = {} 
-    }
-
-    function unit_tests_set:addTest(test_name, test_func)
-        local newgt = {}        -- create new environment
-        setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
-        setfenv(test_func, newgt)    -- set the new environment for the test function so as to prevent the test function to "contaminate" the global namespace
-        self.tests[#self.tests+1] = {name = test_name, func=test_func};
-    end
-
-    return unit_tests_set;
+	local unit_tests_set = { 
+		name = set_name or "Unknown unit tests", 
+		tests = {} 
+	}
+	function unit_tests_set:addTest(test_name, test_func)
+		local newgt = {}        -- create new environment
+		setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
+		setfenv(test_func, newgt)    -- set the new environment for the test function so as to prevent the test function to "contaminate" the global namespace
+		self.tests[#self.tests+1] = {name = test_name, func=test_func};
+	end
+	return unit_tests_set;
 end
 
 --runs the provided function, prints OK is a success, FAIL! otherwise with a detail of the error
