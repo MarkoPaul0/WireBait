@@ -1,4 +1,3 @@
-
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
     Dissectors in lua
@@ -19,219 +18,66 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+local wirebait = { plugin_tester = {}, pcap_reader = {}}
+local buffer = require("wireshark_api_mock").buffer; --using the buffer class from wireshark_mock to parse the binary data from the pcap file
 
-local function verifyArgsType(...)  --TODO: ability to check optional args
-    level = 2;
-    i = 1;
-    while true do
-        expected_type = select(i, ...);
-        if not expected_type then break end;
-        var_name, var_val =  debug.getlocal(level,i);
-        assert(type(var_val) == expected_type, "\nFunction " .. debug.getinfo(2).name .."() expected arg #".. i .." to be of type '" .. tostring(expected_type) .. "' but got '" .. type(var_val) .. "'!")
-        i = i + 1;
-    end
+--[[Reads byte_count bytes from file into a string in hexadecimal format ]]
+local function readFileAsHex(file, byte_count)
+	data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
+	hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
+	return hex_data
 end
 
 
--- # Wirebait Field
-local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]display_val_map)
-    verifyArgsType('string', 'string', 'number', 'string')
-    local wb_field = { --private data
-        m_filter = filter,
-        m_name = name,
-        m_size = size,
-        m_type = ws_type_key,
-        m_wireshark_field = ProtoField[ws_type_key](filter, name, size, base, display_val_map);
-    }
-
-    local getFilter = function()
-        return wb_field.m_filter;
-    end
-
-    local getName = function()
-        return wb_field.m_name;
-    end
-
-    local getSize = function()
-        return wb_field.m_size
-    end
-
-    local getWiresharkProtofield = function()
-        return wb_field.m_wireshark_field;
-    end
-    
-    local getType = function()
-        return wb_field.m_type;
-    end
-
-    local pulic_wirebait_field_interface = {
-        filter = getFilter,
-        name = getName,
-        size = getSize,
-        wsProtofield = getWiresharkProtofield,
-        type = getType,
-    };
-
-    return pulic_wirebait_field_interface;
+function wirebait.pcap_reader:new (filepath)
+	local self = {
+		m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
+	}
+	
+	assert(self.m_file, "File at '" .. filepath .. "' not found!");
+	
+	--[[Reads data from file into a string in hexadecimal format ]]
+--	function readHexData(byte_count)
+--		data = self.m_file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
+--		hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
+--		return hex_data
+--	end
+	
+	--[[Performing various checks before reading the packet data]]
+	local global_header_buf = buffer.new(readFileAsHex(self.m_file, 24));
+	assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header."); 
+	assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
+	
+	local getNextIPPayload = function()
+		--Reading pcap packet header (this is not part of the actual ethernet frame)
+		pcap_hdr_buffer = buffer.new(readFileAsHex(self.m_file, 16));
+		print("Header: " .. tostring(pcap_hdr_buffer));
+		packet_length = pcap_hdr_buffer(8,4):le_uint();
+		
+		--Reading actual packet data
+		packet_data = readFileAsHex(self.m_file, packet_length);
+		print("Packet: " .. tostring(packet_data));
+	end
+	
+--	self_pcap_reader:getNextIPPayload = getNextIPPayload;
+--	setmetatable(self_pcap_reader, self)
+--	self.__index = self
+	return {
+		getNextIPPayload = getNextIPPayload
+	};
 end
 
-
-local function newWirebaitTree(ws_tree, buffer, position)
-    local wb_tree = { --private data
-        m_ws_tree = ws_tree;
-        m_buffer = buffer;
-        m_start_position = position or 0;
-        m_position = (position or 0), --+ (size or 0);
-    }
-    
-    local getParent = function()
-        return wb_tree.m_parent;
-    end
-
-    local getWiresharkTree = function ()
-        return wb_tree.m_ws_tree;
-    end
-
-    local getBuffer = function()
-        return wb_tree.m_buffer;
-    end
-
-    local getPosition = function()
-        return wb_tree.m_position;
-    end
-    
-    local getLength = function()
-        assert(wb_tree.m_position >= wb_tree.m_start_position);
-        return wb_tree.m_position - wb_tree.m_start_position;
-    end
-
-    local skip = function(self, byte_count) --skip only affects the current tree and cannot go beyon the end_position
-        --if not wb_tree.m_is_root then
-        --   self:parent():skip(byte_count);
-        --end
-        assert(wb_tree.m_position + byte_count <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
-        wb_tree.m_position = wb_tree.m_position + byte_count;
-    end
-    
-    local skipTo = function(self, position)
-        assert(position <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
-        wb_tree.m_position = position;
-    end
-    
-    local resetHighlight = function(self, length, relative_offset)
-        local L = length or 0;
-        local R = relative_offset or 0;
-        --TODO: do something witht the relative offset
-        wb_tree.m_ws_tree:set_length(length);
-    end
-    
-    return {
-        getParent,
-        getWiresharkTree,
-        getBuffer,
-        getPosition,
-        getLength,
-        skip,
-        skipTo,
-        resetHighlight
-      }
-end
-
--- # wirebait dissector
-local function newDissectorGenerator()
-    local wirebait_dissector = {
-      --m_name = name; --e.g "Dummy Transfer Protocol"
-      --m_abbr = abbr; --abbreviation "DTP"
-      m_wb_fields = {}; --fields that
-      m_wb_dissection_func = {};
-    }
-
-    --local public_wb_dissector = {
-    --    __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
-    --    __wirebait_type_name = "WirebaitDissector",
-    --}
-    local byte_size_by_type = {
-        ["uint8"] = 1;
-        ["uint16"] = 2;
-        ["uint32"] = 4;
-        ["uint64"] = 8;
-      }
-    
-    local registerField = function(ftype, name, filter, --[[optional]] display_value_map)
-      local wirebait_field = newWirebaitField(filter, name, byte_size_by_type[ftype], ftype, diplay_value_map);
-      wirebait_dissector.m_wb_fields[#wirebait_dissector.m_wb_fields] = wirebait_field;
-    end
-    
-    local generateWiresharkDissector = function(name, abbr)
-      local ws_dissector = Proto(abbr, name);
-      ws_dissector.fields = {};
-      for i,wb_field in ipairs(wirebait_dissector.m_wb_fields) do
-        ws_dissector.fields["f_" .. wb_field.getName] = wb_field.getWiresharkProtofield()
-      end
-      ws_dissector.dissector = function(ws_buffer, ws_info, ws_tree) 
-        --TODO: actually make these wb elements
-        local wb_tree = newWirebaitTree(ws_tree, ws_buffer);
-        wirebait_dissector.m_wb_dissection_func(wb_buffer, ws_info, wb_tree);
-      end
-      return ws_dissector;
-    end
-    
-    local setDissectionFunction = function(wb_dissection_func)
-      --todo check the func is a func
-      wirebait_dissector.m_wb_dissection_func = wb_dissection_func;
-    end
-
-    return {
-      registerField = registerField,
-      setDissectionFunction = setDissectionFunction,
-      generateDissector = generateWiresharkDissector,
-    }
-end
+reader = wirebait.pcap_reader:new("C:/Users/Marko/Desktop/pcaptest.pcap");
 
 
---[[ Using a function to create the wirebait module so that it can have 
-private state data ( 1 dissector per wirebait, and wirebait keeps track of protofields
-so as to register them automatically)
-]]--
-local function publicWirebaitInterface() 
-    local wirebait = { --wirebait state data which needs to be private
-        m_created_proto_fields = {};
-        m_size = 0,
-        m_dissector = nil
-    }
-
-    function wirebait.createProtofield(filter, name, size, ws_protofield)
-        local new_pf = newWirebaitField(filter, name, size, ws_protofield)
-        wirebait.m_created_proto_fields[wirebait.m_size] = new_pf
-        wirebait.m_size = wirebait.m_size + 1;
-        return new_pf
-    end
-
-    function wirebait.createTreeitem(arg1, arg2, ...)
-        return newWirebaitTree(wirebait.m_created_proto_fields, arg1, arg2, unpack({...}));
-    end
-
-    function wirebait.createDissectorSingleton(name, abbrev_name)
-        --checks('string', 'string');
-        if not wirebait.m_dissector then
-            wirebait.m_dissector = Proto(abbrev_name, name);
-        else
-            return wirebait.m_dissector;
-        end
-    end
-
-    function getCreatedProtofieldCount()
-        return wirebait.m_size;
-    end
-
-    return { --All functions available in wirebait package are named here
-        field = { new = wirebait.createProtofield, count = getCreatedProtofieldCount },
-        tree = { new = wirebait.createTreeitem },
-        --dissector = { newSingleton = wirebait.createDissectorSingleton },
-        dissector = { new = newDissectorGenerator},
-    }
-end
-
-wirebait = publicWirebaitInterface() 
-return wirebait
-
+reader:getNextIPPayload()
+print("\n")
+reader:getNextIPPayload()
+print("\n")
+reader:getNextIPPayload()
+print("\n")
+reader:getNextIPPayload()
+print("\n")
+reader:getNextIPPayload()
+print("\n")
+reader:getNextIPPayload()

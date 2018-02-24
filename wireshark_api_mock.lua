@@ -149,6 +149,10 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         end
         return str
     end
+	
+	function buffer:hex_string()
+		return self.m_data_as_hex_str;
+	end
     
     --c.f. [wireshark tvbrange](https://wiki.wireshark.org/LuaAPI/Tvb) for missing implementations such as float() le_float() etc..
 
