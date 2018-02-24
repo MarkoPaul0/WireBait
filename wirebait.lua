@@ -19,6 +19,7 @@
 ]]
 
 local wirebait = { plugin_tester = {}, pcap_reader = {}, packet = {}, plugin = {}}
+local wireshark = require("wireshark_api_mock");
 local buffer = require("wireshark_api_mock").buffer; --using the buffer class from wireshark_mock to parse the binary data from the pcap file
 
 --[[Local helper methods, only used withing this library]]
@@ -175,16 +176,31 @@ function wirebait.plugin.new(wireshark_plugin)
 end
 
 
-function wirebait.test_plugin(plugin, pcap_filepath)
-	reader = wirebait.pcap_reader:new(pcap_filepath);
-	repeat
-		packet = reader:getNextEthernetFrame()
-		if packet then
-			print(packet:info());
-		end
-	until packet == nil
+function wirebait.plugin_tester:new(plugin_filepath, pcap_filepath)
+	local plugin_tester = {
+		some_int = 0;
+	};
+	wireshark.wirebait_handle = plugin_tester;
+
+	function plugin_tester:run()
+		reader = wirebait.pcap_reader:new(pcap_filepath);
+		repeat
+			packet = reader:getNextEthernetFrame()
+			if packet then
+				print(packet:info());
+			end
+		until packet == nil
+	end
+
+	return plugin_tester;
 end
 
+test = wirebait.plugin_tester:new("bs", "more bs");
+wireshark.Proto.new("smp", "simple proto");
+test:add(10);
+wireshark.Proto.new("smp", "simple proto");
+test:add(2);
+wireshark.Proto.new("smp", "simple proto");
 
 wirebait.test_plugin(nil, "C:/Users/Marko/Desktop/pcaptest.pcap");
 

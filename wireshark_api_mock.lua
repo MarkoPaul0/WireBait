@@ -18,10 +18,12 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wireshark_mock = { Proto = {}, ProtoField = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
+local wireshark_mock = { wirebait_hanlde = nil, Proto = {}, ProtoField = {}, treeitem = {}, buffer = {}, base = { DEC = {} }};
 
 function wireshark_mock.Proto.new(name, abbr)
   assert(name and abbr, "Proto argument should not be nil!")
+  wireshark_mock.wirebait_handle:show();
+  --print("wirebait_handle: " .. (wireshark_mock.wirebait_handle or "nil"));  
   local proto = {
     m_name = name,
     m_abbr = abbr,
