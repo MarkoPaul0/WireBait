@@ -18,7 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wirebait = { plugin_tester = {}, pcap_reader = {}, packet = {}}
+local wirebait = { plugin_tester = {}, pcap_reader = {}, packet = {}, plugin = {}}
 local buffer = require("wireshark_api_mock").buffer; --using the buffer class from wireshark_mock to parse the binary data from the pcap file
 
 --[[Local helper methods, only used withing this library]]
@@ -38,8 +38,8 @@ end
 
 local PROTOCOCOL_TYPES = {
 	IPV4 = 0x800,
-	UDP = 0x11,
-	TCP =  0x06
+	UDP  = 0x11,
+	TCP  =  0x06
 };
 
 function wirebait.packet.new (packet_buffer, packet_no)
@@ -51,17 +51,21 @@ function wirebait.packet.new (packet_buffer, packet_no)
 			type = 0, --type as unsigned int, e.g. 0x0800 for IPV4
 			ipv4 = {
 				protocol = 0, --protocol as unsigned int, e.g. 0x06 for TCP
-				dst_ip = 0,
-				src_ip = 0,
+				dst_ip = 0, -- uint32 little endian
+				src_ip = 0, -- uint32 little endian
 				udp = {
-						src_port = 0,
-						dst_port = 0,
-						data = {},
-					},
-				tcp = {},
-				other = {}, --if not tcp nor udp
+					src_port = 0,
+					dst_port = 0,
+					data = {},
+				},
+				tcp = {
+					src_port = 0,
+					dst_port = 0,
+					data = {},
+				},
+				other_data = {}, --if not tcp nor udp
 			}, 
-			other = {} --if not ip
+			other_data = {} --if not ip
 		}
 	}
 	--assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
@@ -104,10 +108,10 @@ function wirebait.packet.new (packet_buffer, packet_no)
 		if self.ethernet.type == PROTOCOCOL_TYPES.IPV4 then
 			if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
 				return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port;
+				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
 			elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
 				return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port;
+				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
 			else
 				--[[Unknown transport layer]]
 				return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
@@ -141,14 +145,14 @@ function wirebait.pcap_reader:new (filepath)
 		if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
 			return nil;
 		end
-		print("Pcap Header: " .. tostring(pcap_hdr_buffer));
+		--print("Pcap Header: " .. tostring(pcap_hdr_buffer));
 		packet_length = pcap_hdr_buffer(8,4):le_uint();
 		
 		packet_buffer = buffer.new(readFileAsHex(self.m_file, packet_length));
 		if packet_buffer:len() < packet_length then -- this does not handle live capture
 			return nil;
 		end
-		print("     Packet: " .. tostring(packet_buffer));
+		--print("     Packet: " .. tostring(packet_buffer));
 		assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
 		local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
 		self.m_packet_number = self.m_packet_number + 1;
@@ -163,32 +167,26 @@ function wirebait.pcap_reader:new (filepath)
 	};
 end
 
-reader = wirebait.pcap_reader:new("C:/Users/Marko/Desktop/pcaptest.pcap");
+
+function wirebait.plugin.new(wireshark_plugin)
+	local self = {
+		m_wireshark_plugin = wireshark_plugin
+	};
+end
 
 
-repeat
-	packet = reader:getNextEthernetFrame()
-	if packet then
-		print(packet:info());
-	end
-until packet == nil
+function wirebait.test_plugin(plugin, pcap_filepath)
+	reader = wirebait.pcap_reader:new(pcap_filepath);
+	repeat
+		packet = reader:getNextEthernetFrame()
+		if packet then
+			print(packet:info());
+		end
+	until packet == nil
+end
 
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
---packet = reader:getNextEthernetFrame()
---print(packet:info());
+
+wirebait.test_plugin(nil, "C:/Users/Marko/Desktop/pcaptest.pcap");
+
+
 

@@ -79,7 +79,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         return string.len(self.m_data_as_hex_str)/2;
     end
 
-    function hexStringToUint64(hex_str)
+    local function hexStringToUint64(hex_str)
         assert(#hex_str > 0, "Requires strict positive number of bytes!");
         assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
         if #hex_str <= 8 then
@@ -95,7 +95,7 @@ function wireshark_mock.buffer.new(data_as_hex_string)
         end
     end
 
-    function le_hexStringToUint64(hex_str) --little endian version
+    local function le_hexStringToUint64(hex_str) --little endian version
         assert(#hex_str > 0, "Requires strict positive number of bytes!");
         assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
         hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
