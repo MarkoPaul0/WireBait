@@ -26,7 +26,12 @@ local wirebait = {
   packet = {}, 
   pcap_reader = {}, 
   ws_api = {},
-  plugin_tester = {}
+  plugin_tester = {},
+  
+  state = { --[[ state to keep track of the dissector wirebait is testing ]]
+      dissector_filepath = nil,
+      proto = nil
+    }
   }
 
 --[[Local helper methods, only used withing this library]]
@@ -92,13 +97,15 @@ function wirebait.Proto.new(name, abbr)
     dissector = {}, --dissection function
   }
 
+  assert(wirebait.state.proto == nil, "Multiple Protos are declared in the dissector file you are testing!");
+  wirebait.state.proto = proto;
   return proto;
 end
 
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
-function wirebait.ProtoField.new(name, abbr, _type, size)
+function wirebait.ProtoField.new(abbr, name, _type, size)
   assert(name and abbr and _type, "Protofiled argument should not be nil!")
-  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
+  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8, string=0};
   local protofield = {
     m_name = name;
     m_abbr = abbr;
@@ -109,23 +116,30 @@ function wirebait.ProtoField.new(name, abbr, _type, size)
   return protofield;
 end
 
---[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
-function wirebait.treeitem.new(length) 
-  local treeitem = {
-    m_length = length or 0;
-    m_subtrees = {};
-    m_subtrees_count = 0;
-  }
+function wirebait.ProtoField.string(name, abbr) return wirebait.ProtoField.new(name, abbr, "string", 0) end
+function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
 
-  function treeitem:set_len(length)
-    self.m_length = length;
+--[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
+function wirebait.treeitem.new(protofield, buffer, parent) 
+  local treeitem = {
+    m_protofield = protofield,
+    m_parent = parent,
+    m_child = nil,
+    m_depth = 0,
+    m_buffer = buffer;
+  }
+  if parent then
+    treeitem.m_depth = parent.m_depth + 1;
   end
 
-  function treeitem:add(protofield)
-    index = self.m_subtrees_count;
-    self.m_subtrees[index] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new(protofield.m_size) };
-    self.m_subtrees_count = self.m_subtrees_count + 1;
-    return self.m_subtrees[index].treeitem;
+  function treeitem:add(protofield, buffer)
+    local size = protofield.m_size;
+    if protofield.m_type == "string" and size == 0 then
+      size = buffer:len();
+    end
+    print(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. buffer(0, size):hex_string()); --TODO review the or buffer:len
+    self.m_child = wirebait.treeitem.new(protofield, buffer, self);
+    return self.m_child;
   end
 
   return treeitem;
@@ -346,9 +360,10 @@ function wirebait.ws_api.new(wireshark_plugin)
 end
 
 
-function wirebait.plugin_tester.new(plugin_filepath, pcap_filepath)
+function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
   local plugin_tester = {
-    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
+    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath),
+    m_dissector_filepath = dissector_filepath
   };
   --wireshark.wirebait_handle = plugin_tester;
 
@@ -357,6 +372,15 @@ function wirebait.plugin_tester.new(plugin_filepath, pcap_filepath)
       packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
         print(packet:info());
+        Proto = wirebait.Proto;
+        ProtoField = wirebait.ProtoField;
+        dofile(self.m_dissector_filepath);
+        buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
+        root_tree = wirebait.treeitem.new(buffer);
+        if buffer then
+          wirebait.state.proto.dissector(buffer, nil, root_tree);
+        end
+        break;
       end
     until packet == nil
   end
@@ -364,7 +388,7 @@ function wirebait.plugin_tester.new(plugin_filepath, pcap_filepath)
   return plugin_tester;
 end
 
-test = wirebait.plugin_tester.new("bs", "C:/Users/Marko/Desktop/pcaptest.pcap");
+test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 --wirebait.Proto.new("smp", "simple proto");
 --test:add(10);
 --wirebait.Proto.new("smp", "simple proto");
