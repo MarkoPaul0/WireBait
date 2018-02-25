@@ -18,197 +18,360 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local wirebait = { plugin_tester = {}, pcap_reader = {}, packet = {}, plugin = {}}
-local wireshark = require("wireshark_api_mock");
-local buffer = require("wireshark_api_mock").buffer; --using the buffer class from wireshark_mock to parse the binary data from the pcap file
+local wirebait = { 
+  Proto = {}, 
+  ProtoField = {}, 
+  treeitem = {}, 
+  buffer = {}, 
+  packet = {}, 
+  pcap_reader = {}, 
+  ws_api = {},
+  plugin_tester = {}
+  }
 
 --[[Local helper methods, only used withing this library]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
 local function readFileAsHex(file, byte_count)
-	data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
-	data = data or "";
-	hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
-	return hex_data
+  data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
+  data = data or "";
+  hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
+  return hex_data
 end
 
 --[[prints an ip in octet format givent its little endian int32 representation]]
 local function printIP(le_int_ip)
-	local ip_str = ((le_int_ip & 0xFF000000) >> 24) .. "." .. ((le_int_ip & 0x00FF0000) >> 16) .. "." .. ((le_int_ip & 0x0000FF00) >> 8) .. "." .. (le_int_ip & 0x000000FF);
-	return ip_str;
+  local ip_str = ((le_int_ip & 0xFF000000) >> 24) .. "." .. ((le_int_ip & 0x00FF0000) >> 16) .. "." .. ((le_int_ip & 0x0000FF00) >> 8) .. "." .. (le_int_ip & 0x000000FF);
+  return ip_str;
+end
+
+--[[converts a string in hex format into a big endian uint64 ]]
+local function hexStringToUint64(hex_str)
+  assert(#hex_str > 0, "Requires strict positive number of bytes!");
+  assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
+  if #hex_str <= 8 then
+    return tonumber(hex_str,16);
+  else
+    hex_str = string.format("%016s",hex_str) --left pad with zeros
+    byte_size=#hex_str/2
+    value = 0;
+    for i=1,byte_size do
+      value = value + tonumber(hex_str:sub(-2*i+1,-2*i),16)*16^(2*(i-1))
+    end
+    return value;
+  end
+end
+
+--[[converts a string in hex format into a little endian uint64 ]]
+local function le_hexStringToUint64(hex_str) --little endian version
+  assert(#hex_str > 0, "Requires strict positive number of bytes!");
+  assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
+  hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
+
+  --reading byte in inverted byte order
+  byte_size=#hex_str/2
+  value = 0;
+  for i=1,byte_size do
+    value = value + tonumber(hex_str:sub(2*i-1,2*i),16)*16^(2*(i-1))
+  end
+  return value;
 end
 
 local PROTOCOCOL_TYPES = {
-	IPV4 = 0x800,
-	UDP  = 0x11,
-	TCP  =  0x06
+  IPV4 = 0x800,
+  UDP  = 0x11,
+  TCP  =  0x06
 };
 
-function wirebait.packet.new (packet_buffer, packet_no)
-	local self = {
-		packet_number = packet_no,
-		ethernet = {
-			dst_mac = "", --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
-			src_mac = "",
-			type = 0, --type as unsigned int, e.g. 0x0800 for IPV4
-			ipv4 = {
-				protocol = 0, --protocol as unsigned int, e.g. 0x06 for TCP
-				dst_ip = 0, -- uint32 little endian
-				src_ip = 0, -- uint32 little endian
-				udp = {
-					src_port = 0,
-					dst_port = 0,
-					data = {},
-				},
-				tcp = {
-					src_port = 0,
-					dst_port = 0,
-					data = {},
-				},
-				other_data = {}, --if not tcp nor udp
-			}, 
-			other_data = {} --if not ip
-		}
-	}
-	--assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
-	--[[Ethernet layer parsing]]
-	self.ethernet.dst_mac = packet_buffer(0,6):hex_string();
-	self.ethernet.src_mac = packet_buffer(6,6):hex_string();
-	self.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
-	if self.ethernet.type ~= PROTOCOCOL_TYPES.IPV4 then
-		self.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
-	else
-		--[[IPV4 layer parsing]]
-		self.ethernet.ipv4.protocol = packet_buffer(23,1):uint();
-		self.ethernet.ipv4.src_ip = packet_buffer(26,4):uint();
-		self.ethernet.ipv4.dst_ip = packet_buffer(30,4):uint();
+--[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
+function wirebait.Proto.new(name, abbr)
+  assert(name and abbr, "Proto argument should not be nil!")
+  local proto = {
+    m_name = name,
+    m_abbr = abbr,
+    fields = {}, --protofields
+    dissector = {}, --dissection function
+  }
 
-		--[[UDP layer parsing]]
-		if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
-			self.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
-			self.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
-			self.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
-		elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
-			--[[TCP layer parsing]]
-			self.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
-			self.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
-			-- for Lua 5.3 and above
-			local tcp_hdr_len = 4 * ((packet_buffer(46,1):uint() & 0xF0) >> 4);
-			-- for Lua 5.2 and below
-			--local tcp_hdr_len = bit32.arshift(bit32.band(packet_buffer(46,1):uint(), 0xF0)) * 4;
-			local tcp_payload_start_index = 34 + tcp_hdr_len;
-			if packet_buffer:len() > tcp_payload_start_index then
-				self.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
-			end
-		else
-			--[[Unknown transport layer]]
-			self.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
-		end
-	end
-	
-	info = function()
-		if self.ethernet.type == PROTOCOCOL_TYPES.IPV4 then
-			if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
-				return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
-			elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
-				return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-				.. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
-			else
-				--[[Unknown transport layer]]
-				return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
-			end
-		else
-			return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
-		end
-	end
-	
-	self.info = info;
-	return self;
+  return proto;
+end
+
+--[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
+function wirebait.ProtoField.new(name, abbr, _type, size)
+  assert(name and abbr and _type, "Protofiled argument should not be nil!")
+  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
+  local protofield = {
+    m_name = name;
+    m_abbr = abbr;
+    m_type = _type;
+    m_size = size_by_type[_type] or size or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
+  }
+
+  return protofield;
+end
+
+--[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
+function wirebait.treeitem.new(length) 
+  local treeitem = {
+    m_length = length or 0;
+    m_subtrees = {};
+    m_subtrees_count = 0;
+  }
+
+  function treeitem:set_len(length)
+    self.m_length = length;
+  end
+
+  function treeitem:add(protofield)
+    index = self.m_subtrees_count;
+    self.m_subtrees[index] = { proto_field = protofield, treeitem = wireshark_mock.treeitem.new(protofield.m_size) };
+    self.m_subtrees_count = self.m_subtrees_count + 1;
+    return self.m_subtrees[index].treeitem;
+  end
+
+  return treeitem;
+end
+
+--[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
+function wirebait.buffer.new(data_as_hex_string)
+  assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
+  assert(string.len(data_as_hex_string:gsub('%X','')) > 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
+  assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
+
+  local buffer = {
+    m_data_as_hex_str = data_as_hex_string;
+  }
+
+  function buffer:len()
+    return string.len(self.m_data_as_hex_str)/2;
+  end
+
+  function buffer:le_uint()
+    size = math.min(#self.m_data_as_hex_str,8)
+    return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+  end
+
+  function buffer:le_uint64()
+    size = math.min(#self.m_data_as_hex_str,16)
+    return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+  end;
+
+  function buffer:uint()
+    size = math.min(#self.m_data_as_hex_str,8)
+    return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+  end
+
+  function buffer:uint64()
+    size = math.min(#self.m_data_as_hex_str,16)
+    return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+  end;
+
+  function buffer:string()
+    str = ""
+    for i=1,self:len() do
+      byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      str = str .. string.char(tonumber(byte_, 16))
+    end
+    return str
+  end
+
+  function buffer:stringz()
+    str = ""
+    for i=1,self:len()-1 do
+      byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      if byte_ == '00' then
+        return str
+      end
+      str = str .. string.char(tonumber(byte_, 16))
+    end
+    return str
+  end
+
+  function buffer:hex_string()
+    return self.m_data_as_hex_str;
+  end
+
+  --c.f. [wireshark tvbrange](https://wiki.wireshark.org/LuaAPI/Tvb) for missing implementations such as float() le_float() etc..
+
+  function buffer:__call(start, length) --allows buffer to be called as a function 
+    assert(start >= 0, "Start position is positive!");
+    assert(length > 0, "Length is strictly positive!");
+    assert(start + length <= self:len(), "Index get out of bounds!")
+    return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
+  end
+
+  function buffer:__tostring()
+    return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
+  end
+  setmetatable(buffer, buffer)
+
+  return buffer;
+end
+
+--[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
+     At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
+     is that you can visualize what the struct would look like once populated]]
+function wirebait.packet.new (packet_buffer, packet_no)
+  local packet = {
+    packet_number = packet_no,
+    ethernet = {
+      dst_mac = nil, --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
+      src_mac = nil,
+      type = nil, --type as unsigned int, e.g. 0x0800 for IPV4
+      ipv4 = {
+        protocol = nil, --protocol as unsigned int, e.g. 0x06 for TCP
+        dst_ip = nil, -- uint32 little endian
+        src_ip = nil, -- uint32 little endian
+        udp = {
+          src_port = nil,
+          dst_port = nil,
+          data = nil,
+        },
+        tcp = {
+          src_port = nil,
+          dst_port = nil,
+          data = nil,
+        },
+        other_data = nil, -- exist if pkt is not tcp nor udp
+      }, 
+      other_data = nil -- exist if pkt is not ip
+    }
+  }
+  --assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
+  --[[Ethernet layer parsing]]
+  packet.ethernet.dst_mac = packet_buffer(0,6):hex_string();
+  packet.ethernet.src_mac = packet_buffer(6,6):hex_string();
+  packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
+  if packet.ethernet.type ~= PROTOCOCOL_TYPES.IPV4 then
+    packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
+  else
+    --[[IPV4 layer parsing]]
+    packet.ethernet.ipv4.protocol = packet_buffer(23,1):uint();
+    packet.ethernet.ipv4.src_ip = packet_buffer(26,4):uint();
+    packet.ethernet.ipv4.dst_ip = packet_buffer(30,4):uint();
+
+    --[[UDP layer parsing]]
+    if packet.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
+      packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
+      packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
+      packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
+    elseif packet.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
+      --[[TCP layer parsing]]
+      packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
+      packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
+      -- for Lua 5.3 and above
+      local tcp_hdr_len = 4 * ((packet_buffer(46,1):uint() & 0xF0) >> 4);
+      -- for Lua 5.2 and below
+      --local tcp_hdr_len = bit32.arshift(bit32.band(packet_buffer(46,1):uint(), 0xF0)) * 4;
+      local tcp_payload_start_index = 34 + tcp_hdr_len;
+      if packet_buffer:len() > tcp_payload_start_index then
+        packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
+      end
+    else
+      --[[Unknown transport layer]]
+      packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
+    end
+  end
+
+  function packet:info()
+    if self.ethernet.type == PROTOCOCOL_TYPES.IPV4 then
+      if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
+        return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
+      elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
+        return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
+      else
+        --[[Unknown transport layer]]
+        return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
+      end
+    else
+      return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
+    end
+  end
+
+  return packet;
 end
 
 
-function wirebait.pcap_reader:new (filepath)
-	local self = {
-		m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
-		m_packet_number = 1
-	}
-	
-	--[[Performing various checks before reading the packet data]]
-	assert(self.m_file, "File at '" .. filepath .. "' not found!");
-	local global_header_buf = buffer.new(readFileAsHex(self.m_file, 24));
-	assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
-	assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
-	
-	--[[Reading pcap file and returning the next ethernet frame]]
-	local getNextEthernetFrame = function()
-		--Reading pcap packet header (this is not part of the actual ethernet frame)
-		pcap_hdr_buffer = buffer.new(readFileAsHex(self.m_file, 16));
-		if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
-			return nil;
-		end
-		--print("Pcap Header: " .. tostring(pcap_hdr_buffer));
-		packet_length = pcap_hdr_buffer(8,4):le_uint();
-		
-		packet_buffer = buffer.new(readFileAsHex(self.m_file, packet_length));
-		if packet_buffer:len() < packet_length then -- this does not handle live capture
-			return nil;
-		end
-		--print("     Packet: " .. tostring(packet_buffer));
-		assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
-		local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
-		self.m_packet_number = self.m_packet_number + 1;
-		return ethernet_frame;
-	end
-	
+function wirebait.pcap_reader.new(filepath)
+  local pcap_reader = {
+    m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
+    m_packet_number = 1
+  }
+
+  --[[Performing various checks before reading the packet data]]
+  assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
+  local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
+  assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
+  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
+
+  --[[Reading pcap file and returning the next ethernet frame]]
+  function pcap_reader:getNextEthernetFrame()
+    --Reading pcap packet header (this is not part of the actual ethernet frame)
+    pcap_hdr_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, 16));
+    if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
+      return nil;
+    end
+    --print("Pcap Header: " .. tostring(pcap_hdr_buffer));
+    packet_length = pcap_hdr_buffer(8,4):le_uint();
+
+    packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
+    if packet_buffer:len() < packet_length then -- this does not handle live capture
+      return nil;
+    end
+    --print("     Packet: " .. tostring(packet_buffer));
+    assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
+    local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
+    self.m_packet_number = self.m_packet_number + 1;
+    return ethernet_frame;
+  end
+
 --	self_pcap_reader:getNextIPPayload = getNextIPPayload;
 --	setmetatable(self_pcap_reader, self)
 --	self.__index = self
-	return {
-		getNextEthernetFrame = getNextEthernetFrame
-	};
+  return pcap_reader;
 end
 
 
 function wirebait.ws_api.new(wireshark_plugin)
-	local api = {
-		
-	};
-	
-	function api:registerField()
-	end
-	
-	function api:add(protofield)
-	end
+  local api = {
+
+  };
+
+  function api:registerField()
+  end
+
+  function api:add(protofield)
+  end
 end
 
 
-function wirebait.plugin_tester:new(plugin_filepath, pcap_filepath)
-	local plugin_tester = {
-		some_int = 0;
-	};
-	wireshark.wirebait_handle = plugin_tester;
+function wirebait.plugin_tester.new(plugin_filepath, pcap_filepath)
+  local plugin_tester = {
+    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
+  };
+  --wireshark.wirebait_handle = plugin_tester;
 
-	function plugin_tester:run()
-		reader = wirebait.pcap_reader:new(pcap_filepath);
-		repeat
-			packet = reader:getNextEthernetFrame()
-			if packet then
-				print(packet:info());
-			end
-		until packet == nil
-	end
+  function plugin_tester:run()
+    repeat
+      packet = self.m_pcap_reader:getNextEthernetFrame()
+      if packet then
+        print(packet:info());
+      end
+    until packet == nil
+  end
 
-	return plugin_tester;
+  return plugin_tester;
 end
 
-test = wirebait.plugin_tester:new("bs", "more bs");
-wireshark.Proto.new("smp", "simple proto");
-test:add(10);
-wireshark.Proto.new("smp", "simple proto");
-test:add(2);
-wireshark.Proto.new("smp", "simple proto");
+test = wirebait.plugin_tester.new("bs", "C:/Users/Marko/Desktop/pcaptest.pcap");
+--wirebait.Proto.new("smp", "simple proto");
+--test:add(10);
+--wirebait.Proto.new("smp", "simple proto");
+--test:add(2);
+--wirebait.Proto.new("smp", "simple proto");
 
-wirebait.test_plugin(nil, "C:/Users/Marko/Desktop/pcaptest.pcap");
+test:run()
 
 
 
