@@ -169,10 +169,16 @@ function wirebait.pcap_reader:new (filepath)
 end
 
 
-function wirebait.plugin.new(wireshark_plugin)
-	local self = {
-		m_wireshark_plugin = wireshark_plugin
+function wirebait.ws_api.new(wireshark_plugin)
+	local api = {
+		
 	};
+	
+	function api:registerField()
+	end
+	
+	function api:add(protofield)
+	end
 end
 
 
