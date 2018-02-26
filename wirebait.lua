@@ -165,7 +165,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       print(string.rep(" ", self.m_depth*3) .. table.concat(texts, " "));
     else
-      printed_value = tostring(value or protofield:extractValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      local printed_value = tostring(value or protofield:extractValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
       --TODO: the protofield should provide a print method, which takes care of parsing the given buffer. For now let's just print the hex_string
       io.write(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
@@ -206,17 +206,17 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:le_uint()
-    size = math.min(#self.m_data_as_hex_str,8)
+    local size = math.min(#self.m_data_as_hex_str,8)
     return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end
 
   function buffer:le_uint64()
-    size = math.min(#self.m_data_as_hex_str,16)
+    local size = math.min(#self.m_data_as_hex_str,16)
     return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end;
 
   function buffer:uint()
-    size = math.min(#self.m_data_as_hex_str,8)
+    local size = math.min(#self.m_data_as_hex_str,8)
     return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end
 
@@ -235,9 +235,9 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:stringz()
-    str = ""
+    local str = ""
     for i=1,self:len()-1 do
-      byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
       if byte_ == '00' then
         return str
       end
@@ -368,14 +368,14 @@ function wirebait.pcap_reader.new(filepath)
   --[[Reading pcap file and returning the next ethernet frame]]
   function pcap_reader:getNextEthernetFrame()
     --Reading pcap packet header (this is not part of the actual ethernet frame)
-    pcap_hdr_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, 16));
+    local pcap_hdr_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, 16));
     if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
       return nil;
     end
     --print("Pcap Header: " .. tostring(pcap_hdr_buffer));
-    packet_length = pcap_hdr_buffer(8,4):le_uint();
+    local packet_length = pcap_hdr_buffer(8,4):le_uint();
 
-    packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
+    local packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
     if packet_buffer:len() < packet_length then -- this does not handle live capture
       return nil;
     end
@@ -415,14 +415,14 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
 
   function plugin_tester:run()
     repeat
-      packet = self.m_pcap_reader:getNextEthernetFrame()
+      local packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
         print(packet:info());
         Proto = wirebait.Proto;
         ProtoField = wirebait.ProtoField;
         dofile(self.m_dissector_filepath);
-        buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
-        root_tree = wirebait.treeitem.new(buffer);
+        local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
+        local root_tree = wirebait.treeitem.new(buffer);
         if buffer then
           wirebait.state.proto.dissector(buffer, nil, root_tree);
         end
