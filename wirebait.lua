@@ -37,9 +37,9 @@ local wirebait = {
 --[[Local helper methods, only used withing this library]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
 local function readFileAsHex(file, byte_count)
-  data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
+  local data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
   data = data or "";
-  hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
+  local hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
   return hex_data
 end
 
@@ -56,9 +56,9 @@ local function hexStringToUint64(hex_str)
   if #hex_str <= 8 then
     return tonumber(hex_str,16);
   else
-    hex_str = string.format("%016s",hex_str) --left pad with zeros
-    byte_size=#hex_str/2
-    value = 0;
+    local hex_str = string.format("%016s",hex_str) --left pad with zeros
+    local byte_size=#hex_str/2
+    local value = 0;
     for i=1,byte_size do
       value = value + tonumber(hex_str:sub(-2*i+1,-2*i),16)*16^(2*(i-1))
     end
@@ -70,11 +70,11 @@ end
 local function le_hexStringToUint64(hex_str) --little endian version
   assert(#hex_str > 0, "Requires strict positive number of bytes!");
   assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
-  hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
+  local hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
 
   --reading byte in inverted byte order
-  byte_size=#hex_str/2
-  value = 0;
+  local byte_size=#hex_str/2
+  local value = 0;
   for i=1,byte_size do
     value = value + tonumber(hex_str:sub(2*i-1,2*i),16)*16^(2*(i-1))
   end
@@ -112,6 +112,20 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
     m_type = _type;
     m_size = size_by_type[_type] or size or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
   }
+  
+  function protofield:extractValueFromBuffer(buffer)
+    local extractValueFuncByType = {
+      uint8 = function (buf) return buf(0,1):uint() end,
+      uint16 = function (buf) return buf(0,2):uint() end,
+      uint32 = function (buf) return buf(0,3):uint() end,
+      uint64 = function (buf) return buf(0,4):uint64() end,
+      string = function (buf) return buf(0,buf:len()):hex_string() end,
+    };
+    
+    local func = extractValueFuncByType[self.m_type];
+    assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
+    return func(buffer);
+  end
 
   return protofield;
 end
@@ -131,14 +145,45 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   if parent then
     treeitem.m_depth = parent.m_depth + 1;
   end
+  
+  local function addProtoField(self, protofield, buffer_or_value, texts)
+    assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
+    if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
+      --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
+      value = buffer_or_value;
+    else
+      --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
+      buffer = buffer_or_value
+      assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+      if texts then
+        value = texts[1] --might be nil
+        texts[1] = nil --removing value from the texts array
+      end
+    end
+    assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
+    
+    if texts then --texts override the value displayed in the tree including the header defined in the protofield
+      print(string.rep(" ", self.m_depth*3) .. table.concat(texts, " "));
+    else
+      printed_value = tostring(value or protofield:extractValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      --TODO: the protofield should provide a print method, which takes care of parsing the given buffer. For now let's just print the hex_string
+      io.write(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+    end
+    
+    self.m_child = wirebait.treeitem.new(protofield, buffer, self);
+  end
 
-  function treeitem:add(protofield, buffer)
+  function treeitem:add(protofield, buffer, value, ...)
+    local texts = {...};
     local size = protofield.m_size;
     if protofield.m_type == "string" and size == 0 then
       size = buffer:len();
     end
-    print(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. buffer(0, size):hex_string()); --TODO review the or buffer:len
-    self.m_child = wirebait.treeitem.new(protofield, buffer, self);
+    
+    addProtoField(self, protofield, buffer, value, texts);
+    
+    --print(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. buffer(0, size):hex_string()); --TODO review the or buffer:len
+    --self.m_child = wirebait.treeitem.new(protofield, buffer, self);
     return self.m_child;
   end
 
@@ -152,7 +197,8 @@ function wirebait.buffer.new(data_as_hex_string)
   assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
 
   local buffer = {
-    m_data_as_hex_str = data_as_hex_string;
+    _struct_type = "buffer",
+    m_data_as_hex_str = data_as_hex_string,
   }
 
   function buffer:len()
@@ -175,14 +221,14 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:uint64()
-    size = math.min(#self.m_data_as_hex_str,16)
+    local size = math.min(#self.m_data_as_hex_str,16)
     return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end;
 
   function buffer:string()
-    str = ""
+    local str = ""
     for i=1,self:len() do
-      byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
       str = str .. string.char(tonumber(byte_, 16))
     end
     return str
@@ -389,13 +435,19 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
 end
 
 test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
---wirebait.Proto.new("smp", "simple proto");
---test:add(10);
---wirebait.Proto.new("smp", "simple proto");
---test:add(2);
---wirebait.Proto.new("smp", "simple proto");
 
 test:run()
 
+--test = function(a, b, c, ...)
+--  print("a: " .. a)
+--  print("b: " .. b)
+--  print("c: " .. c)
+  
+--  args={...}
+--  value = args[1]
+  
+--end
+
+--test(1,2,3)
 
 

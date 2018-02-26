@@ -25,7 +25,7 @@ local wireshark = require("wireshark_api_mock")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
-therefore forgetting the local keywork will not have a negative impact.
+therefore forgetting the local keyword will not have a negative impact.
 ]]--
 --Creating unit tests
 local unit_tests = tester.newUnitTestsSet("Wireshark Buffer Unit Tests");
