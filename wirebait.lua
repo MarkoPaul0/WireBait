@@ -91,6 +91,7 @@ local PROTOCOCOL_TYPES = {
 function wirebait.Proto.new(name, abbr)
   assert(name and abbr, "Proto argument should not be nil!")
   local proto = {
+    _struct_type = "Proto";
     m_name = name,
     m_abbr = abbr,
     fields = {}, --protofields
@@ -107,6 +108,7 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
   assert(name and abbr and _type, "Protofiled argument should not be nil!")
   local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8, string=0};
   local protofield = {
+    _struct_type = "ProtoField";
     m_name = name;
     m_abbr = abbr;
     m_type = _type;
@@ -119,7 +121,9 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
       uint16 = function (buf) return buf(0,2):uint() end,
       uint32 = function (buf) return buf(0,3):uint() end,
       uint64 = function (buf) return buf(0,4):uint64() end,
-      string = function (buf) return buf(0,buf:len()):hex_string() end,
+      string = function (buf) return 
+        buf(0,buf:len()):string() 
+        end,
     };
     
     local func = extractValueFuncByType[self.m_type];
@@ -146,7 +150,13 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     treeitem.m_depth = parent.m_depth + 1;
   end
   
-  local function addProtoField(self, protofield, buffer_or_value, texts)
+  --[[ Private function adding a proto to the provided treeitem ]]
+  local function addProto(tree, proto, buffer_or_value, texts)
+    error("Proto no supported yet!");
+  end
+  
+  --[[ Private function adding a protofield to the provided treeitem ]]
+  local function addProtoField(tree, protofield, buffer_or_value, texts)
     assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
     if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
       --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
@@ -163,27 +173,30 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
     
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(string.rep(" ", self.m_depth*3) .. table.concat(texts, " "));
+      print(string.rep(" ", tree.m_depth*3) .. table.concat(texts, " "));
     else
       local printed_value = tostring(value or protofield:extractValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      --TODO: the protofield should provide a print method, which takes care of parsing the given buffer. For now let's just print the hex_string
-      io.write(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+      io.write(string.rep(" ", tree.m_depth*3) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
-    
-    self.m_child = wirebait.treeitem.new(protofield, buffer, self);
+    tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
+  end
+  
+  --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
+  local function addTreeItem(tree, proto, buffer_or_value, texts)
+    error("TvbRange no supported yet!");
   end
 
-  function treeitem:add(protofield, buffer, value, ...)
+  function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
     local texts = {...};
-    local size = protofield.m_size;
-    if protofield.m_type == "string" and size == 0 then
-      size = buffer:len();
+    if proto_or_protofield_or_buffer._struct_type == "Proto" then
+      addProto(self, proto_or_protofield_or_buffer, buffer, value, texts);
+    elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
+      addProtoField(self, proto_or_protofield_or_buffer, buffer, value, texts);
+    elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
+      addTreeItem(self, proto_or_protofield_or_buffer, buffer, value, texts);
+    else
+      error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
     end
-    
-    addProtoField(self, protofield, buffer, value, texts);
-    
-    --print(string.rep(" ", self.m_depth*3) .. protofield.m_name .. ": " .. buffer(0, size):hex_string()); --TODO review the or buffer:len
-    --self.m_child = wirebait.treeitem.new(protofield, buffer, self);
     return self.m_child;
   end
 
@@ -200,6 +213,7 @@ function wirebait.buffer.new(data_as_hex_string)
     _struct_type = "buffer",
     m_data_as_hex_str = data_as_hex_string,
   }
+  local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
   function buffer:len()
     return string.len(self.m_data_as_hex_str)/2;
@@ -231,6 +245,7 @@ function wirebait.buffer.new(data_as_hex_string)
       local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
       str = str .. string.char(tonumber(byte_, 16))
     end
+    str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
 
@@ -238,11 +253,12 @@ function wirebait.buffer.new(data_as_hex_string)
     local str = ""
     for i=1,self:len()-1 do
       local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
-      if byte_ == '00' then
+      if byte_ == '00' then --null char termination
         return str
       end
       str = str .. string.char(tonumber(byte_, 16))
     end
+    str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
 
