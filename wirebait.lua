@@ -88,11 +88,11 @@ local PROTOCOCOL_TYPES = {
 };
 
 --[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
-function wirebait.Proto.new(name, abbr)
-  assert(name and abbr, "Proto argument should not be nil!")
+function wirebait.Proto.new(abbr, description)
+  assert(description and abbr, "Proto argument should not be nil!")
   local proto = {
     _struct_type = "Proto";
-    m_name = name,
+    m_description = description,
     m_abbr = abbr,
     fields = {}, --protofields
     dissector = {}, --dissection function
@@ -152,7 +152,27 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   
   --[[ Private function adding a proto to the provided treeitem ]]
   local function addProto(tree, proto, buffer_or_value, texts)
-    error("Proto no supported yet!");
+    assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
+    if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
+      --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
+      value = buffer_or_value;
+    else
+      --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
+      buffer = buffer_or_value
+      assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+      if texts then
+        value = texts[1] --might be nil
+        texts[1] = nil --removing value from the texts array
+      end
+    end
+    assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
+    
+    if texts then --texts override the value displayed in the tree including the header defined in the protofield
+      print(string.rep(" ", tree.m_depth*3) .. table.concat(texts, " "));
+    else
+      io.write(string.rep(" ", tree.m_depth*3) .. proto.m_description .. "\n");
+    end
+    tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
   end
   
   --[[ Private function adding a protofield to the provided treeitem ]]
@@ -407,20 +427,6 @@ function wirebait.pcap_reader.new(filepath)
 --	self.__index = self
   return pcap_reader;
 end
-
-
-function wirebait.ws_api.new(wireshark_plugin)
-  local api = {
-
-  };
-
-  function api:registerField()
-  end
-
-  function api:add(protofield)
-  end
-end
-
 
 function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
   local plugin_tester = {

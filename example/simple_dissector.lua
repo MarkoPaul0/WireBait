@@ -45,6 +45,8 @@ p_smp.fields = { f_uin32t };
 
 function p_smp.dissector(buffer, packet_info, root_tree)
     --Dissecting packet header
-    sub_tree = root_tree:add(f_text, buffer(0,10));
+    proto_tree = root_tree:add(p_smp, buffer(0,10))
+    sub_tree = proto_tree:add(f_text, buffer(0,10));
     sub_tree:add(f_uin32t, buffer(2,4));
+    sub_tree:add(f_uin32t, buffer(4,6));
 end
