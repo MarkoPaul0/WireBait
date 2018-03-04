@@ -63,6 +63,12 @@ unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian)", function()
         b = wirebait.buffer.new("6D45D89F55C23601574F524C440032b4b1b34b2b");
         tester.assert(b:uint64(), 7873937702377371137);
     end)
+  
+--[[ TODO: figure out why 64bit integer are problematic when dealing with really high values]]
+unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian) Largest uint64", function()
+        b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
+        tester.assert(b:uint64(), 18446744073709551615); 
+    end)
 
 unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
         b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
@@ -89,12 +95,12 @@ unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) -1", function()
         tester.assert(b:int(), -1);
     end)
   
-unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) Large Negative Number", function()
+unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) Largest Negative Number", function()
         b = wirebait.buffer.new("80000000");
         tester.assert(b:int(), -2147483648);
     end)
   
-unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) Large Positive Number", function()
+unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) Largest Positive Number", function()
         b = wirebait.buffer.new("7FFFFFFF");
         tester.assert(b:int(), 2147483647);
     end)
@@ -113,6 +119,11 @@ unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) -1", function(
 unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) Large Negative Number", function()
         b = wirebait.buffer.new("EFFFFFFFFFFFFFFF");
         tester.assert(b:int64(), -1152921504606846977);
+    end)
+  
+unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) Largest Negative Number", function()
+        b = wirebait.buffer.new("8000000000000000");
+        tester.assert(b:int64(), -9223372036854775808);
     end)
   
 unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) Large Positive Number", function()

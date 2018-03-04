@@ -50,6 +50,8 @@ local function printIP(le_int_ip)
 end
 
 --[[converts a string in hex format into a big endian uint64 ]]
+--[[For some reason Lua starts interpreting numbers greater than 0x06FFFFFFFFFFFFFF as floats instead of an integers.
+This is frustrating and warrants an inverstigation.]]
 local function hexStringToUint64(hex_str)
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
@@ -280,7 +282,6 @@ function wirebait.buffer.new(data_as_hex_string)
     end
   end
   
-  --[[For some reason in Lua 5.3 because number greater than 0x6FFFFFFFFFFFFFFF are interpreted as float. In the case of a positve int it's no big deal
   and int64() will return a float as well. However all negative numbers are by definition greater than 0x6FFFFFFFFFFFFFFF. Having the number interpreted
   as float means I can't use bitwise operations to extract the value, at least not directly. Regargless this logic won't work for negative numbers with a raw value
   greater than 0x6FFFFFFFFFFFFFFF, because you need to NOT that value to get the encoded value.
@@ -290,16 +291,16 @@ function wirebait.buffer.new(data_as_hex_string)
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local first_byte_raw = self(0,1):uint();
     
-    --TODO: write version specifc code
-    if first_byte_raw & tonumber("80",16) > 0 then --negative number
-      local first_byte_val = first_byte_raw & tonumber("7F", 16);
-      assert(first_byte_val <= tonumber("6F", 16), "A bug with integers larger than 0x6FFFFFFFFFFFFFFF in lua 5.3, prevents int64() from working properly!")
-      local first_byte_hex = string.format("%X", first_byte_val); --first byte with sign bit set to 0
-      local uint = hexStringToUint64(first_byte_hex .. self(1,self:len()-1):hex_string());
-      local val_mask = tonumber("7FFFFFFFFFFFFFFF", 16)
-      return -((~uint & val_mask) + 1);
-    else
+    if size <= 4 then
+      return self:uint();
+    elseif first_byte_raw & tonumber("80",16) == 0 then --positive int
       return self:uint64();
+    else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
+      the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
+      local first_word_val = (~self(0,4):uint()) & tonumber("7FFFFFFF", 16);
+      local second_word_val = ~self(3,4):uint() & tonumber("FFFFFFFF", 16);
+      local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
+      return result;
     end
   end
   
@@ -506,9 +507,10 @@ test:run()
 --buf = wirebait.buffer.new("80FFFFFFFFFFFFFF")
 --local str = "‭f";
 --print(string.len(""))
-buf = wirebait.buffer.new("D6B7F9DD549BDFBF")
+buf = wirebait.buffer.new("FFFFFFFFFFFFFFFF")
+--buf = wirebait.buffer.new("01B6")
 --buf = wirebait.buffer.new("FFFFFFAB")
-print(buf:int64())
+print(buf:uint64())
 print(("%d"):format(-9151314442816847873))
 
 return wirebait
