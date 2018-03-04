@@ -25,13 +25,9 @@ tester = require("unit_tests.tester")
 print("\nRunning all unit tests")
 
 --# WIREBAIT TESTS
---tester.test(dofile("unit_tests/wirebait/wirebait_tree_UT.lua"))
---tester.test(dofile("unit_tests/wirebait/wirebait_field_UT.lua"))
-
---# WIRESHARK-API-MOCK TESTS
-tester.test(dofile("unit_tests/wireshark/wireshark_protofield_UT.lua"))
-tester.test(dofile("unit_tests/wireshark/wireshark_buffer_UT.lua"))
-tester.test(dofile("unit_tests/wireshark/wireshark_treeitem_UT.lua"))
+tester.test(dofile("unit_tests/wirebait/wirebait_protofield_UT.lua"))
+tester.test(dofile("unit_tests/wirebait/wirebait_buffer_UT.lua"))
+tester.test(dofile("unit_tests/wirebait/wirebait_treeitem_UT.lua"))
 
 tester.printReport();
 

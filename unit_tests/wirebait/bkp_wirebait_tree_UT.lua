@@ -18,6 +18,7 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
+--[[
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("unit_tests.tester")
@@ -183,4 +184,5 @@ if is_standalone_test then
 else
     return unit_tests
 end
+]]
 

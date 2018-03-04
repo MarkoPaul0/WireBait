@@ -51,8 +51,8 @@ end
 
 --[[converts a string in hex format into a big endian uint64 ]]
 local function hexStringToUint64(hex_str)
-  assert(#hex_str > 0, "Requires strict positive number of bytes!");
-  assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
+  assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
+  assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
   if #hex_str <= 8 then
     return tonumber(hex_str,16);
   else
@@ -60,7 +60,7 @@ local function hexStringToUint64(hex_str)
     local byte_size=#hex_str/2
     local value = 0;
     for i=1,byte_size do
-      value = value + tonumber(hex_str:sub(-2*i+1,-2*i),16)*16^(2*(i-1))
+      value = value + tonumber(hex_str:sub(-2*i,-2*i+1),16)*16^(2*(i-1))
     end
     return value;
   end
@@ -106,16 +106,16 @@ end
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function wirebait.ProtoField.new(abbr, name, _type, size)
   assert(name and abbr and _type, "Protofiled argument should not be nil!")
-  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8, string=0};
+  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
   local protofield = {
     _struct_type = "ProtoField";
     m_name = name;
     m_abbr = abbr;
     m_type = _type;
-    m_size = size_by_type[_type] or size or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
+    m_size = size_by_type[_type] or size -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
   }
   
-  function protofield:extractValueFromBuffer(buffer)
+  function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
       uint8 = function (buf) return buf(0,1):uint() end,
       uint16 = function (buf) return buf(0,2):uint() end,
@@ -134,8 +134,11 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
   return protofield;
 end
 
-function wirebait.ProtoField.string(name, abbr) return wirebait.ProtoField.new(name, abbr, "string", 0) end
+function wirebait.ProtoField.string(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "string") end
+function wirebait.ProtoField.uint8(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint8") end
+function wirebait.ProtoField.uint16(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint16") end
 function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
+function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint64") end
 
 --[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
 function wirebait.treeitem.new(protofield, buffer, parent) 
@@ -148,6 +151,11 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   }
   if parent then
     treeitem.m_depth = parent.m_depth + 1;
+  end
+  
+  local function prefix(depth)
+    assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
+    return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. "└─ ";
   end
   
   --[[ Private function adding a proto to the provided treeitem ]]
@@ -168,9 +176,9 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
     
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(string.rep(" ", tree.m_depth*3) .. table.concat(texts, " "));
+      print(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      io.write(string.rep(" ", tree.m_depth*3) .. proto.m_description .. "\n");
+      io.write(prefix(tree.m_depth) .. proto.m_description .. "\n");
     end
     tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
   end
@@ -193,10 +201,10 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
     
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(string.rep(" ", tree.m_depth*3) .. table.concat(texts, " "));
+      print(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      local printed_value = tostring(value or protofield:extractValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      io.write(string.rep(" ", tree.m_depth*3) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+      local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      io.write(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
     tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
   end
@@ -236,7 +244,7 @@ function wirebait.buffer.new(data_as_hex_string)
   local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
   function buffer:len()
-    return string.len(self.m_data_as_hex_str)/2;
+    return math.floor(string.len(self.m_data_as_hex_str)/2);
   end
 
   function buffer:le_uint()
@@ -258,7 +266,36 @@ function wirebait.buffer.new(data_as_hex_string)
     local size = math.min(#self.m_data_as_hex_str,16)
     return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end;
-
+  
+  function buffer:int()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
+    local uint = self:uint();
+    local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
+    local val_mask=tonumber("EF" .. string.rep("FF", size-1), 16);
+    if uint & sign_mask > 0 then --we're dealing with a negative number
+      return -((~uint & val_mask) + 1);
+    else --we are dealing with a positive number
+      return uint;
+    end
+  end
+  
+  --[[this doesn't always in Lua 5.3 because self:uint64() returns a float if the number is too big. And you cannot perform bitwise operations
+  on a float...huh... This looks like a lua bug to me, proof is that math.floor(2^64-1) returns a float and not an interger
+  this means that for now, this logic works only with number less than 00FFFFFF FFFFFFFF]]
+  function buffer:int64()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
+    local uint = self:uint64();
+    local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
+    local val_mask=tonumber("EF" .. string.rep("FF", size-1), 16);
+    if uint & sign_mask > 0 then --we're dealing with a negative number
+      return -((~uint & val_mask) + 1);
+    else --we are dealing with a positive number
+      return uint;
+    end
+  end
+  
   function buffer:string()
     local str = ""
     for i=1,self:len() do
@@ -388,7 +425,6 @@ function wirebait.packet.new (packet_buffer, packet_no)
   return packet;
 end
 
-
 function wirebait.pcap_reader.new(filepath)
   local pcap_reader = {
     m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
@@ -459,7 +495,11 @@ end
 test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 
 test:run()
-
+buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
+buf = wirebait.buffer.new("6FFFFFFFFFFFFFFF")
+buf = wirebait.buffer.new("FFFFFFAB")
+print((buf:int()))
+--buf:int();
 --test = function(a, b, c, ...)
 --  print("a: " .. a)
 --  print("b: " .. b)
@@ -471,5 +511,7 @@ test:run()
 --end
 
 --test(1,2,3)
+
+return wirebait
 
 
