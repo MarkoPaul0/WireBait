@@ -60,7 +60,7 @@ local function hexStringToUint64(hex_str)
     local byte_size=#hex_str/2
     local value = 0;
     for i=1,byte_size do
-      value = value + tonumber(hex_str:sub(-2*i,-2*i+1),16)*16^(2*(i-1))
+      value = math.floor(value) + math.floor(tonumber(hex_str:sub(-2*i,-2*i+1),16)*16^(2*(i-1))) --not using math.floor leads to off by 1 results with large 64 bit values
     end
     return value;
   end
@@ -272,27 +272,34 @@ function wirebait.buffer.new(data_as_hex_string)
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local uint = self:uint();
     local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
-    local val_mask=tonumber("EF" .. string.rep("FF", size-1), 16);
     if uint & sign_mask > 0 then --we're dealing with a negative number
+      local val_mask=tonumber("7F" .. string.rep("FF", size-1), 16);
       return -((~uint & val_mask) + 1);
     else --we are dealing with a positive number
       return uint;
     end
   end
   
-  --[[this doesn't always in Lua 5.3 because self:uint64() returns a float if the number is too big. And you cannot perform bitwise operations
-  on a float...huh... This looks like a lua bug to me, proof is that math.floor(2^64-1) returns a float and not an interger
-  this means that for now, this logic works only with number less than 00FFFFFF FFFFFFFF]]
+  --[[For some reason in Lua 5.3 because number greater than 0x6FFFFFFFFFFFFFFF are interpreted as float. In the case of a positve int it's no big deal
+  and int64() will return a float as well. However all negative numbers are by definition greater than 0x6FFFFFFFFFFFFFFF. Having the number interpreted
+  as float means I can't use bitwise operations to extract the value, at least not directly. Regargless this logic won't work for negative numbers with a raw value
+  greater than 0x6FFFFFFFFFFFFFFF, because you need to NOT that value to get the encoded value.
+  This float problem looks like a Lua 5.3 bug to me. Proof is that math.floor(2^64-1) returns a float as well]]
   function buffer:int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
-    local uint = self:uint64();
-    local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
-    local val_mask=tonumber("EF" .. string.rep("FF", size-1), 16);
-    if uint & sign_mask > 0 then --we're dealing with a negative number
+    local first_byte_raw = self(0,1):uint();
+    
+    --TODO: write version specifc code
+    if first_byte_raw & tonumber("80",16) > 0 then --negative number
+      local first_byte_val = first_byte_raw & tonumber("7F", 16);
+      assert(first_byte_val <= tonumber("6F", 16), "A bug with integers larger than 0x6FFFFFFFFFFFFFFF in lua 5.3, prevents int64() from working properly!")
+      local first_byte_hex = string.format("%X", first_byte_val); --first byte with sign bit set to 0
+      local uint = hexStringToUint64(first_byte_hex .. self(1,self:len()-1):hex_string());
+      local val_mask = tonumber("7FFFFFFFFFFFFFFF", 16)
       return -((~uint & val_mask) + 1);
-    else --we are dealing with a positive number
-      return uint;
+    else
+      return self:uint64();
     end
   end
   
@@ -495,22 +502,14 @@ end
 test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 
 test:run()
-buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
-buf = wirebait.buffer.new("6FFFFFFFFFFFFFFF")
-buf = wirebait.buffer.new("FFFFFFAB")
-print((buf:int()))
---buf:int();
---test = function(a, b, c, ...)
---  print("a: " .. a)
---  print("b: " .. b)
---  print("c: " .. c)
-  
---  args={...}
---  value = args[1]
-  
---end
-
---test(1,2,3)
+--buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
+--buf = wirebait.buffer.new("80FFFFFFFFFFFFFF")
+--local str = "‭f";
+--print(string.len(""))
+buf = wirebait.buffer.new("D6B7F9DD549BDFBF")
+--buf = wirebait.buffer.new("FFFFFFAB")
+print(buf:int64())
+print(("%d"):format(-9151314442816847873))
 
 return wirebait
 
