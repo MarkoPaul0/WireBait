@@ -282,10 +282,6 @@ function wirebait.buffer.new(data_as_hex_string)
     end
   end
   
-  and int64() will return a float as well. However all negative numbers are by definition greater than 0x6FFFFFFFFFFFFFFF. Having the number interpreted
-  as float means I can't use bitwise operations to extract the value, at least not directly. Regargless this logic won't work for negative numbers with a raw value
-  greater than 0x6FFFFFFFFFFFFFFF, because you need to NOT that value to get the encoded value.
-  This float problem looks like a Lua 5.3 bug to me. Proof is that math.floor(2^64-1) returns a float as well]]
   function buffer:int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
