@@ -322,6 +322,22 @@ function wirebait.buffer.new(data_as_hex_string)
     str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
+  
+  function buffer:bitfield(offset, length)
+    offset = offset or 0;
+    length = length or 1;
+    local byte_offset = math.floor(offset/8);
+    local byte_size = math.ceil((offset+length)/8) - byte_offset;
+    local left_bits_count = offset % 8;
+    local right_bits_count = (byte_size + byte_offset)*8 - (offset+length);
+    local uint_val = self(byte_offset, byte_size):uint64();
+    local bit_mask = tonumber(string.rep("FF", byte_size), 16);
+    for i=1,left_bits_count do 
+      bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
+    end
+    local result = (uint_val & bit_mask) >> right_bits_count;
+    return result;
+  end
 
   function buffer:hex_string()
     return self.m_data_as_hex_str;
@@ -503,10 +519,12 @@ test:run()
 --buf = wirebait.buffer.new("80FFFFFFFFFFFFFF")
 --local str = "‭f";
 --print(string.len(""))
-buf = wirebait.buffer.new("FFFFFFFFFFFFFFFF")
+buf = wirebait.buffer.new("AB123FC350DDB12D3A")
 --buf = wirebait.buffer.new("01B6")
 --buf = wirebait.buffer.new("FFFFFFAB")
-print(buf:uint64())
+print(buf:bitfield(11,3))
+print(buf:bitfield(11,5))
+print(buf:bitfield(0,40))
 print(("%d"):format(-9151314442816847873))
 
 return wirebait
