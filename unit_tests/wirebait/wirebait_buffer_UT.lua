@@ -68,6 +68,7 @@ unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian)", function()
 unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian) Largest uint64", function()
     b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
     tester.assert(b:uint64(), 18446744073709551615); 
+    tester.assert(b:uint64(), -1); 
   end)
 
 unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
@@ -110,7 +111,6 @@ unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) Zero", functio
     tester.assert(b:int64(), 0);
   end)
 
---[[This test fails]]
 unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) -1", function()
     b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
     tester.assert(b:int64(), -1);

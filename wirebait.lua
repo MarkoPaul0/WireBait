@@ -60,11 +60,9 @@ local function hexStringToUint64(hex_str)
   else
     local hex_str = string.format("%016s",hex_str) --left pad with zeros
     hex_str = hex_str:gsub(" ","0"); --for some reaon in lua 5.3 "%016s" letf pads with zeros. These version issues are annoying to say the least...
-    local byte_size=#hex_str/2
-    local value = 0;
-    for i=1,byte_size do
-      value = math.floor(value) + math.floor(tonumber(hex_str:sub(-2*i,-2*i+1),16)*16^(2*(i-1))) --not using math.floor leads to off by 1 results with large 64 bit values
-    end
+    local first_word_val = tonumber(string.sub(hex_str, 1,8),16);
+    local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
+    local value = math.floor((first_word_val << 32) + second_word_val)
     return value;
   end
 end
@@ -78,7 +76,7 @@ local function le_hexStringToUint64(hex_str) --little endian version
   --reading byte in inverted byte order
   local byte_size=#hex_str/2
   local value = 0;
-  for i=1,byte_size do
+  for i=1,byte_size do --[[this is crap, let's do the same thing I'm doing in the big endian version]]
     value = value + tonumber(hex_str:sub(2*i-1,2*i),16)*16^(2*(i-1))
   end
   return value;
