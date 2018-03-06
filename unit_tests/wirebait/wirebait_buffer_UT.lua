@@ -179,6 +179,42 @@ unit_tests:addTest("Testing wireshark buffer:bitfield(0,33) = 5740199814", funct
     tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,33), 5740199814);
   end)
 
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,8) = 255", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,8), 255);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,16) = 65535", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,16), 65535);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,32) = 4294967295", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,32), 4294967295);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,33) = 8589934591", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,33), 8589934591);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,56) = 72057594037927935", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,56), 72057594037927935);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,57) = 144115188075855871", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,57), 144115188075855871);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,58) = 288230376151711743", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,58), 288230376151711743);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,63) = 9223372036854775807", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,63), 9223372036854775807);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,64) = -1", function()
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64), -1);
+  end)
+
 unit_tests:addTest("Testing wireshark buffer:len()", function() 
     b = wirebait.buffer.new("4845");
     tester.assert(b:len(), 2, "Wrong length");

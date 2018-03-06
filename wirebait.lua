@@ -295,7 +295,7 @@ function wirebait.buffer.new(data_as_hex_string)
     else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
       the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
       local first_word_val = (~self(0,4):uint()) & tonumber("7FFFFFFF", 16);
-      local second_word_val = ~self(3,4):uint() & tonumber("FFFFFFFF", 16);
+      local second_word_val = ~self(4,4):uint() & tonumber("FFFFFFFF", 16);
       local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
       return result;
     end
@@ -356,17 +356,31 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:bitfield(offset, length)
     offset = offset or 0;
     length = length or 1;
+    assert(length <= 64, "Since bitfield() returns a uint64 of the bitfield, length must be <= 64 bits! (length: " .. length .. ")")
     local byte_offset = math.floor(offset/8);
     local byte_size = math.ceil((offset+length)/8) - byte_offset;
     local left_bits_count = offset % 8;
     local right_bits_count = (byte_size + byte_offset)*8 - (offset+length);
-    local uint_val = self(byte_offset, byte_size):uint64();
+    
     local bit_mask = tonumber(string.rep("FF", byte_size), 16);
     for i=1,left_bits_count do 
       bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
     end
-    local result = (uint_val & bit_mask) >> right_bits_count;
-    return result;
+    
+    if length > 56 then -- past 56 bits, lua may of may start to interpret numbers as floats
+      --local word_size1 = math.floor(byte_size/2);
+      --local word_size2 = math.ceil(byte_size/2);
+      local first_word_val = self(0,4):uint();
+      local second_word_val = self(4, 4):uint() >> right_bits_count;
+      bit_mask = bit_mask >> 32;
+      first_word_val = first_word_val & bit_mask;
+      local result = math.floor((first_word_val << (32 - right_bits_count)) + second_word_val)
+      return result;
+    else
+      local uint_val = self(byte_offset, byte_size):uint64();
+
+      return (uint_val & bit_mask) >> right_bits_count;
+    end
   end
 
   function buffer:hex_string()
@@ -545,21 +559,8 @@ end
 test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 
 test:run()
---buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
---buf = wirebait.buffer.new("80FFFFFFFFFFFFFF")
---local str = "‭f";
---print(string.len(""))
-buf = wirebait.buffer.new("AB123FC350DDB12D")
---buf = wirebait.buffer.new("01B6")
---buf = wirebait.buffer.new("FFFFFFAB")
+--buf = wirebait.buffer.new("AB123FC350DDB12D")
 
---buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
-print(buf:bitfield(11,3))
-print(buf:bitfield(11,5))
-print(buf:bitfield(0,8))
-print(buf:bitfield(0,33))
---print(buf:bitfield(0,64))
---print(("%d"):format(-9151314442816847873))
 
 return wirebait
 
