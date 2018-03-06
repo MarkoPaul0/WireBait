@@ -300,6 +300,35 @@ function wirebait.buffer.new(data_as_hex_string)
     end
   end
   
+  function buffer:float()
+    local size = self:len();
+    assert(size == 4, "Buffer must be 4 bytes long for buffer:float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
+    local uint = self:uint();
+    --Handling special values nicely
+    if uint == 0 or uint == 0x80000000 then
+      return 0;
+    elseif uint == 0x7f800000 then
+      return math.huge
+    elseif uint == 0xff800000 then
+      return -math.huge
+    end
+    
+    local bit_len = size == 4 and 23 or 52;
+    local exponent_mask = tonumber("7F80" .. string.rep("00", size-2), 16);
+    local exp = (uint & exponent_mask) >> bit_len;
+    local fraction= 1;
+    for i=1,bit_len do
+      local bit_mask = 1 << (23-i); --looking at one bit at a time
+      if bit_mask & uint > 0 then
+        fraction = fraction + math.pow(2,-i)
+      end
+    end
+    
+    local absolute_value = fraction * math.pow(2, exp -127);
+    local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
+    return sign * absolute_value;
+  end
+  
   function buffer:string()
     local str = ""
     for i=1,self:len() do
@@ -522,10 +551,18 @@ test:run()
 buf = wirebait.buffer.new("AB123FC350DDB12D3A")
 --buf = wirebait.buffer.new("01B6")
 --buf = wirebait.buffer.new("FFFFFFAB")
-print(buf:bitfield(11,3))
-print(buf:bitfield(11,5))
-print(buf:bitfield(0,40))
-print(("%d"):format(-9151314442816847873))
+
+print(wirebait.buffer.new("BE200000"):float())
+print(wirebait.buffer.new("C0000000"):float())
+print(wirebait.buffer.new("00000000"):float())
+print(wirebait.buffer.new("80000000"):float())
+print(wirebait.buffer.new("7f800000"):float())
+print(wirebait.buffer.new("ff800000"):float())
+print(wirebait.buffer.new("3eaaaaab"):float())
+--print(buf:bitfield(11,3))
+--print(buf:bitfield(11,5))
+--print(buf:bitfield(0,40))
+--print(("%d"):format(-9151314442816847873))
 
 return wirebait
 
