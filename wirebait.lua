@@ -59,6 +59,7 @@ local function hexStringToUint64(hex_str)
     return tonumber(hex_str,16);
   else
     local hex_str = string.format("%016s",hex_str) --left pad with zeros
+    hex_str = hex_str:gsub(" ","0"); --for some reaon in lua 5.3 "%016s" letf pads with zeros. These version issues are annoying to say the least...
     local byte_size=#hex_str/2
     local value = 0;
     for i=1,byte_size do
@@ -548,20 +549,16 @@ test:run()
 --buf = wirebait.buffer.new("80FFFFFFFFFFFFFF")
 --local str = "‭f";
 --print(string.len(""))
-buf = wirebait.buffer.new("AB123FC350DDB12D3A")
+buf = wirebait.buffer.new("AB123FC350DDB12D")
 --buf = wirebait.buffer.new("01B6")
 --buf = wirebait.buffer.new("FFFFFFAB")
 
-print(wirebait.buffer.new("BE200000"):float())
-print(wirebait.buffer.new("C0000000"):float())
-print(wirebait.buffer.new("00000000"):float())
-print(wirebait.buffer.new("80000000"):float())
-print(wirebait.buffer.new("7f800000"):float())
-print(wirebait.buffer.new("ff800000"):float())
-print(wirebait.buffer.new("3eaaaaab"):float())
---print(buf:bitfield(11,3))
---print(buf:bitfield(11,5))
---print(buf:bitfield(0,40))
+--buf = wirebait.buffer.new("0FFFFFFFFFFFFFFF")
+print(buf:bitfield(11,3))
+print(buf:bitfield(11,5))
+print(buf:bitfield(0,8))
+print(buf:bitfield(0,33))
+--print(buf:bitfield(0,64))
 --print(("%d"):format(-9151314442816847873))
 
 return wirebait

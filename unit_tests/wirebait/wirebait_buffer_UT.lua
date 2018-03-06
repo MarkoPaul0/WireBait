@@ -134,27 +134,49 @@ unit_tests:addTest("Testing wireshark buffer:int64() (Big-Endian) Large Positive
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) 1", function()
     tester.assert(wirebait.buffer.new("3F800000"):float(), 1);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) -2", function()
     tester.assert(wirebait.buffer.new("C0000000"):float(), -2);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) 0", function()
     tester.assert(wirebait.buffer.new("00000000"):float(), 0);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) -0", function()
     tester.assert(wirebait.buffer.new("80000000"):float(), 0);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) Infinity", function()
     tester.assert(wirebait.buffer.new("7F800000"):float(), math.huge);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) -Infinity", function()
     tester.assert(wirebait.buffer.new("FF800000"):float(), -math.huge);
   end) 
+
 unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) -0.15625", function()
     tester.assert(wirebait.buffer.new("BE200000"):float(), -0.15625);
   end) 
 
-unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) -0.15625", function()
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precision) 0.15625", function()
     tester.assert(wirebait.buffer.new("3E200000"):float(), 0.15625);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(11,3) = 4", function()
+    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,3), 4);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(11,5) = 18", function()
+    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,5), 18);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,8) = 171", function()
+    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,8), 171);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:bitfield(0,33) = 5740199814", function()
+    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,33), 5740199814);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:len()", function() 
