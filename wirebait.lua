@@ -49,6 +49,14 @@ local function printIP(le_int_ip)
   return ip_str;
 end
 
+local function swithEndianness(hex_str)
+  local new_hex_str = "";
+  for i=1,#hex_str/2 do
+    new_hex_str = hex_str:sub(2*i-1,2*i) .. new_hex_str;
+  end
+  return new_hex_str;
+end
+
 --[[converts a string in hex format into a big endian uint64 ]]
 --[[For some reason Lua starts interpreting numbers greater than 0x06FFFFFFFFFFFFFF as floats instead of an integers.
 This is frustrating and warrants an inverstigation.]]
@@ -68,18 +76,16 @@ local function hexStringToUint64(hex_str)
 end
 
 --[[converts a string in hex format into a little endian uint64 ]]
-local function le_hexStringToUint64(hex_str) --little endian version
-  assert(#hex_str > 0, "Requires strict positive number of bytes!");
-  assert(#hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
-  local hex_str = string.format("%-16s",hex_str):gsub(" ","0") --right pad with zeros
-
-  --reading byte in inverted byte order
-  local byte_size=#hex_str/2
-  local value = 0;
-  for i=1,byte_size do --[[this is crap, let's do the same thing I'm doing in the big endian version]]
-    value = value + tonumber(hex_str:sub(2*i-1,2*i),16)*16^(2*(i-1))
+local function le_hexStringToUint64(le_hex_str) --little endian version
+  assert(#le_hex_str > 0, "Requires strict positive number of bytes!");
+  assert(#le_hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
+  le_hex_str = string.format("%-16s",le_hex_str):gsub(" ","0")
+  
+  local hex_str = "";
+  for i=1,#le_hex_str/2 do
+    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
   end
-  return value;
+  return hexStringToUint64(hex_str);
 end
 
 local PROTOCOCOL_TYPES = {
@@ -281,6 +287,13 @@ function wirebait.buffer.new(data_as_hex_string)
     end
   end
   
+  function buffer:le_int()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
+    local be_hex_str = swithEndianness(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):int();
+  end
+  
   function buffer:int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
@@ -297,6 +310,13 @@ function wirebait.buffer.new(data_as_hex_string)
       local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
       return result;
     end
+  end
+  
+  function buffer:le_int64()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
+    local be_hex_str = swithEndianness(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):int64();
   end
   
   function buffer:float()
@@ -326,6 +346,13 @@ function wirebait.buffer.new(data_as_hex_string)
     local absolute_value = fraction * math.pow(2, exp -127);
     local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
     return sign * absolute_value;
+  end
+  
+  function buffer:le_float()
+    local size = self:len();
+    assert(size == 4, "Buffer must be 4 bytes long for buffer:le_float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
+    local be_hex_str = swithEndianness(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):float();
   end
   
   function buffer:string()
@@ -559,7 +586,16 @@ test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/exam
 test:run()
 --buf = wirebait.buffer.new("AB123FC350DDB12D")
 
+local function reverse_str(le_hex_str)
+  local hex_str = "";
+  for i=1,math.min(#le_hex_str/2,8) do
+    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
+  end
+  return hex_str;
+end
 
+str="ABCDEF12"
+print(swithEndianness(str))
 return wirebait
 
 
