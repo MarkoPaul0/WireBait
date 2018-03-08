@@ -27,12 +27,12 @@ local wirebait = {
   pcap_reader = {}, 
   ws_api = {},
   plugin_tester = {},
-  
+
   state = { --[[ state to keep track of the dissector wirebait is testing ]]
-      dissector_filepath = nil,
-      proto = nil
-    }
+    dissector_filepath = nil,
+    proto = nil
   }
+}
 
 --[[Local helper methods, only used withing this library]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
@@ -80,7 +80,7 @@ local function le_hexStringToUint64(le_hex_str) --little endian version
   assert(#le_hex_str > 0, "Requires strict positive number of bytes!");
   assert(#le_hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
   le_hex_str = string.format("%-16s",le_hex_str):gsub(" ","0")
-  
+
   local hex_str = "";
   for i=1,#le_hex_str/2 do
     hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
@@ -121,7 +121,7 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
     m_type = _type;
     m_size = size_by_type[_type] or size -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
   }
-  
+
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
       uint8 = function (buf) return buf(0,1):uint() end,
@@ -130,9 +130,9 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
       uint64 = function (buf) return buf(0,4):uint64() end,
       string = function (buf) return 
         buf(0,buf:len()):string() 
-        end,
+      end,
     };
-    
+
     local func = extractValueFuncByType[self.m_type];
     assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
     return func(buffer);
@@ -159,12 +159,12 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   if parent then
     treeitem.m_depth = parent.m_depth + 1;
   end
-  
+
   local function prefix(depth)
     assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
     return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. "└─ ";
   end
-  
+
   --[[ Private function adding a proto to the provided treeitem ]]
   local function addProto(tree, proto, buffer_or_value, texts)
     assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
@@ -181,7 +181,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       end
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
-    
+
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       print(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
@@ -189,7 +189,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
   end
-  
+
   --[[ Private function adding a protofield to the provided treeitem ]]
   local function addProtoField(tree, protofield, buffer_or_value, texts)
     assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
@@ -206,7 +206,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       end
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
-    
+
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       print(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
@@ -215,7 +215,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
   end
-  
+
   --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
   local function addTreeItem(tree, proto, buffer_or_value, texts)
     error("TvbRange no supported yet!");
@@ -273,7 +273,7 @@ function wirebait.buffer.new(data_as_hex_string)
     local size = math.min(#self.m_data_as_hex_str,16)
     return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
   end;
-  
+
   function buffer:int()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
@@ -286,19 +286,19 @@ function wirebait.buffer.new(data_as_hex_string)
       return uint;
     end
   end
-  
+
   function buffer:le_int()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
     local be_hex_str = swithEndianness(self:hex_string());
     return wirebait.buffer.new(be_hex_str):int();
   end
-  
+
   function buffer:int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local first_byte_raw = self(0,1):uint();
-    
+
     if size <= 4 then
       return self:uint();
     elseif first_byte_raw & tonumber("80",16) == 0 then --positive int
@@ -311,14 +311,14 @@ function wirebait.buffer.new(data_as_hex_string)
       return result;
     end
   end
-  
+
   function buffer:le_int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
     local be_hex_str = swithEndianness(self:hex_string());
     return wirebait.buffer.new(be_hex_str):int64();
   end
-  
+
   function buffer:float()
     local size = self:len();
     assert(size == 4, "Buffer must be 4 bytes long for buffer:float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
@@ -331,7 +331,7 @@ function wirebait.buffer.new(data_as_hex_string)
     elseif uint == 0xff800000 then
       return -math.huge
     end
-    
+
     local bit_len = size == 4 and 23 or 52;
     local exponent_mask = tonumber("7F80" .. string.rep("00", size-2), 16);
     local exp = (uint & exponent_mask) >> bit_len;
@@ -342,19 +342,49 @@ function wirebait.buffer.new(data_as_hex_string)
         fraction = fraction + math.pow(2,-i)
       end
     end
-    
+
     local absolute_value = fraction * math.pow(2, exp -127);
     local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
     return sign * absolute_value;
   end
-  
+
   function buffer:le_float()
     local size = self:len();
     assert(size == 4, "Buffer must be 4 bytes long for buffer:le_float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
     local be_hex_str = swithEndianness(self:hex_string());
     return wirebait.buffer.new(be_hex_str):float();
   end
+
+  --TODO: unit test
+  function buffer:ipv4()
+    assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:ipv4() to work. (Buffer size: " .. self:len() ..")");
+    return printIP(self:int());
+  end
+
+  --TODO: unit test
+  function buffer:le_ipv4()
+    assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:le_ipv4() to work. (Buffer size: " .. self:len() ..")");
+    return printIP(self:le_int());
+  end
+
+  --TODO: unit test
+  function buffer:eth()
+    assert(self:len() == 6, "Buffer must by 6 bytes long for buffer:eth() to work. (Buffer size: " .. self:len() ..")");
+    local eth_addr = "";
+    for i=1,self:len() do
+      local sep = i == 1 and "" or ":";
+      eth_addr = eth_addr .. sep .. self(i-1,1):hex_string();
+    end
+    return eth_addr;
+  end
   
+    --TODO: unit test
+  function buffer:le_eth()
+    assert(self:len() == 6, "Buffer must by 6 bytes long for buffer:le_eth() to work. (Buffer size: " .. self:len() ..")");
+    local be_hex_str = swithEndianness(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):eth();
+  end
+
   function buffer:string()
     local str = ""
     for i=1,self:len() do
@@ -377,7 +407,7 @@ function wirebait.buffer.new(data_as_hex_string)
     str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
-  
+
   function buffer:bitfield(offset, length)
     offset = offset or 0;
     length = length or 1;
@@ -386,12 +416,12 @@ function wirebait.buffer.new(data_as_hex_string)
     local byte_size = math.ceil((offset+length)/8) - byte_offset;
     local left_bits_count = offset % 8;
     local right_bits_count = (byte_size + byte_offset)*8 - (offset+length);
-    
+
     local bit_mask = tonumber(string.rep("FF", byte_size), 16);
     for i=1,left_bits_count do 
       bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
     end
-    
+
     if length > 56 then -- past 56 bits, lua may of may start to interpret numbers as floats
       --local word_size1 = math.floor(byte_size/2);
       --local word_size2 = math.ceil(byte_size/2);
@@ -594,8 +624,8 @@ local function reverse_str(le_hex_str)
   return hex_str;
 end
 
-str="ABCDEF12"
-print(swithEndianness(str))
+print(wirebait.buffer.new("EC086B703682"):eth())
+print(wirebait.buffer.new("EC086B703682"):le_eth())
 return wirebait
 
 
