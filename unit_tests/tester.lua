@@ -70,10 +70,12 @@ end
 --runs all unit tests in a unit test set
 function tester.test(unit_tests_set) --iterate through a set of unit tests
     io.stdout:write("\n>>>> " .. string.upper(unit_tests_set.name) .. "\n");
+    local index = 0;
     for test_number,test in pairs(unit_tests_set.tests) do 
         if type(test.func) == 'function' then
-            io.stdout:write(string.format("%-77s", test.name))
+            io.stdout:write(string.format("%-5d %-77s", index, test.name))
             tester.runTest(test.func);
+            index = index + 1;
         end
     end
 end
