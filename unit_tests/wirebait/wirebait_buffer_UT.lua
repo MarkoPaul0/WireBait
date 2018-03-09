@@ -49,7 +49,7 @@ unit_tests:addTest("Testing wireshark buffer:string()", function()
     tester.assert(b:string(),"HELLO WORLD", "Wrong result.");
   end)
 
-unit_tests:addTest("Testing wireshark buffer:string()", function()
+unit_tests:addTest("Testing wireshark buffer:stringz()", function()
     b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
     tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
   end)
@@ -63,11 +63,11 @@ unit_tests:addTest("Testing wireshark buffer(pos,len)", function()
   end)
 
 unit_tests:addTest("Testing wireshark buffer:uint() (Big-Endian)", function()
-    tester.assert(wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b"):uint(), 1212501068);
+    tester.assert(wirebait.buffer.new("48454C4C"):uint(), 1212501068);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian)", function()
-    tester.assert(wirebait.buffer.new("6D45D89F55C23601574F524C440032b4b1b34b2b"):uint64(), 7873937702377371137);
+    tester.assert(wirebait.buffer.new("6D45D89F55C23601"):uint64(), 7873937702377371137);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:uint64() (Big-Endian) Largest uint64", function()
@@ -83,11 +83,11 @@ unit_tests:addTest("Testing wireshark buffer:le_uint64() (Little-Endian) Largest
   end)
 
 unit_tests:addTest("Testing wireshark buffer:le_uint() (Little-Endian)", function()
-    tester.assert(wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b"):le_uint(), 1280066888);
+  tester.assert(wirebait.buffer.new("48454C4C"):le_uint(), 1280066888);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:le_uint64() (Little-Endian)", function()
-    tester.assert(wirebait.buffer.new("48454C4C285200000000000000"):le_uint64(), 90333032236360);
+    tester.assert(wirebait.buffer.new("48454C4C28520000"):le_uint64(), 90333032236360);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:int() (Big-Endian) Negative Number", function()
@@ -290,6 +290,18 @@ unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Pr
 
 unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) Pi", function()
     tester.assert(wirebait.buffer.new("182D4454FB210940"):le_float(), math.pi);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:ipv4() (Big-Endian) 192.168.0.1", function()
+    tester.assert(wirebait.buffer.new("C0A80001"):ipv4(), "192.168.0.1");
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:le_ipv4() (Little-Endian) 192.168.0.1", function()
+    tester.assert(wirebait.buffer.new("0100A8C0"):le_ipv4(), "192.168.0.1");
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:eth() (Big-Endian) EC:08:6B:70:36:82", function()
+    tester.assert(wirebait.buffer.new("EC086B703682"):eth(), "EC:08:6B:70:36:82");
   end)
 
 unit_tests:addTest("Testing wireshark buffer:bitfield(11,3) = 4", function()

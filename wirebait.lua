@@ -49,7 +49,7 @@ local function printIP(le_int_ip)
   return ip_str;
 end
 
-local function swithEndianness(hex_str)
+local function swapBytes(hex_str)
   local new_hex_str = "";
   for i=1,#hex_str/2 do
     new_hex_str = hex_str:sub(2*i-1,2*i) .. new_hex_str;
@@ -73,19 +73,6 @@ local function hexStringToUint64(hex_str)
     local value = math.floor((first_word_val << 32) + second_word_val)
     return value;
   end
-end
-
---[[converts a string in hex format into a little endian uint64 ]]
-local function le_hexStringToUint64(le_hex_str) --little endian version
-  assert(#le_hex_str > 0, "Requires strict positive number of bytes!");
-  assert(#le_hex_str <= 16, "Cannot convert more thant 8 bytes to an int value!");
-  le_hex_str = string.format("%-16s",le_hex_str):gsub(" ","0")
-
-  local hex_str = "";
-  for i=1,#le_hex_str/2 do
-    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
-  end
-  return hexStringToUint64(hex_str);
 end
 
 local PROTOCOCOL_TYPES = {
@@ -254,24 +241,24 @@ function wirebait.buffer.new(data_as_hex_string)
     return math.floor(string.len(self.m_data_as_hex_str)/2);
   end
 
-  function buffer:le_uint()
-    local size = math.min(#self.m_data_as_hex_str,8)
-    return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
-  end
-
-  function buffer:le_uint64()
-    local size = math.min(#self.m_data_as_hex_str,16)
-    return le_hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
-  end;
-
   function buffer:uint()
-    local size = math.min(#self.m_data_as_hex_str,8)
-    return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+    assert(self:len() <= 4, "tvbrange:uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:bytes());
   end
 
   function buffer:uint64()
-    local size = math.min(#self.m_data_as_hex_str,16)
-    return hexStringToUint64(string.sub(self.m_data_as_hex_str,0,size));
+    assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:bytes());
+  end;
+  
+  function buffer:le_uint()
+    assert(self:len() <= 4, "tvbrange:le_uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:swapped_bytes());
+  end
+
+  function buffer:le_uint64()
+    assert(self:len() <= 8, "tvbrange:le_uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:swapped_bytes());
   end;
 
   function buffer:int()
@@ -290,22 +277,19 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:le_int()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
-    local be_hex_str = swithEndianness(self:hex_string());
-    return wirebait.buffer.new(be_hex_str):int();
+    return wirebait.buffer.new(self:swapped_bytes()):int();
   end
 
   function buffer:int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
-    local first_byte_raw = self(0,1):uint();
-
     if size <= 4 then
       return self:uint();
-    elseif first_byte_raw & tonumber("80",16) == 0 then --positive int
+    elseif self(0,1):uint() & tonumber("80",16) == 0 then --positive int
       return self:uint64();
     else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
       the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
-      local first_word_val = (~self(0,4):uint()) & tonumber("7FFFFFFF", 16);
+      local first_word_val = ~self(0,4):uint() & tonumber("7FFFFFFF", 16);
       local second_word_val = ~self(4,4):uint() & tonumber("FFFFFFFF", 16);
       local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
       return result;
@@ -315,8 +299,7 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:le_int64()
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
-    local be_hex_str = swithEndianness(self:hex_string());
-    return wirebait.buffer.new(be_hex_str):int64();
+    return wirebait.buffer.new(self:swapped_bytes()):int64();
   end
 
   function buffer:float()
@@ -380,30 +363,25 @@ function wirebait.buffer.new(data_as_hex_string)
       local absolute_value = fraction * math.pow(2, exp - 1023);
       local sign = first_word & tonumber("80000000", 16) > 0 and -1 or 1;
       return sign * absolute_value;
-      
     end
   end
 
   function buffer:le_float()
     local size = self:len();
     assert(size == 4 or size == 8, "Buffer must be 4 or 8 bytes long for buffer:le_float() to work. (Buffer size: " .. self:len() ..")");
-    local be_hex_str = swithEndianness(self:hex_string());
-    return wirebait.buffer.new(be_hex_str):float();
+    return wirebait.buffer.new(self:swapped_bytes()):float();
   end
 
-  --TODO: unit test
   function buffer:ipv4()
     assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:ipv4() to work. (Buffer size: " .. self:len() ..")");
     return printIP(self:int());
   end
 
-  --TODO: unit test
   function buffer:le_ipv4()
     assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:le_ipv4() to work. (Buffer size: " .. self:len() ..")");
     return printIP(self:le_int());
   end
 
-  --TODO: unit test
   function buffer:eth()
     assert(self:len() == 6, "Buffer must by 6 bytes long for buffer:eth() to work. (Buffer size: " .. self:len() ..")");
     local eth_addr = "";
@@ -436,6 +414,26 @@ function wirebait.buffer.new(data_as_hex_string)
     str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
+  
+  --[[TODO: this is not utf-16]]
+  function buffer:ustring()
+    return self:string();
+  end
+  
+  --[[TODO: this is not utf-16]]
+  function buffer:ustringz()
+    return self:stringz();
+  end
+  
+  function buffer:le_ustring()
+    local be_hex_str = swapBytes(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):ustring();
+  end
+  
+  function buffer:le_ustringz()
+    local be_hex_str = swapBytes(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):ustringz();
+  end
 
   function buffer:bitfield(offset, length)
     offset = offset or 0;
@@ -451,7 +449,7 @@ function wirebait.buffer.new(data_as_hex_string)
       bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
     end
 
-    if length > 56 then -- past 56 bits, lua may of may start to interpret numbers as floats
+    if length > 56 then -- past 56 bits, lua starts to interpret numbers as floats
       --local word_size1 = math.floor(byte_size/2);
       --local word_size2 = math.ceil(byte_size/2);
       local first_word_val = self(0,4):uint();
@@ -470,8 +468,14 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:hex_string()
     return self.m_data_as_hex_str;
   end
-
-  --c.f. [wireshark tvbrange](https://wiki.wireshark.org/LuaAPI/Tvb) for missing implementations such as float() le_float() etc..
+  
+  function buffer:bytes()
+    return self.m_data_as_hex_str;
+  end
+  
+  function buffer:swapped_bytes()
+    return swapBytes(self.m_data_as_hex_str);
+  end
 
   function buffer:__call(start, length) --allows buffer to be called as a function 
     assert(start >= 0, "Start position is positive!");
