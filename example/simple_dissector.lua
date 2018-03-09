@@ -40,13 +40,14 @@
 local p_smp = Proto.new("smp", "Simple Protocol");
 local f_text = ProtoField.string("smp.string", "Some Header");
 local f_uin32t = ProtoField.uint32("smp.int", "Some Integer");
-
-p_smp.fields = { f_uin32t };
+local f_uin64t = ProtoField.uint64("smp.int64", "Some 64 bit int");
+p_smp.fields = { f_text, f_uin32t };
 
 function p_smp.dissector(buffer, packet_info, root_tree)
     --Dissecting packet header
-    proto_tree = root_tree:add(p_smp, buffer(0,10))
+    proto_tree = root_tree:add(p_smp, buffer(0,20))
     sub_tree = proto_tree:add(f_text, buffer(0,10));
-    sub_tree:add(f_uin32t, buffer(2,4));
+    sub_tree:add(f_uin32t, buffer(2,4), 28, "hey: ", "hola");
     sub_tree:add(f_uin32t, buffer(4,6));
+    sub_tree2 = proto_tree:add(f_uin64t, buffer(10,8));
 end

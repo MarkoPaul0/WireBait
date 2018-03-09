@@ -180,6 +180,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   --[[ Private function adding a protofield to the provided treeitem ]]
   local function addProtoField(tree, protofield, buffer_or_value, texts)
     assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
+    local value = nil;
     if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
       --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
       value = buffer_or_value;
@@ -188,8 +189,17 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       buffer = buffer_or_value
       assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
       if texts then
-        value = texts[1] --might be nil
-        texts[1] = nil --removing value from the texts array
+        if type(texts) == "table" then
+          if #texts > 0 then
+            value = texts[1] --might be nil
+            table.remove(texts,1); --removing value from the texts array
+          else
+            texts = nil;
+          end
+        else
+          value = texts;
+          texts = nil;
+        end
       end
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
@@ -207,15 +217,28 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   local function addTreeItem(tree, proto, buffer_or_value, texts)
     error("TvbRange no supported yet!");
   end
+  
+  --[[ Checks if a protofield was registered]]
+  local function checkProtofieldRegistered(protofield)
+    for k, v in pairs(wirebait.state.proto.fields) do
+      if protofield == v then
+        return true;
+      end
+    end
+    return false;
+  end
 
   function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
-    local texts = {...};
+    if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
+      print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
+      os.exit()
+    end
     if proto_or_protofield_or_buffer._struct_type == "Proto" then
-      addProto(self, proto_or_protofield_or_buffer, buffer, value, texts);
+      addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
-      addProtoField(self, proto_or_protofield_or_buffer, buffer, value, texts);
+      addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
-      addTreeItem(self, proto_or_protofield_or_buffer, buffer, value, texts);
+      addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     else
       error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
     end
