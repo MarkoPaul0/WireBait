@@ -321,36 +321,72 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:float()
     local size = self:len();
-    assert(size == 4, "Buffer must be 4 bytes long for buffer:float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
-    local uint = self:uint();
-    --Handling special values nicely
-    if uint == 0 or uint == 0x80000000 then
-      return 0;
-    elseif uint == 0x7f800000 then
-      return math.huge
-    elseif uint == 0xff800000 then
-      return -math.huge
-    end
-
-    local bit_len = size == 4 and 23 or 52;
-    local exponent_mask = tonumber("7F80" .. string.rep("00", size-2), 16);
-    local exp = (uint & exponent_mask) >> bit_len;
-    local fraction= 1;
-    for i=1,bit_len do
-      local bit_mask = 1 << (23-i); --looking at one bit at a time
-      if bit_mask & uint > 0 then
-        fraction = fraction + math.pow(2,-i)
+    assert(size == 4 or size == 8, "Buffer must be 4 or 8 bytes long for buffer:float() to work. (Buffer size: " .. self:len() ..")");
+    if size == 4 then --32 bit float
+      local uint = self:uint();
+      --Handling special values nicely
+      if uint == 0 or uint == 0x80000000 then
+        return 0;
+      elseif uint == 0x7f800000 then
+        return math.huge
+      elseif uint == 0xff800000 then
+        return -math.huge
       end
-    end
 
-    local absolute_value = fraction * math.pow(2, exp -127);
-    local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
-    return sign * absolute_value;
+      local bit_len = 23;
+      local exponent_mask = tonumber("7F800000", 16);
+      local exp = (uint & exponent_mask) >> bit_len;
+      local fraction= 1;
+      for i=1,bit_len do
+        local bit_mask = 1 << (23-i); --looking at one bit at a time
+        if bit_mask & uint > 0 then
+          fraction = fraction + math.pow(2,-i)
+        end
+      end
+
+      local absolute_value = fraction * math.pow(2, exp -127);
+      local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
+      return sign * absolute_value;
+    else --64 bit float
+      local first_word = self(0,4):uint();
+      local second_word = self(4,4):uint();
+      if second_word == 0 then
+        if first_word == 0 or first_word == 0x80000000 then
+          return 0;
+        elseif first_word == 0x7FF00000 then
+          return math.huge
+        elseif first_word == 0xFFF00000 then
+          return -math.huge
+        end
+      end
+      
+      local exponent_mask = tonumber("7FF00000", 16);
+      local exp = (first_word & exponent_mask) >> 20;
+      local fraction= 1;
+      for i=1,20 do
+        local bit_mask = 1 << (20-i); --looking at one bit at a time
+        if bit_mask & first_word > 0 then
+          fraction = fraction + math.pow(2,-i)
+        end
+      end
+      
+      for i=1,32 do
+        local bit_mask = 1 << (32-i); --looking at one bit at a time
+        if bit_mask & second_word > 0 then
+          fraction = fraction + math.pow(2,-i-20)
+        end
+      end
+      
+      local absolute_value = fraction * math.pow(2, exp - 1023);
+      local sign = first_word & tonumber("80000000", 16) > 0 and -1 or 1;
+      return sign * absolute_value;
+      
+    end
   end
 
   function buffer:le_float()
     local size = self:len();
-    assert(size == 4, "Buffer must be 4 bytes long for buffer:le_float() to work. (8 bytes not supported yet) (Buffer size: " .. self:len() ..")");
+    assert(size == 4 or size == 8, "Buffer must be 4 or 8 bytes long for buffer:le_float() to work. (Buffer size: " .. self:len() ..")");
     local be_hex_str = swithEndianness(self:hex_string());
     return wirebait.buffer.new(be_hex_str):float();
   end
@@ -376,13 +412,6 @@ function wirebait.buffer.new(data_as_hex_string)
       eth_addr = eth_addr .. sep .. self(i-1,1):hex_string();
     end
     return eth_addr;
-  end
-  
-    --TODO: unit test
-  function buffer:le_eth()
-    assert(self:len() == 6, "Buffer must by 6 bytes long for buffer:le_eth() to work. (Buffer size: " .. self:len() ..")");
-    local be_hex_str = swithEndianness(self:hex_string());
-    return wirebait.buffer.new(be_hex_str):eth();
   end
 
   function buffer:string()
@@ -624,8 +653,8 @@ local function reverse_str(le_hex_str)
   return hex_str;
 end
 
-print(wirebait.buffer.new("EC086B703682"):eth())
-print(wirebait.buffer.new("EC086B703682"):le_eth())
+--print(wirebait.buffer.new("EC086B703682"):eth())
+--print(wirebait.buffer.new("3fd5555555555555"):float())
 return wirebait
 
 

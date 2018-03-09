@@ -206,6 +206,36 @@ unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Single Precisio
     tester.assert(wirebait.buffer.new("3E200000"):float(), 0.15625);
   end)
 
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) 1", function()
+    tester.assert(wirebait.buffer.new("3FF0000000000000"):float(), 1);
+  end) 
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) 1", function()
+    tester.assert(wirebait.buffer.new("000000000000F03F"):le_float(), 1);
+  end)
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) -2", function()
+    tester.assert(wirebait.buffer.new("C000000000000000"):float(), -2);
+  end)
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) 0", function()
+    tester.assert(wirebait.buffer.new("0000000000000000"):float(), 0);
+  end)
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) -0", function()
+    tester.assert(wirebait.buffer.new("8000000000000000"):float(), 0);
+  end) 
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) Infinity", function()
+    tester.assert(wirebait.buffer.new("7FF0000000000000"):float(), math.huge);
+  end)
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) -Infinity", function()
+    tester.assert(wirebait.buffer.new("FFF0000000000000"):float(), -math.huge);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) -Pi", function()
+    tester.assert(wirebait.buffer.new("C00921FB54442D18"):float(), -math.pi);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:float() (Big-Endian Double Precision) Pi", function()
+    tester.assert(wirebait.buffer.new("400921FB54442D18"):float(), math.pi);
+  end)
+
 unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Precision) -2", function()
     tester.assert(wirebait.buffer.new("000000C0"):le_float(), -2);
   end) 
@@ -216,7 +246,7 @@ unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Pr
 
 unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Precision) -0", function()
     tester.assert(wirebait.buffer.new("00000080"):le_float(), 0);
-  end) 
+  end)
 
 unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Precision) Infinity", function()
     tester.assert(wirebait.buffer.new("0000807F"):le_float(), math.huge);
@@ -232,6 +262,34 @@ unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Pr
 
 unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Single Precision) 0.15625", function()
     tester.assert(wirebait.buffer.new("0000203E"):le_float(), 0.15625);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) -2", function()
+    tester.assert(wirebait.buffer.new("00000000000000C0"):le_float(), -2);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) 0", function()
+    tester.assert(wirebait.buffer.new("0000000000000000"):le_float(), 0);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) -0", function()
+    tester.assert(wirebait.buffer.new("0000000000000080"):le_float(), 0);
+  end)
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) Infinity", function()
+    tester.assert(wirebait.buffer.new("000000000000F07F"):le_float(), math.huge);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) -Infinity", function()
+    tester.assert(wirebait.buffer.new("000000000000F0FF"):le_float(), -math.huge);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) -Pi", function()
+    tester.assert(wirebait.buffer.new("182D4454FB2109C0"):le_float(), -math.pi);
+  end) 
+
+unit_tests:addTest("Testing wireshark buffer:le_float() (Little-Endian Double Precision) Pi", function()
+    tester.assert(wirebait.buffer.new("182D4454FB210940"):le_float(), math.pi);
   end)
 
 unit_tests:addTest("Testing wireshark buffer:bitfield(11,3) = 4", function()
