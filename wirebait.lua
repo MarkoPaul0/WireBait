@@ -285,12 +285,12 @@ function wirebait.buffer.new(data_as_hex_string)
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     if size <= 4 then
       return self:uint();
-    elseif self(0,1):uint() & tonumber("80",16) == 0 then --positive int
+    elseif self(0,1):uint() & 0x80 == 0 then --positive int
       return self:uint64();
     else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
       the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
-      local first_word_val = ~self(0,4):uint() & tonumber("7FFFFFFF", 16);
-      local second_word_val = ~self(4,4):uint() & tonumber("FFFFFFFF", 16);
+      local first_word_val = ~self(0,4):uint() & 0x7FFFFFFF;
+      local second_word_val = ~self(4,4):uint() & 0xFFFFFFFF;
       local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
       return result;
     end
@@ -309,59 +309,57 @@ function wirebait.buffer.new(data_as_hex_string)
       local uint = self:uint();
       --Handling special values nicely
       if uint == 0 or uint == 0x80000000 then
-        return 0;
-      elseif uint == 0x7f800000 then
-        return math.huge
-      elseif uint == 0xff800000 then
-        return -math.huge
+        return 0; --[[+/- zero]]
+      elseif uint == 0x7F800000 then
+        return math.huge --[[+infinity]]
+      elseif uint == 0xFF800000 then
+        return -math.huge --[[-infinity]]
       end
-
       local bit_len = 23;
-      local exponent_mask = tonumber("7F800000", 16);
+      local exponent_mask = 0x7F800000;
       local exp = (uint & exponent_mask) >> bit_len;
       local fraction= 1;
       for i=1,bit_len do
-        local bit_mask = 1 << (23-i); --looking at one bit at a time
+        local bit_mask = 1 << (bit_len-i); --looking at one bit at a time
         if bit_mask & uint > 0 then
           fraction = fraction + math.pow(2,-i)
         end
       end
-
       local absolute_value = fraction * math.pow(2, exp -127);
-      local sign = uint & tonumber("80" .. string.rep("00", size-1), 16) > 0 and -1 or 1;
+      local sign = uint & 0x80000000 > 0 and -1 or 1;
       return sign * absolute_value;
     else --64 bit float
-      local first_word = self(0,4):uint();
-      local second_word = self(4,4):uint();
-      if second_word == 0 then
-        if first_word == 0 or first_word == 0x80000000 then
-          return 0;
-        elseif first_word == 0x7FF00000 then
-          return math.huge
-        elseif first_word == 0xFFF00000 then
-          return -math.huge
+      local word1 = self(0,4):uint(); --word1 will contain the bit sign, the exponent and part of the fraction
+      local word2 = self(4,4):uint(); --word2 will contain the rest of the fraction
+      --Handling special values nicely
+      if word2 == 0 then
+        if word1 == 0 or word1 == 0x80000000 then
+          return 0; --[[+/-zero]]
+        elseif word1 == 0x7FF00000 then
+          return math.huge --[[+infinity]]
+        elseif word1 == 0xFFF00000 then
+          return -math.huge --[[-infinity]]
         end
       end
-      
-      local exponent_mask = tonumber("7FF00000", 16);
-      local exp = (first_word & exponent_mask) >> 20;
+      local exponent_mask = 0x7FF00000;
+      local bit_len1 = 20;
+      local exp = (word1 & exponent_mask) >> bit_len1;
       local fraction= 1;
-      for i=1,20 do
-        local bit_mask = 1 << (20-i); --looking at one bit at a time
-        if bit_mask & first_word > 0 then
+      for i=1,bit_len1 do --[[starting to calculate fraction with word1]]
+        local bit_mask = 1 << (bit_len1-i); --looking at one bit at a time
+        if bit_mask & word1 > 0 then
           fraction = fraction + math.pow(2,-i)
         end
       end
-      
-      for i=1,32 do
-        local bit_mask = 1 << (32-i); --looking at one bit at a time
-        if bit_mask & second_word > 0 then
-          fraction = fraction + math.pow(2,-i-20)
+      local bit_len2 = 32; --[[finishing to calculate fraction with word2]]
+      for i=1,bit_len2 do
+        local bit_mask = 1 << (bit_len2-i); --looking at one bit at a time
+        if bit_mask & word2 > 0 then
+          fraction = fraction + math.pow(2,-i-bit_len1)
         end
       end
-      
       local absolute_value = fraction * math.pow(2, exp - 1023);
-      local sign = first_word & tonumber("80000000", 16) > 0 and -1 or 1;
+      local sign = word1 & 0x80000000 > 0 and -1 or 1;
       return sign * absolute_value;
     end
   end
@@ -450,8 +448,6 @@ function wirebait.buffer.new(data_as_hex_string)
     end
 
     if length > 56 then -- past 56 bits, lua starts to interpret numbers as floats
-      --local word_size1 = math.floor(byte_size/2);
-      --local word_size2 = math.ceil(byte_size/2);
       local first_word_val = self(0,4):uint();
       local second_word_val = self(4, 4):uint() >> right_bits_count;
       bit_mask = bit_mask >> 32;
@@ -460,7 +456,6 @@ function wirebait.buffer.new(data_as_hex_string)
       return result;
     else
       local uint_val = self(byte_offset, byte_size):uint64();
-
       return (uint_val & bit_mask) >> right_bits_count;
     end
   end
