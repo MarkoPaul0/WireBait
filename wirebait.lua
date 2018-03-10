@@ -573,9 +573,8 @@ end
 --[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
      At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
      is that you can visualize what the struct would look like once populated]]
-function wirebait.packet.new (packet_buffer, packet_no)
+function wirebait.packet.new (packet_buffer)
   local packet = {
-    packet_number = packet_no,
     ethernet = {
       dst_mac = nil, --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
       src_mac = nil,
@@ -665,19 +664,19 @@ function wirebait.packet.new (packet_buffer, packet_no)
   function packet:info()
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
-        return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
+        return "UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
       elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
-        return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
+        return "TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
       else
         --[[Unknown transport layer]]
-        return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
+        return "IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
       end
     else
-      return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
+      return "Ethernet packet (non ipv4)";
     end
   end
   
@@ -713,14 +712,12 @@ end
 function wirebait.pcap_reader.new(filepath)
   local pcap_reader = {
     m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
-    m_packet_number = 1
   }
-
   --[[Performing various checks before reading the packet data]]
   assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
   local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
   assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
-  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
+  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported! (Note that pcapng file are not supported either)"); 
 
   --[[Reading pcap file and returning the next ethernet frame]]
   function pcap_reader:getNextEthernetFrame()
@@ -729,23 +726,15 @@ function wirebait.pcap_reader.new(filepath)
     if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
       return nil;
     end
-    --print("Pcap Header: " .. tostring(pcap_hdr_buffer));
     local packet_length = pcap_hdr_buffer(8,4):le_uint();
-
     local packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
     if packet_buffer:len() < packet_length then -- this does not handle live capture
       return nil;
     end
-    --print("     Packet: " .. tostring(packet_buffer));
     assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
-    local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
-    self.m_packet_number = self.m_packet_number + 1;
+    local ethernet_frame = wirebait.packet.new(packet_buffer);
     return ethernet_frame;
   end
-
---	self_pcap_reader:getNextIPPayload = getNextIPPayload;
---	setmetatable(self_pcap_reader, self)
---	self.__index = self
   return pcap_reader;
 end
 
@@ -756,7 +745,6 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
     m_dissector_filepath = dissector_filepath,
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
-  --wireshark.wirebait_handle = plugin_tester;
 
   function plugin_tester:run()
     wirebait.state.dissector_table = newDissectorTable();
@@ -766,10 +754,10 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
     DissectorTable = wirebait.state.dissector_table;
     dofile(self.m_dissector_filepath);
     
+    local packet_no = 1;
     repeat
       local packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
-        
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         if buffer then
           local root_tree = wirebait.treeitem.new(buffer);
@@ -782,7 +770,7 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
           end
           if proto_handle or not self.m_only_show_dissected_packets then
             io.write("-------------------------------------------------------------------------[[\n");
-            io.write(packet:info() .. "\n");
+            io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
             if proto_handle then
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
@@ -790,8 +778,8 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
             io.write("]]-------------------------------------------------------------------------\n\n\n");
           end
         end
-        
       end
+      packet_no = packet_no + 1;
     until packet == nil
   end
 
