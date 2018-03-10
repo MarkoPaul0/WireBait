@@ -19,5 +19,6 @@
 ]]
 
 local wirebait = require("wirebait");
-local dissector_tester = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
+local dissector_tester = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+  "C:/Users/Marko/Desktop/wirebait_test2.pcap");
 dissector_tester:run();

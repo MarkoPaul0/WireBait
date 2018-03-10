@@ -19,6 +19,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--local wireshark = require("wirebait.wireshark_api_mock")
+--local wirebait = require("wirebait.wirebait")
+
 
 --[[ Simple protocol "smp" with header containing sequence number + payload containing N messages
     header :
@@ -28,33 +31,23 @@
             - uint8 message_type
             - uint16 message_size
             - uint8 is_urgent 1 = true, 0 = false
-            - char[24] username (null terminated)
+            - char[24] username
         message_payload:
             <depending on message type>
 --]]--
 
-local p_smp = Proto("smp", "Simple Protocol");
-local f_header = ProtoField.string("smp.Header", "Header"); --more of a place holder to organize the tree
-local f_seq_no = ProtoField.uint64("smp.seq_no", "Sequence Number");
-local f_type = ProtoField.uint8("smp.type", "Type");
-local f_size = ProtoField.uint16("smp.size", "Size");
-local f_is_urgent = ProtoField.uint8("smp.is_urgent", "Urgent");
-local f_username = ProtoField.stringz("smp.", "Username");
 
-p_smp.fields = {f_header, f_seq_no, f_type, f_size, f_is_urgent, f_username};
+local p_smp = Proto.new("smp", "Simple Protocol");
+local f_text = ProtoField.string("smp.string", "Some Header");
+local f_uin32t = ProtoField.uint32("smp.int", "Some Integer");
+local f_uin64t = ProtoField.uint64("smp.int64", "Some 64 bit int");
+p_smp.fields = { f_text, f_uin32t };
 
 function p_smp.dissector(buffer, packet_info, root_tree)
-  packet_info.cols.protocol = p_smp.name
-  main_tree = root_tree:add(p_smp, buffer(0))
-  
-  hdr_tree = main_tree:add(f_header, buffer(0,28), "", "Header");
-  hdr_tree:add(f_seq_no, buffer(0,8));
-  hdr_tree:add(f_type, buffer(8,1));
-  hdr_tree:add(f_size, buffer(9,2));
-  hdr_tree:add(f_is_urgent, buffer(11,1));
-  hdr_tree:add(f_username, buffer(12,24), buffer(12,24):stringz());
+    --Dissecting packet header
+    proto_tree = root_tree:add(p_smp, buffer(0,20))
+    sub_tree = proto_tree:add(f_text, buffer(0,10));
+    sub_tree:add(f_uin32t, buffer(2,4), 28, "hey: ", "hola");
+    sub_tree:add(f_uin32t, buffer(4,6));
+    sub_tree2 = proto_tree:add(f_uin64t, buffer(10,8));
 end
-
---local udp_encap_table = DissectorTable.get("udp.port")
---udp_encap_table:add(59121, p_smp)
---udp_encap_table:add(7437, p_smp)

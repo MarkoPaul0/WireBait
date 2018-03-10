@@ -25,12 +25,16 @@ local wirebait = {
   buffer = {}, 
   packet = {}, 
   pcap_reader = {}, 
-  ws_api = {},
   plugin_tester = {},
 
   state = { --[[ state to keep track of the dissector wirebait is testing ]]
     dissector_filepath = nil,
-    proto = nil
+    proto = nil,
+    packet_info = {
+      cols={
+        protocol = nil
+      }
+    }
   }
 }
 
@@ -90,9 +94,10 @@ function wirebait.Proto.new(abbr, description)
     m_abbr = abbr,
     fields = {}, --protofields
     dissector = {}, --dissection function
+    name = description --ws api
   }
 
-  assert(wirebait.state.proto == nil, "Multiple Protos are declared in the dissector file you are testing!");
+  assert(wirebait.state.proto == nil, "Wirebait currenlty only support 1 proto per dissector file!");
   wirebait.state.proto = proto;
   return proto;
 end
@@ -113,11 +118,10 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
     local extractValueFuncByType = {
       uint8 = function (buf) return buf(0,1):uint() end,
       uint16 = function (buf) return buf(0,2):uint() end,
-      uint32 = function (buf) return buf(0,3):uint() end,
-      uint64 = function (buf) return buf(0,4):uint64() end,
-      string = function (buf) return 
-        buf(0,buf:len()):string() 
-      end,
+      uint32 = function (buf) return buf(0,4):uint() end,
+      uint64 = function (buf) return buf(0,8):uint64() end,
+      string = function (buf) return buf(0):string() end,
+      stringz = function (buf) return buf(0):stringz() end,
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -129,6 +133,7 @@ function wirebait.ProtoField.new(abbr, name, _type, size)
 end
 
 function wirebait.ProtoField.string(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "string") end
+function wirebait.ProtoField.stringz(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "stringz") end
 function wirebait.ProtoField.uint8(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint8") end
 function wirebait.ProtoField.uint16(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint16") end
 function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
@@ -162,9 +167,12 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
       buffer = buffer_or_value
       assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
-      if texts then
+      if #texts > 0 then
         value = texts[1] --might be nil
-        texts[1] = nil --removing value from the texts array
+        table.remove(texts,1); --removing value from the texts array
+      end
+      if #texts == 0 then
+        texts = nil
       end
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
@@ -193,7 +201,8 @@ function wirebait.treeitem.new(protofield, buffer, parent)
           if #texts > 0 then
             value = texts[1] --might be nil
             table.remove(texts,1); --removing value from the texts array
-          else
+          end
+          if #texts == 0 then
             texts = nil;
           end
         else
@@ -497,6 +506,7 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:__call(start, length) --allows buffer to be called as a function 
     assert(start >= 0, "Start position is positive!");
+    length = length or self:len() - start; --add unit test for the case where no length was provided
     assert(length > 0, "Length is strictly positive!");
     assert(start + length <= self:len(), "Index get out of bounds!")
     return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
@@ -646,13 +656,13 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
       local packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
         print(packet:info());
-        Proto = wirebait.Proto;
+        Proto = wirebait.Proto.new;
         ProtoField = wirebait.ProtoField;
         dofile(self.m_dissector_filepath);
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         local root_tree = wirebait.treeitem.new(buffer);
         if buffer then
-          wirebait.state.proto.dissector(buffer, nil, root_tree);
+          wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
         end
         break;
       end
@@ -662,18 +672,18 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
   return plugin_tester;
 end
 
-test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
+--test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 
-test:run()
---buf = wirebait.buffer.new("AB123FC350DDB12D")
+--test:run()
+----buf = wirebait.buffer.new("AB123FC350DDB12D")
 
-local function reverse_str(le_hex_str)
-  local hex_str = "";
-  for i=1,math.min(#le_hex_str/2,8) do
-    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
-  end
-  return hex_str;
-end
+--local function reverse_str(le_hex_str)
+--  local hex_str = "";
+--  for i=1,math.min(#le_hex_str/2,8) do
+--    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
+--  end
+--  return hex_str;
+--end
 
 --print(wirebait.buffer.new("EC086B703682"):eth())
 --print(wirebait.buffer.new("3fd5555555555555"):float())
