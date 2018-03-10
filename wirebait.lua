@@ -793,26 +793,6 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
---local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
-local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/wirebait_test2.pcap");
---local test = wirebait.plugin_tester.new{
---  dissector_path = "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
---  pcap_path = "C:/Users/Marko/Desktop/wirebait_test2.pcap"
---  only_show_dissected_packets = true};
-test:run()
-
-----buf = wirebait.buffer.new("AB123FC350DDB12D")
-
---local function reverse_str(le_hex_str)
---  local hex_str = "";
---  for i=1,math.min(#le_hex_str/2,8) do
---    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
---  end
---  return hex_str;
---end
-
---print(wirebait.buffer.new("EC086B703682"):eth())
---print(wirebait.buffer.new("3fd5555555555555"):float())
 return wirebait
 
 
