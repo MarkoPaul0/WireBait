@@ -36,40 +36,12 @@ local wirebait = {
       }
     },
     dissector_table = {
-        udp = { port = {} }
+        udp = { port = nil }
     }
   }
 }
 
-local function dissectorTableConstructor()
-  dissector_table = { 
-    udp = { port = {} }
-  }
-  
-  local function port_table_ctr()
-    port_table = {}
-    
-    function port_table:add(port, proto_handle)
-      assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
-      self[port] = proto_handle;
-    end
-    
-    return port_table;
-  end
-  
-  dissector_table.udp.port = port_table_ctr();
-
-  function dissector_table.get(path)
-    local obj = dissector_table;
-    path:gsub("%a+", function(split_path) obj = obj[split_path] end)
-    return obj;
-  end
-      
-  return dissector_table;
-end
-
-
---[[Local helper methods, only used withing this library]]
+--[[----------LOCAL HELPER METHODS (only used within the library)---------------------------------------------------------------------------------------------------------]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
 local function readFileAsHex(file, byte_count)
   local data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
@@ -78,7 +50,7 @@ local function readFileAsHex(file, byte_count)
   return hex_data
 end
 
---[[prints an ip in octet format givent its little endian int32 representation]]
+--[[Prints an ip in octet format givent its little endian int32 representation]]
 local function printIP(le_int_ip)
   local ip_str = ((le_int_ip & 0xFF000000) >> 24) .. "." .. ((le_int_ip & 0x00FF0000) >> 16) .. "." .. ((le_int_ip & 0x0000FF00) >> 8) .. "." .. (le_int_ip & 0x000000FF);
   return ip_str;
@@ -92,9 +64,8 @@ local function swapBytes(hex_str)
   return new_hex_str;
 end
 
---[[converts a string in hex format into a big endian uint64 ]]
---[[For some reason Lua starts interpreting numbers greater than 0x06FFFFFFFFFFFFFF as floats instead of an integers.
-This is frustrating and warrants an inverstigation.]]
+--[[Converts a string in hex format into a big endian uint64 ]]
+--[[In lua there is no real integer type, and past 2^53 numbers a interpreted as double, which is why uin64t are handled in 2 words]]
 local function hexStringToUint64(hex_str)
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
@@ -110,12 +81,15 @@ local function hexStringToUint64(hex_str)
   end
 end
 
-local PROTOCOCOL_TYPES = {
+local PROTOCOL_TYPES = {
   IPV4 = 0x800,
   UDP  = 0x11,
   TCP  =  0x06
 };
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+--[----------WIRESHARK PROTO----------------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
 function wirebait.Proto.new(abbr, description)
   assert(description and abbr, "Proto argument should not be nil!")
@@ -132,7 +106,10 @@ function wirebait.Proto.new(abbr, description)
   wirebait.state.proto = proto;
   return proto;
 end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+--[----------WIRESHARK PROTOFIELD-----------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function wirebait.ProtoField.new(abbr, name, _type, size)
   assert(name and abbr and _type, "Protofiled argument should not be nil!")
@@ -169,7 +146,10 @@ function wirebait.ProtoField.uint8(name, abbr) return wirebait.ProtoField.new(na
 function wirebait.ProtoField.uint16(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint16") end
 function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
 function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint64") end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+--[----------WIRESHARK TREEITEM-------------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
 function wirebait.treeitem.new(protofield, buffer, parent) 
   local treeitem = {
@@ -287,7 +267,10 @@ function wirebait.treeitem.new(protofield, buffer, parent)
 
   return treeitem;
 end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+--[----------WIRESHARK BYTEARRAY/TVB/TVBRANGE-----------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
 function wirebait.buffer.new(data_as_hex_string)
   assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
@@ -551,7 +534,40 @@ function wirebait.buffer.new(data_as_hex_string)
 
   return buffer;
 end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+--[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
+local function newDissectorTable()
+  dissector_table = { 
+    udp = { port = {} }
+  }
+  
+  local function newPortTable()
+    port_table = {}
+    
+    function port_table:add(port, proto_handle)
+      assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
+      self[port] = proto_handle;
+    end
+    
+    return port_table;
+  end
+  
+  dissector_table.udp.port = newPortTable();
+
+  function dissector_table.get(path)
+    local obj = dissector_table;
+    path:gsub("%a+", function(split_path) obj = obj[split_path] end)
+    return obj;
+  end
+      
+  return dissector_table;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------PCAP READING LOGIC-------------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
      At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
      is that you can visualize what the struct would look like once populated]]
@@ -586,7 +602,7 @@ function wirebait.packet.new (packet_buffer, packet_no)
   packet.ethernet.dst_mac = packet_buffer(0,6):hex_string();
   packet.ethernet.src_mac = packet_buffer(6,6):hex_string();
   packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
-  if packet.ethernet.type ~= PROTOCOCOL_TYPES.IPV4 then
+  if packet.ethernet.type ~= PROTOCOL_TYPES.IPV4 then
     packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
   else
     --[[IPV4 layer parsing]]
@@ -595,11 +611,11 @@ function wirebait.packet.new (packet_buffer, packet_no)
     packet.ethernet.ipv4.dst_ip = packet_buffer(30,4):uint();
 
     --[[UDP layer parsing]]
-    if packet.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
+    if packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
       packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
       packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
       packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
-    elseif packet.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
+    elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
       --[[TCP layer parsing]]
       packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
       packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
@@ -641,12 +657,12 @@ function wirebait.packet.new (packet_buffer, packet_no)
   end
 
   function packet:info()
-    if self.ethernet.type == PROTOCOCOL_TYPES.IPV4 then
-      if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
+    if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
+      if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
         return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
-      elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
+      elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
@@ -709,7 +725,7 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
   --wireshark.wirebait_handle = plugin_tester;
 
   function plugin_tester:run()
-    wirebait.state.dissector_table = dissectorTableConstructor();
+    wirebait.state.dissector_table = newDissectorTable();
     
     Proto = wirebait.Proto.new;
     ProtoField = wirebait.ProtoField;
@@ -736,6 +752,7 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
 
   return plugin_tester;
 end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 --test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
 
