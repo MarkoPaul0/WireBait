@@ -55,6 +55,6 @@ function p_smp.dissector(buffer, packet_info, root_tree)
   hdr_tree:add(f_username, buffer(12,24), buffer(12,24):stringz());
 end
 
---local udp_encap_table = DissectorTable.get("udp.port")
---udp_encap_table:add(59121, p_smp)
---udp_encap_table:add(7437, p_smp)
+local udp_encap_table = DissectorTable.get("udp.port")
+udp_encap_table:add(59121, p_smp)
+udp_encap_table:add(7437, p_smp)

@@ -34,9 +34,40 @@ local wirebait = {
       cols={
         protocol = nil
       }
+    },
+    dissector_table = {
+        udp = { port = {} }
     }
   }
 }
+
+local function dissectorTableConstructor()
+  dissector_table = { 
+    udp = { port = {} }
+  }
+  
+  local function port_table_ctr()
+    port_table = {}
+    
+    function port_table:add(port, proto_handle)
+      assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
+      self[port] = proto_handle;
+    end
+    
+    return port_table;
+  end
+  
+  dissector_table.udp.port = port_table_ctr();
+
+  function dissector_table.get(path)
+    local obj = dissector_table;
+    path:gsub("%a+", function(split_path) obj = obj[split_path] end)
+    return obj;
+  end
+      
+  return dissector_table;
+end
+
 
 --[[Local helper methods, only used withing this library]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
@@ -515,6 +546,7 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:__tostring()
     return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
   end
+  
   setmetatable(buffer, buffer)
 
   return buffer;
@@ -584,15 +616,40 @@ function wirebait.packet.new (packet_buffer, packet_no)
       packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
     end
   end
+  
+  local function print_bytes(buffer, cols_count, bytes_per_col) --[[althought it is working, let's simplify this method]]
+    local col_id = 1;
+    local byte_id = 0;
+    local str = "\t";
+    local last_id = 0;
+    for i=1,buffer:len() do
+      str = str .. " " .. buffer(i-1,1):hex_string();
+      byte_id = byte_id + 1;
+      if byte_id == bytes_per_col then
+        if col_id == cols_count then
+          str = str .. "\n\t";
+          last_id = i;
+          col_id = 1;
+        else
+          str = str .. "  ";
+          col_id = col_id + 1;
+        end
+        byte_id = 0;
+      end
+    end
+    return str;
+  end
 
   function packet:info()
     if self.ethernet.type == PROTOCOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.UDP then
         return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
+        --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
       elseif self.ethernet.ipv4.protocol == PROTOCOCOL_TYPES.TCP then
         return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
+        --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
       else
         --[[Unknown transport layer]]
         return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
@@ -652,18 +709,26 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
   --wireshark.wirebait_handle = plugin_tester;
 
   function plugin_tester:run()
+    wirebait.state.dissector_table = dissectorTableConstructor();
+    
+    Proto = wirebait.Proto.new;
+    ProtoField = wirebait.ProtoField;
+    DissectorTable = wirebait.state.dissector_table;
+    dofile(self.m_dissector_filepath);
+    
     repeat
       local packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
-        print(packet:info());
-        Proto = wirebait.Proto.new;
-        ProtoField = wirebait.ProtoField;
-        dofile(self.m_dissector_filepath);
+        io.write("-------------------------------------------------------------------------[[\n");
+        io.write(packet:info() .. "\n");
+        
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         local root_tree = wirebait.treeitem.new(buffer);
         if buffer then
+          --TODO: only dissect packet if the dissector is added to the dissector table for the corresponding udp or tcp port 
           wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
         end
+        io.write("]]-------------------------------------------------------------------------\n\n");
         break;
       end
     until packet == nil
