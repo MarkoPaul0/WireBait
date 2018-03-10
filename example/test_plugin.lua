@@ -20,5 +20,5 @@
 
 local wirebait = require("wirebait");
 local dissector_tester = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
-  "C:/Users/Marko/Desktop/wirebait_test2.pcap");
+  "C:/Users/Marko/Desktop/wirebait_test2.pcap", {only_show_dissected_packets=true});
 dissector_tester:run();

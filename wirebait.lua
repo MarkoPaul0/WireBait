@@ -749,10 +749,12 @@ function wirebait.pcap_reader.new(filepath)
   return pcap_reader;
 end
 
-function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
+function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_table) --[[options_table uses named arguments]]
+  options_table = options_table or {};
   local plugin_tester = {
     m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath),
-    m_dissector_filepath = dissector_filepath
+    m_dissector_filepath = dissector_filepath,
+    m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
   --wireshark.wirebait_handle = plugin_tester;
 
@@ -767,8 +769,7 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
     repeat
       local packet = self.m_pcap_reader:getNextEthernetFrame()
       if packet then
-        io.write("-------------------------------------------------------------------------[[\n");
-        io.write(packet:info() .. "\n");
+        
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         if buffer then
           local root_tree = wirebait.treeitem.new(buffer);
@@ -779,12 +780,17 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
             assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
             proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
           end
-          if proto_handle then
-            assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
-            proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+          if proto_handle or not self.m_only_show_dissected_packets then
+            io.write("-------------------------------------------------------------------------[[\n");
+            io.write(packet:info() .. "\n");
+            if proto_handle then
+              assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
+              proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+            end
+            io.write("]]-------------------------------------------------------------------------\n\n\n");
           end
         end
-        io.write("]]-------------------------------------------------------------------------\n\n\n");
+        
       end
     until packet == nil
   end
@@ -794,11 +800,9 @@ end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 --local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
-local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/wirebait_test2.pcap");
---local test = wirebait.plugin_tester.new{
---  dissector_path = "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
---  pcap_path = "C:/Users/Marko/Desktop/wirebait_test2.pcap"
---  only_show_dissected_packets = true};
+local test = wirebait.plugin_tester.new( "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+  "C:/Users/Marko/Desktop/wirebait_test2.pcap",
+  {only_show_dissected_packets = true});
 test:run()
 
 ----buf = wirebait.buffer.new("AB123FC350DDB12D")
