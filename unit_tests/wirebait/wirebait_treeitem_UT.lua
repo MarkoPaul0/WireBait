@@ -20,8 +20,8 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("wirebait.unit_tests.tester")
-local wireshark = require("wirebait.wireshark_api_mock")
+local tester = tester or require("unit_tests.tester")
+local wirebait = require("wirebait")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
@@ -31,13 +31,13 @@ therefore forgetting the local keywork will not have a negative impact.
 local unit_tests = tester.newUnitTestsSet("Wireshark Tree Item Unit Tests");
 
 unit_tests:addTest("Testing wireshark tree item construction", function()
-        tree_item = wireshark.treeitem.new();
+        tree_item = wirebait.treeitem.new();
         tester.assert(tree_item.m_length, 0, "Wrong length!")
         tester.assert(tree_item.m_subtrees_count, 0, "Wrong subtrees count!")
     end);
 
 unit_tests:addTest("Testing wireshark treeitem:set_len()", function()
-        tree_item = wireshark.treeitem.new();
+        tree_item = wirebait.treeitem.new();
         tree_item:set_len(4);
         tester.assert(tree_item.m_length, 4, "Wrong length!")
         tree_item:set_len(42);
@@ -45,8 +45,8 @@ unit_tests:addTest("Testing wireshark treeitem:set_len()", function()
     end);
 
 unit_tests:addTest("Testing wireshark treeitem:add()", function()
-        tree_item = wireshark.treeitem.new();
-        ws_protfield = wireshark.Protofield.new("Some Field", "smp.someField", "uint16")
+        tree_item = wirebait.treeitem.new();
+        ws_protfield = wirebait.ProtoField.new("Some Field", "smp.someField", "uint16")
         sub_treeitem = tree_item:add(ws_protfield)
         tester.assert(sub_treeitem.m_length, 2, "Wrong length!")
     end);

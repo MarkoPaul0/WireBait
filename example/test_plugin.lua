@@ -1,4 +1,3 @@
-
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
     Dissectors in lua
@@ -19,17 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-
---# UNIT TESTING 
-tester = require("unit_tests.tester")
-print("\nRunning all unit tests")
-
---# WIREBAIT TESTS
-tester.test(dofile("unit_tests/wirebait/wirebait_protofield_UT.lua"))
-tester.test(dofile("unit_tests/wirebait/wirebait_buffer_UT.lua"))
-tester.test(dofile("unit_tests/wirebait/wirebait_treeitem_UT.lua"))
-
-tester.printReport();
-
-
-
+local wirebait = require("wirebait");
+local dissector_tester = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+  "C:/Users/Marko/Desktop/wirebait_test2.pcap");
+dissector_tester:run();

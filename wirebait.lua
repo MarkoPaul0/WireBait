@@ -1,4 +1,3 @@
-
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
     Dissectors in lua
@@ -19,266 +18,801 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+local wirebait = { 
+  Proto = {}, 
+  ProtoField = {}, 
+  treeitem = {}, 
+  buffer = {}, 
+  packet = {}, 
+  pcap_reader = {}, 
+  plugin_tester = {},
 
-local function verifyArgsType(...)  --TODO: ability to check optional args
-    level = 2;
-    i = 1;
-    while true do
-        expected_type = select(i, ...);
-        if not expected_type then break end;
-        var_name, var_val =  debug.getlocal(level,i);
-        assert(type(var_val) == expected_type, "\nFunction " .. debug.getinfo(2).name .."() expected arg #".. i .." to be of type '" .. tostring(expected_type) .. "' but got '" .. type(var_val) .. "'!")
-        i = i + 1;
-    end
+  state = { --[[ state to keep track of the dissector wirebait is testing ]]
+    dissector_filepath = nil,
+    proto = nil,
+    packet_info = {
+      cols={
+        protocol = nil
+      }
+    },
+    dissector_table = {
+        udp = { port = nil },
+        tcp = { port = nil }
+    }
+  }
+}
+
+--[[----------LOCAL HELPER METHODS (only used within the library)---------------------------------------------------------------------------------------------------------]]
+--[[Reads byte_count bytes from file into a string in hexadecimal format ]]
+local function readFileAsHex(file, byte_count)
+  local data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
+  data = data or "";
+  local hex_data = string.gsub(data, ".", function (b) return string.format("%02X",string.byte(b)) end ) --turns the binary data into a string in hex format
+  return hex_data
 end
 
--- # wirebait dissector
-local function createWirebaitDissector()
-    local wirebait_dissector = {
-
-    }
-
-    local public_wb_dissector = {
-        __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
-        __wirebait_type_name = "WirebaitDissector",
-
-    }
-
-    return public_wb_dissector;
+--[[Prints an ip in octet format givent its little endian int32 representation]]
+local function printIP(le_int_ip)
+  local ip_str = ((le_int_ip & 0xFF000000) >> 24) .. "." .. ((le_int_ip & 0x00FF0000) >> 16) .. "." .. ((le_int_ip & 0x0000FF00) >> 8) .. "." .. (le_int_ip & 0x000000FF);
+  return ip_str;
 end
 
--- # Wirebait Field
-local function newWirebaitField(filter, name, size, ws_type_key, --[[optional]]display_val_map)
-    verifyArgsType('string', 'string', 'number', 'string')
-    local wb_field = { --private data
-        m_filter = filter,
-        m_name = name,
-        m_size = size,
-        m_type = ws_type_key,
-        m_wireshark_field = Protofield[ws_type_key](filter, name, size, base, display_val_map);
-    }
+local function swapBytes(hex_str)
+  local new_hex_str = "";
+  for i=1,#hex_str/2 do
+    new_hex_str = hex_str:sub(2*i-1,2*i) .. new_hex_str;
+  end
+  return new_hex_str;
+end
 
-    local getFilter = function()
-        return wb_field.m_filter;
-    end
+--[[Converts a string in hex format into a big endian uint64 ]]
+--[[In lua there is no real integer type, and past 2^53 numbers a interpreted as double, which is why uin64t are handled in 2 words]]
+local function hexStringToUint64(hex_str)
+  assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
+  assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
+  if #hex_str <= 8 then
+    return tonumber(hex_str,16);
+  else
+    local hex_str = string.format("%016s",hex_str) --left pad with zeros
+    hex_str = hex_str:gsub(" ","0"); --for some reaon in lua 5.3 "%016s" letf pads with zeros. These version issues are annoying to say the least...
+    local first_word_val = tonumber(string.sub(hex_str, 1,8),16);
+    local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
+    local value = math.floor((first_word_val << 32) + second_word_val)
+    return value;
+  end
+end
 
-    local getName = function()
-        return wb_field.m_name;
-    end
+local PROTOCOL_TYPES = {
+  IPV4 = 0x800,
+  UDP  = 0x11,
+  TCP  =  0x06
+};
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
-    local getSize = function()
-        return wb_field.m_size
-    end
 
-    local getWiresharkProtofield = function()
-        return wb_field.m_wireshark_field;
-    end
-    
-    local getType = function()
-        return wb_field.m_type;
-    end
+--[----------WIRESHARK PROTO----------------------------------------------------------------------------------------------------------------------------------------------]]
+--[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
+function wirebait.Proto.new(abbr, description)
+  assert(description and abbr, "Proto argument should not be nil!")
+  local proto = {
+    _struct_type = "Proto";
+    m_description = description,
+    m_abbr = abbr,
+    fields = {}, --protofields
+    dissector = {}, --dissection function
+    name = description --ws api
+  }
 
-    local pulic_wirebait_field_interface = {
-        filter = getFilter,
-        name = getName,
-        size = getSize,
-        wsProtofield = getWiresharkProtofield,
-        type = getType,
+  assert(wirebait.state.proto == nil, "Wirebait currenlty only support 1 proto per dissector file!");
+  wirebait.state.proto = proto;
+  return proto;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------WIRESHARK PROTOFIELD-----------------------------------------------------------------------------------------------------------------------------------------]]
+--[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
+function wirebait.ProtoField.new(abbr, name, _type, size)
+  assert(name and abbr and _type, "Protofiled argument should not be nil!")
+  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
+  local protofield = {
+    _struct_type = "ProtoField";
+    m_name = name;
+    m_abbr = abbr;
+    m_type = _type;
+    m_size = size_by_type[_type] or size -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
+  }
+
+  function protofield:getValueFromBuffer(buffer)
+    local extractValueFuncByType = {
+      uint8 = function (buf) return buf(0,1):uint() end,
+      uint16 = function (buf) return buf(0,2):uint() end,
+      uint32 = function (buf) return buf(0,4):uint() end,
+      uint64 = function (buf) return buf(0,8):uint64() end,
+      string = function (buf) return buf(0):string() end,
+      stringz = function (buf) return buf(0):stringz() end,
     };
 
-    return pulic_wirebait_field_interface;
+    local func = extractValueFuncByType[self.m_type];
+    assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
+    return func(buffer);
+  end
+
+  return protofield;
 end
 
+function wirebait.ProtoField.string(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "string") end
+function wirebait.ProtoField.stringz(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "stringz") end
+function wirebait.ProtoField.uint8(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint8") end
+function wirebait.ProtoField.uint16(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint16") end
+function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
+function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint64") end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
--- # Wirebait Tree
-local function newWirebaitTree(wb_fields_map, ws_tree, buffer, position, size, parent_wb_tree, is_expandable)
-    local wb_tree = { --private data
-        m_wb_fields_map = wb_fields_map; --reference to wirebait.created_protofields shared by all trees to keep track of new fields and register them
-        m_ws_tree = ws_tree;
-        m_buffer = buffer;
-        m_start_position = position or 0;
-        m_position = (position or 0), --+ (size or 0);
-        m_end_position = (position or 0) + (size or buffer:len());
-        m_parent = parent_wb_tree;
-        m_is_root = not parent_wb_tree;
-        m_is_expandable = is_expandable or false; -- strings are expandable
-        m_last_child_ref = nil; --reference to last child added
-    }
-    if size then assert(buffer:len() >= (position or 0) + size, "Buffer is smaller than specified size!") end
-    
+--[----------WIRESHARK TREEITEM-------------------------------------------------------------------------------------------------------------------------------------------]]
+--[[ Equivalent of [wireshark treeitem](https://wiki.wireshark.org/LuaAPI/TreeItem) ]]
+function wirebait.treeitem.new(protofield, buffer, parent) 
+  local treeitem = {
+    m_protofield = protofield,
+    m_parent = parent,
+    m_child = nil,
+    m_depth = 0,
+    m_buffer = buffer;
+  }
+  if parent then
+    treeitem.m_depth = parent.m_depth + 1;
+  end
 
-    local getParent = function()
-        return wb_tree.m_parent;
+  local function prefix(depth)
+    assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
+    return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. "└─ ";
+  end
+
+  --[[ Private function adding a proto to the provided treeitem ]]
+  local function addProto(tree, proto, buffer_or_value, texts)
+    assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
+    if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
+      --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
+      value = buffer_or_value;
+    else
+      --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
+      buffer = buffer_or_value
+      assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+      if #texts > 0 then
+        value = texts[1] --might be nil
+        table.remove(texts,1); --removing value from the texts array
+      end
+      if #texts == 0 then
+        texts = nil
+      end
     end
+    assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
-    local getWiresharkTree = function ()
-        return wb_tree.m_ws_tree;
+    if texts then --texts override the value displayed in the tree including the header defined in the protofield
+      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+    else
+      io.write(prefix(tree.m_depth) .. proto.m_description .. "\n");
     end
+    tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
+  end
 
-    local getBuffer = function()
-        return wb_tree.m_buffer;
-    end
-
-    local getPosition = function()
-        return wb_tree.m_position;
-    end
-
-    local skip = function(self, byte_count) --skip only affects the current tree and cannot go beyon the end_position
-        --if not wb_tree.m_is_root then
-        --   self:parent():skip(byte_count);
-        --end
-        assert(wb_tree.m_position + byte_count <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
-        wb_tree.m_position = wb_tree.m_position + byte_count;
-    end
-    
-    local skipTo = function(self, position)
-        assert(position <= wb_tree.m_end_position , "Trying to skip more bytes than available in buffer managed by wirebait tree!")
-        wb_tree.m_position = position;
-    end
-    
-    local expandTo = function(self, position) --expand only moves the end position, not the current position
-        assert(wb_tree.m_parent.m_last_child_ref, "This should not even be possible. The parent of this element has no ref to its last child!")
-        assert(wb_tree.m_parent.m_last_child_ref == self, "Can only expand if the parent has not added another child");
-        assert(position <= wb_tree.m_buffer:len(), "Trying to expand tree to be larger than underlying buffer!") --TODO: off by 1
-        wb_tree.m_end_position = position;
-        wb_tree.m_parent.skipTo(self, position);
-    end
-
-    local fitHighlight = function(self, is_recursive, position) --makes highlighting fit the data from m_start_position to position or m_position
-        local position =  position or self:position();
-        assert(position >= wb_tree.m_start_position, "Current position is before start position!");
-        local length = position - wb_tree.m_start_position
-        wb_tree.m_ws_tree:set_len(length);
-        if is_recursive and not wb_tree.m_is_root then
-            self:parent():fitHighlight(is_recursive, position);
-        end
-    end
-
-    local findOrAddProto = function(field_key, filter, name, type_key, size, base, display_val_map);
-        if not wb_tree.m_wb_fields_map[field_key] then --adding new wb protofield if it doesn't exist
-            wb_tree.m_wb_fields_map[field_key] = wirebait.field.new(filter, name, size, type_key, display_val_map);
-        end
-        return wb_tree.m_wb_fields_map[field_key];
-    end
-
-    local addTree = function (self, filter, name, type_key, size, b, display_map, is_expandable)
-        base = base or base.DEC;
-        local field_key = "f_"..name:gsub('%W','') --Removes all non alpha-num chars from name and prepend 'f_'. For instance "2 Packets" becomes "f_2Packets"
-
-        wb_proto_field = findOrAddProto(field_key, filter, name, type_key, size, base, display_val_map);
-
-        --creating a new wireshart tree item and using it to create a new wb tree
-        local new_ws_tree = wb_tree.m_ws_tree:add(wb_proto_field.wsProtofield(), wb_tree.m_buffer(wb_tree.m_position, wb_proto_field.size()));
-        local new_wb_tree = newWirebaitTree(wb_tree.m_wb_fields_map, new_ws_tree, wb_tree.m_buffer, wb_tree.m_position, size, self, is_expandable)
-        wb_tree.m_position = wb_tree.m_position + size;
-        self.m_last_child_ref = new_wb_tree;
-        return new_wb_tree;
-    end
-
-    local addUint8 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = 1;
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
-        return addTree(self, filter, name, "uint8", size, base, display_val_map), value;
-    end
-
-    local addUint16 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = 2;
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
-        return addTree(self, filter, name, "uint16", size, base, display_val_map), value;
-    end
-
-    local addUint32 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = 4;
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint();
-        return addTree(self, filter, name, "uint32", size, base, display_val_map), value;
-    end
-
-    local addUint64 = function (self, filter, name, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        local size = 8;
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):le_uint64();
-        return addTree(self, filter, name, "uint64", size, base, display_val_map), value;
-    end
-
-    local addString = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        assert(size and size > 0, "For now a size > 0 is required when adding a string!")
-        --local size = size or 1; -- using 1 if size of string is not provided
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):string();
-        return addTree(self, filter, name, "string", size, base, display_val_map), value;
-    end
-    
-    local addStringz = function (self, filter, name, size, base, display_val_map) --display_val_map translated raw value on the wire into display value
-        assert(size and size > 0, "For now a size > 0 is required when adding a null terminated string!")
-        --local size = size or 1; -- using 1 if size of string is not provided
-        local value = wb_tree.m_buffer(wb_tree.m_position, size):stringz();
-        return addTree(self, filter, name, "string", size, base, display_val_map), value;
-    end
-
-    local public_wirebait_tree_interface = {
-        __is_wirebait_struct = true, --all wirebait data should have this flag so as to know their type
-        __wirebait_type_name = "WirebaitTree",
-        __buffer = getBuffer,
-        parent = getParent,
-        wiresharkTree = getWiresharkTree,
-        position = getPosition,
-        skip = skip,
-        skipTo = skipTo,
-        expandTo = expandTo,
-        fitHighlight = fitHighlight,
-        addUint8 = addUint8,
-        addUint16 = addUint16,
-        addUint32 = addUint32,
-        addUint64 = addUint64,
-        addString = addString,
-        addStringz = addStringz
-    }
-
-    return public_wirebait_tree_interface;
-end
-
-
---[[ Using a function to create the wirebait module so that it can have 
-private state data ( 1 dissector per wirebait, and wirebait keeps track of protofields
-so as to register them automatically)
-]]--
-local function publicWirebaitInterface() 
-    local wirebait = { --wirebait state data which needs to be private
-        m_created_proto_fields = {};
-        m_size = 0,
-        m_dissector = nil
-    }
-
-    function wirebait.createProtofield(filter, name, size, ws_protofield)
-        local new_pf = newWirebaitField(filter, name, size, ws_protofield)
-        wirebait.m_created_proto_fields[wirebait.m_size] = new_pf
-        wirebait.m_size = wirebait.m_size + 1;
-        return new_pf
-    end
-
-    function wirebait.createTreeitem(arg1, arg2, ...)
-        return newWirebaitTree(wirebait.m_created_proto_fields, arg1, arg2, unpack({...}));
-    end
-
-    function wirebait.createDissectorSingleton(name, abbrev_name)
-        --checks('string', 'string');
-        if not wirebait.m_dissector then
-            wirebait.m_dissector = Proto(abbrev_name, name);
+  --[[ Private function adding a protofield to the provided treeitem ]]
+  local function addProtoField(tree, protofield, buffer_or_value, texts)
+    assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
+    local value = nil;
+    if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
+      --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
+      value = buffer_or_value;
+    else
+      --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
+      buffer = buffer_or_value
+      assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+      if texts then
+        if type(texts) == "table" then
+          if #texts > 0 then
+            value = texts[1] --might be nil
+            table.remove(texts,1); --removing value from the texts array
+          end
+          if #texts == 0 then
+            texts = nil;
+          end
         else
-            return wirebait.m_dissector;
+          value = texts;
+          texts = nil;
         end
+      end
+    end
+    assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
+
+    if texts then --texts override the value displayed in the tree including the header defined in the protofield
+      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+    else
+      local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      io.write(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+    end
+    tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
+  end
+
+  --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
+  local function addTreeItem(tree, proto, buffer_or_value, texts)
+    error("TvbRange no supported yet!");
+  end
+  
+  --[[ Checks if a protofield was registered]]
+  local function checkProtofieldRegistered(protofield)
+    for k, v in pairs(wirebait.state.proto.fields) do
+      if protofield == v then
+        return true;
+      end
+    end
+    return false;
+  end
+
+  function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
+    if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
+      print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
+      os.exit()
+    end
+    if proto_or_protofield_or_buffer._struct_type == "Proto" then
+      addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+    elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
+      addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+    elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
+      addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+    else
+      error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
+    end
+    return self.m_child;
+  end
+
+  return treeitem;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------WIRESHARK BYTEARRAY/TVB/TVBRANGE-----------------------------------------------------------------------------------------------------------------------------]]
+--[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
+function wirebait.buffer.new(data_as_hex_string)
+  assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
+  assert(string.len(data_as_hex_string:gsub('%X','')) >= 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
+  assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
+
+  local buffer = {
+    _struct_type = "buffer",
+    m_data_as_hex_str = data_as_hex_string,
+  }
+  local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
+
+  function buffer:len()
+    return math.floor(string.len(self.m_data_as_hex_str)/2);
+  end
+
+  function buffer:uint()
+    assert(self:len() <= 4, "tvbrange:uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:bytes());
+  end
+
+  function buffer:uint64()
+    assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:bytes());
+  end;
+  
+  function buffer:le_uint()
+    assert(self:len() <= 4, "tvbrange:le_uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:swapped_bytes());
+  end
+
+  function buffer:le_uint64()
+    assert(self:len() <= 8, "tvbrange:le_uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
+    return hexStringToUint64(self:swapped_bytes());
+  end;
+
+  function buffer:int()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
+    local uint = self:uint();
+    local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
+    if uint & sign_mask > 0 then --we're dealing with a negative number
+      local val_mask=tonumber("7F" .. string.rep("FF", size-1), 16);
+      return -((~uint & val_mask) + 1);
+    else --we are dealing with a positive number
+      return uint;
+    end
+  end
+
+  function buffer:le_int()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
+    return wirebait.buffer.new(self:swapped_bytes()):int();
+  end
+
+  function buffer:int64()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
+    if size <= 4 then
+      return self:uint();
+    elseif self(0,1):uint() & 0x80 == 0 then --positive int
+      return self:uint64();
+    else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
+      the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
+      local first_word_val = ~self(0,4):uint() & 0x7FFFFFFF;
+      local second_word_val = ~self(4,4):uint() & 0xFFFFFFFF;
+      local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
+      return result;
+    end
+  end
+
+  function buffer:le_int64()
+    local size = self:len();
+    assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
+    return wirebait.buffer.new(self:swapped_bytes()):int64();
+  end
+
+  function buffer:float()
+    local size = self:len();
+    assert(size == 4 or size == 8, "Buffer must be 4 or 8 bytes long for buffer:float() to work. (Buffer size: " .. self:len() ..")");
+    if size == 4 then --32 bit float
+      local uint = self:uint();
+      --Handling special values nicely
+      if uint == 0 or uint == 0x80000000 then
+        return 0; --[[+/- zero]]
+      elseif uint == 0x7F800000 then
+        return math.huge --[[+infinity]]
+      elseif uint == 0xFF800000 then
+        return -math.huge --[[-infinity]]
+      end
+      local bit_len = 23;
+      local exponent_mask = 0x7F800000;
+      local exp = (uint & exponent_mask) >> bit_len;
+      local fraction= 1;
+      for i=1,bit_len do
+        local bit_mask = 1 << (bit_len-i); --looking at one bit at a time
+        if bit_mask & uint > 0 then
+          fraction = fraction + math.pow(2,-i)
+        end
+      end
+      local absolute_value = fraction * math.pow(2, exp -127);
+      local sign = uint & 0x80000000 > 0 and -1 or 1;
+      return sign * absolute_value;
+    else --64 bit float
+      local word1 = self(0,4):uint(); --word1 will contain the bit sign, the exponent and part of the fraction
+      local word2 = self(4,4):uint(); --word2 will contain the rest of the fraction
+      --Handling special values nicely
+      if word2 == 0 then
+        if word1 == 0 or word1 == 0x80000000 then
+          return 0; --[[+/-zero]]
+        elseif word1 == 0x7FF00000 then
+          return math.huge --[[+infinity]]
+        elseif word1 == 0xFFF00000 then
+          return -math.huge --[[-infinity]]
+        end
+      end
+      local exponent_mask = 0x7FF00000;
+      local bit_len1 = 20;
+      local exp = (word1 & exponent_mask) >> bit_len1;
+      local fraction= 1;
+      for i=1,bit_len1 do --[[starting to calculate fraction with word1]]
+        local bit_mask = 1 << (bit_len1-i); --looking at one bit at a time
+        if bit_mask & word1 > 0 then
+          fraction = fraction + math.pow(2,-i)
+        end
+      end
+      local bit_len2 = 32; --[[finishing to calculate fraction with word2]]
+      for i=1,bit_len2 do
+        local bit_mask = 1 << (bit_len2-i); --looking at one bit at a time
+        if bit_mask & word2 > 0 then
+          fraction = fraction + math.pow(2,-i-bit_len1)
+        end
+      end
+      local absolute_value = fraction * math.pow(2, exp - 1023);
+      local sign = word1 & 0x80000000 > 0 and -1 or 1;
+      return sign * absolute_value;
+    end
+  end
+
+  function buffer:le_float()
+    local size = self:len();
+    assert(size == 4 or size == 8, "Buffer must be 4 or 8 bytes long for buffer:le_float() to work. (Buffer size: " .. self:len() ..")");
+    return wirebait.buffer.new(self:swapped_bytes()):float();
+  end
+
+  function buffer:ipv4()
+    assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:ipv4() to work. (Buffer size: " .. self:len() ..")");
+    return printIP(self:int());
+  end
+
+  function buffer:le_ipv4()
+    assert(self:len() == 4, "Buffer must by 4 bytes long for buffer:le_ipv4() to work. (Buffer size: " .. self:len() ..")");
+    return printIP(self:le_int());
+  end
+
+  function buffer:eth()
+    assert(self:len() == 6, "Buffer must by 6 bytes long for buffer:eth() to work. (Buffer size: " .. self:len() ..")");
+    local eth_addr = "";
+    for i=1,self:len() do
+      local sep = i == 1 and "" or ":";
+      eth_addr = eth_addr .. sep .. self(i-1,1):hex_string();
+    end
+    return eth_addr;
+  end
+
+  function buffer:string()
+    local str = ""
+    for i=1,self:len() do
+      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      str = str .. string.char(tonumber(byte_, 16))
+    end
+    str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
+    return str
+  end
+
+  function buffer:stringz()
+    local str = ""
+    for i=1,self:len()-1 do
+      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      if byte_ == '00' then --null char termination
+        return str
+      end
+      str = str .. string.char(tonumber(byte_, 16))
+    end
+    str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
+    return str
+  end
+  
+  --[[TODO: this is not utf-16]]
+  function buffer:ustring()
+    return self:string();
+  end
+  
+  --[[TODO: this is not utf-16]]
+  function buffer:ustringz()
+    return self:stringz();
+  end
+  
+  function buffer:le_ustring()
+    local be_hex_str = swapBytes(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):ustring();
+  end
+  
+  function buffer:le_ustringz()
+    local be_hex_str = swapBytes(self:hex_string());
+    return wirebait.buffer.new(be_hex_str):ustringz();
+  end
+
+  function buffer:bitfield(offset, length)
+    offset = offset or 0;
+    length = length or 1;
+    assert(length <= 64, "Since bitfield() returns a uint64 of the bitfield, length must be <= 64 bits! (length: " .. length .. ")")
+    local byte_offset = math.floor(offset/8);
+    local byte_size = math.ceil((offset+length)/8) - byte_offset;
+    local left_bits_count = offset % 8;
+    local right_bits_count = (byte_size + byte_offset)*8 - (offset+length);
+
+    local bit_mask = tonumber(string.rep("FF", byte_size), 16);
+    for i=1,left_bits_count do 
+      bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
     end
 
-    function getCreatedProtofieldCount()
-        return wirebait.m_size;
+    if length > 56 then -- past 56 bits, lua starts to interpret numbers as floats
+      local first_word_val = self(0,4):uint();
+      local second_word_val = self(4, 4):uint() >> right_bits_count;
+      bit_mask = bit_mask >> 32;
+      first_word_val = first_word_val & bit_mask;
+      local result = math.floor((first_word_val << (32 - right_bits_count)) + second_word_val)
+      return result;
+    else
+      local uint_val = self(byte_offset, byte_size):uint64();
+      return (uint_val & bit_mask) >> right_bits_count;
     end
+  end
 
-    return { --All functions available in wirebait package are named here
-        field = { new = wirebait.createProtofield, count = getCreatedProtofieldCount },
-        tree = { new = wirebait.createTreeitem },
-        dissector = { newSingleton = wirebait.createDissectorSingleton }
+  function buffer:hex_string()
+    return self.m_data_as_hex_str;
+  end
+  
+  function buffer:bytes()
+    return self.m_data_as_hex_str;
+  end
+  
+  function buffer:swapped_bytes()
+    return swapBytes(self.m_data_as_hex_str);
+  end
+
+  function buffer:__call(start, length) --allows buffer to be called as a function 
+    assert(start >= 0, "Start position should be positive positive!");
+    length = length or self:len() - start; --add unit test for the case where no length was provided
+    assert(length >= 0, "Length should be positive!");
+    assert(start + length <= self:len(), "Index get out of bounds!")
+    return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
+  end
+
+  function buffer:__tostring()
+    return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
+  end
+  
+  setmetatable(buffer, buffer)
+
+  return buffer;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
+local function newDissectorTable()
+  dissector_table = { 
+    udp = { port = {} },
+    tcp = { port = {} },
+  }
+  
+  local function newPortTable()
+    port_table = {}
+    
+    function port_table:add(port, proto_handle)
+      assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
+      self[port] = proto_handle;
+    end
+    
+    return port_table;
+  end
+  
+  dissector_table.udp.port = newPortTable();
+
+  function dissector_table.get(path)
+    local obj = dissector_table;
+    path:gsub("%a+", function(split_path) obj = obj[split_path] end)
+    return obj;
+  end
+      
+  return dissector_table;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------PCAP READING LOGIC-------------------------------------------------------------------------------------------------------------------------------------------]]
+--[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
+     At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
+     is that you can visualize what the struct would look like once populated]]
+function wirebait.packet.new (packet_buffer, packet_no)
+  local packet = {
+    packet_number = packet_no,
+    ethernet = {
+      dst_mac = nil, --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
+      src_mac = nil,
+      type = nil, --type as unsigned int, e.g. 0x0800 for IPV4
+      ipv4 = {
+        protocol = nil, --protocol as unsigned int, e.g. 0x06 for TCP
+        dst_ip = nil, -- uint32 little endian
+        src_ip = nil, -- uint32 little endian
+        udp = {
+          src_port = nil,
+          dst_port = nil,
+          data = nil,
+        },
+        tcp = {
+          src_port = nil,
+          dst_port = nil,
+          data = nil,
+        },
+        other_data = nil, -- exist if pkt is not tcp nor udp
+      }, 
+      other_data = nil -- exist if pkt is not ip
     }
+  }
+  --assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
+  --[[Ethernet layer parsing]]
+  packet.ethernet.dst_mac = packet_buffer(0,6):hex_string();
+  packet.ethernet.src_mac = packet_buffer(6,6):hex_string();
+  packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
+  if packet.ethernet.type ~= PROTOCOL_TYPES.IPV4 then
+    packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
+  else
+    --[[IPV4 layer parsing]]
+    packet.ethernet.ipv4.protocol = packet_buffer(23,1):uint();
+    packet.ethernet.ipv4.src_ip = packet_buffer(26,4):uint();
+    packet.ethernet.ipv4.dst_ip = packet_buffer(30,4):uint();
+
+    --[[UDP layer parsing]]
+    if packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
+      packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
+      packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
+      assert(packet_buffer:len() >= 42, "Packet buffer is of invalid size!")
+      packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
+    elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
+      --[[TCP layer parsing]]
+      packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
+      packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
+      -- for Lua 5.3 and above
+      local tcp_hdr_len = 4 * ((packet_buffer(46,1):uint() & 0xF0) >> 4);
+      -- for Lua 5.2 and below
+      --local tcp_hdr_len = bit32.arshift(bit32.band(packet_buffer(46,1):uint(), 0xF0)) * 4;
+      local tcp_payload_start_index = 34 + tcp_hdr_len;
+      assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
+      --if packet_buffer:len() > tcp_payload_start_index then
+      packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
+    else
+      --[[Unknown transport layer]]
+      packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
+    end
+  end
+  
+  local function print_bytes(buffer, cols_count, bytes_per_col) --[[althought it is working, let's simplify this method]]
+    if buffer:len() == 0 then
+      return "\t<empty>"
+    end
+    local col_id = 1;
+    local byte_id = 0;
+    local str = "\t";
+    local last_id = 0;
+    for i=1,buffer:len() do
+      str = str .. " " .. buffer(i-1,1):hex_string();
+      byte_id = byte_id + 1;
+      if byte_id == bytes_per_col then
+        if col_id == cols_count then
+          str = str .. "\n\t";
+          last_id = i;
+          col_id = 1;
+        else
+          str = str .. "  ";
+          col_id = col_id + 1;
+        end
+        byte_id = 0;
+      end
+    end
+    return str;
+  end
+
+  function packet:info()
+    if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
+      if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
+        return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
+        --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
+      elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
+        return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
+        --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
+      else
+        --[[Unknown transport layer]]
+        return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
+      end
+    else
+      return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
+    end
+  end
+  
+  function packet:getIPProtocol()
+    return self.ethernet.ipv4.protocol;
+  end
+  
+  function packet:getSrcPort()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return self.ethernet.ipv4.udp.src_port
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return self.ethernet.ipv4.tcp.src_port
+    else
+      error("Packet currently only support getSrcPort() for IP/UDP and IP/TCP protocols!")
+    end
+  end
+  
+  function packet:getDstPort()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return self.ethernet.ipv4.udp.dst_port
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return self.ethernet.ipv4.tcp.dst_port
+    else
+      error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
+    end
+  end
+
+  return packet;
 end
 
-wirebait = publicWirebaitInterface() 
+function wirebait.pcap_reader.new(filepath)
+  local pcap_reader = {
+    m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
+    m_packet_number = 1
+  }
+
+  --[[Performing various checks before reading the packet data]]
+  assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
+  local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
+  assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
+  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
+
+  --[[Reading pcap file and returning the next ethernet frame]]
+  function pcap_reader:getNextEthernetFrame()
+    --Reading pcap packet header (this is not part of the actual ethernet frame)
+    local pcap_hdr_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, 16));
+    if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
+      return nil;
+    end
+    --print("Pcap Header: " .. tostring(pcap_hdr_buffer));
+    local packet_length = pcap_hdr_buffer(8,4):le_uint();
+
+    local packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
+    if packet_buffer:len() < packet_length then -- this does not handle live capture
+      return nil;
+    end
+    --print("     Packet: " .. tostring(packet_buffer));
+    assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
+    local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
+    self.m_packet_number = self.m_packet_number + 1;
+    return ethernet_frame;
+  end
+
+--	self_pcap_reader:getNextIPPayload = getNextIPPayload;
+--	setmetatable(self_pcap_reader, self)
+--	self.__index = self
+  return pcap_reader;
+end
+
+function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
+  local plugin_tester = {
+    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath),
+    m_dissector_filepath = dissector_filepath
+  };
+  --wireshark.wirebait_handle = plugin_tester;
+
+  function plugin_tester:run()
+    wirebait.state.dissector_table = newDissectorTable();
+    
+    Proto = wirebait.Proto.new;
+    ProtoField = wirebait.ProtoField;
+    DissectorTable = wirebait.state.dissector_table;
+    dofile(self.m_dissector_filepath);
+    
+    repeat
+      local packet = self.m_pcap_reader:getNextEthernetFrame()
+      if packet then
+        io.write("-------------------------------------------------------------------------[[\n");
+        io.write(packet:info() .. "\n");
+        local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
+        if buffer then
+          local root_tree = wirebait.treeitem.new(buffer);
+          local proto_handle = nil;
+          if packet:getIPProtocol() == PROTOCOL_TYPES.UDP then
+            proto_handle = wirebait.state.dissector_table.udp.port[packet:getSrcPort()] or wirebait.state.dissector_table.udp.port[packet:getDstPort()];
+          else 
+            assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
+            proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
+          end
+          if proto_handle then
+            assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
+            proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+          end
+        end
+        io.write("]]-------------------------------------------------------------------------\n\n\n");
+      end
+    until packet == nil
+  end
+
+  return plugin_tester;
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+--local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
+local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/wirebait_test2.pcap");
+--local test = wirebait.plugin_tester.new{
+--  dissector_path = "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+--  pcap_path = "C:/Users/Marko/Desktop/wirebait_test2.pcap"
+--  only_show_dissected_packets = true};
+test:run()
+
+----buf = wirebait.buffer.new("AB123FC350DDB12D")
+
+--local function reverse_str(le_hex_str)
+--  local hex_str = "";
+--  for i=1,math.min(#le_hex_str/2,8) do
+--    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
+--  end
+--  return hex_str;
+--end
+
+--print(wirebait.buffer.new("EC086B703682"):eth())
+--print(wirebait.buffer.new("3fd5555555555555"):float())
 return wirebait
+
 

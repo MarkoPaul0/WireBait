@@ -18,16 +18,17 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
+--[[
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("wirebait.unit_tests.tester")
+local tester = tester or require("unit_tests.tester")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
 therefore forgetting the local keywork will not have a negative impact.
 ]]--
-local wireshark = require("wirebait.wireshark_api_mock")
-local wirebait = require("wirebait.wirebait")
+local wireshark = require("wireshark_api_mock")
+local wirebait = require("wirebait")
 base = wireshark.base --make available base as a global variable
 Protofield = wireshark.Protofield; --make available Protofield globally
 
@@ -183,4 +184,5 @@ if is_standalone_test then
 else
     return unit_tests
 end
+]]
 

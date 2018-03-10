@@ -20,8 +20,8 @@
 ]]
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("wirebait.unit_tests.tester")
-local wireshark = require("wirebait.wireshark_api_mock")
+local tester = tester or require("unit_tests.tester")
+local wirebait = require("wirebait")
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
@@ -31,15 +31,15 @@ therefore forgetting the local keywork will not have a negative impact.
 local unit_tests = tester.newUnitTestsSet("Wireshark Protofield Unit Tests");
 
 unit_tests:addTest("Testing wireshark protofield construction with new()", function()
-        ws_protfield = wireshark.Protofield.new("Some Field", "smp.someField", "uint16")
-        tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
-        tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
-        tester.assert(ws_protfield.m_size, 2, "Wrong size!")
-        tester.assert(ws_protfield.m_type, "uint16", "Wrong type!")
+        proto_field = wirebait.ProtoField.new("smp.someField", "Some Field", "uint16")
+        tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
+        tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
+        tester.assert(proto_field.m_size, 2, "Wrong size!")
+        tester.assert(proto_field.m_type, "uint16", "Wrong type!")
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint8()", function()
-        ws_protfield = wireshark.Protofield.uint8("Some Field", "smp.someField")
+        ws_protfield = wirebait.ProtoField.uint8("smp.someField", "Some Field")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 1, "Wrong size!")
@@ -47,7 +47,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint8()", fun
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint16()", function()
-        ws_protfield = wireshark.Protofield.uint16("Some Field", "smp.someField")
+        ws_protfield = wirebait.ProtoField.uint16("smp.someField", "Some Field")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 2, "Wrong size!")
@@ -55,7 +55,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint16()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint32()", function()
-        ws_protfield = wireshark.Protofield.uint32("Some Field", "smp.someField")
+        ws_protfield = wirebait.ProtoField.uint32("smp.someField", "Some Field")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 4, "Wrong size!")
@@ -63,7 +63,7 @@ unit_tests:addTest("Testing wireshark protofield construction with uint32()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with uint64()", function()
-        ws_protfield = wireshark.Protofield.uint64("Some Field", "smp.someField")
+        ws_protfield = wirebait.ProtoField.uint64("smp.someField", "Some Field")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(ws_protfield.m_size, 8, "Wrong size!")
@@ -71,17 +71,17 @@ unit_tests:addTest("Testing wireshark protofield construction with uint64()", fu
     end);
 
 unit_tests:addTest("Testing wireshark protofield construction with string()", function()
-        ws_protfield = wireshark.Protofield.string("Some Field", "smp.someField", 42)
+        ws_protfield = wirebait.ProtoField.string("smp.someField", "Some Field")
         tester.assert(ws_protfield.m_name, "Some Field", "Wrong name!")
         tester.assert(ws_protfield.m_abbr, "smp.someField", "Wrong filter!")
-        tester.assert(ws_protfield.m_size, 42, "Wrong size!")
+        tester.assert(ws_protfield.m_size, nil, "Wrong size!")
         tester.assert(ws_protfield.m_type, "string", "Wrong type!")
     end);
 
-unit_tests:addTest("Testing wireshark protofield construction with string() without override size", function()
-        success,error_msg = pcall(wireshark.Protofield.string, "Some Field", "smp.someField");
-        tester.assert(success, false, "This call should fail!")
-    end);
+--unit_tests:addTest("Testing wireshark protofield construction with string() without override size", function()
+--        success,error_msg = pcall(wirebait.ProtoField.string, "smp.someField", "Some Field");
+--        tester.assert(success, false, "This call should fail!")
+--    end);
 
 if is_standalone_test then
     tester.test(unit_tests);
