@@ -36,7 +36,8 @@ local wirebait = {
       }
     },
     dissector_table = {
-        udp = { port = nil }
+        udp = { port = nil },
+        tcp = { port = nil }
     }
   }
 }
@@ -274,7 +275,7 @@ end
 --[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
 function wirebait.buffer.new(data_as_hex_string)
   assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
-  assert(string.len(data_as_hex_string:gsub('%X','')) > 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
+  assert(string.len(data_as_hex_string:gsub('%X','')) >= 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
   assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
 
   local buffer = {
@@ -519,9 +520,9 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:__call(start, length) --allows buffer to be called as a function 
-    assert(start >= 0, "Start position is positive!");
+    assert(start >= 0, "Start position should be positive positive!");
     length = length or self:len() - start; --add unit test for the case where no length was provided
-    assert(length > 0, "Length is strictly positive!");
+    assert(length >= 0, "Length should be positive!");
     assert(start + length <= self:len(), "Index get out of bounds!")
     return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
   end
@@ -540,7 +541,8 @@ end
 --[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
 local function newDissectorTable()
   dissector_table = { 
-    udp = { port = {} }
+    udp = { port = {} },
+    tcp = { port = {} },
   }
   
   local function newPortTable()
@@ -614,6 +616,7 @@ function wirebait.packet.new (packet_buffer, packet_no)
     if packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
       packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
       packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
+      assert(packet_buffer:len() >= 42, "Packet buffer is of invalid size!")
       packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
     elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
       --[[TCP layer parsing]]
@@ -624,9 +627,9 @@ function wirebait.packet.new (packet_buffer, packet_no)
       -- for Lua 5.2 and below
       --local tcp_hdr_len = bit32.arshift(bit32.band(packet_buffer(46,1):uint(), 0xF0)) * 4;
       local tcp_payload_start_index = 34 + tcp_hdr_len;
-      if packet_buffer:len() > tcp_payload_start_index then
-        packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
-      end
+      assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
+      --if packet_buffer:len() > tcp_payload_start_index then
+      packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
     else
       --[[Unknown transport layer]]
       packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
@@ -634,6 +637,9 @@ function wirebait.packet.new (packet_buffer, packet_no)
   end
   
   local function print_bytes(buffer, cols_count, bytes_per_col) --[[althought it is working, let's simplify this method]]
+    if buffer:len() == 0 then
+      return "\t<empty>"
+    end
     local col_id = 1;
     local byte_id = 0;
     local str = "\t";
@@ -664,7 +670,7 @@ function wirebait.packet.new (packet_buffer, packet_no)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
       elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
       else
         --[[Unknown transport layer]]
@@ -672,6 +678,32 @@ function wirebait.packet.new (packet_buffer, packet_no)
       end
     else
       return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
+    end
+  end
+  
+  function packet:getIPProtocol()
+    return self.ethernet.ipv4.protocol;
+  end
+  
+  function packet:getSrcPort()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return self.ethernet.ipv4.udp.src_port
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return self.ethernet.ipv4.tcp.src_port
+    else
+      error("Packet currently only support getSrcPort() for IP/UDP and IP/TCP protocols!")
+    end
+  end
+  
+  function packet:getDstPort()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return self.ethernet.ipv4.udp.dst_port
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return self.ethernet.ipv4.tcp.dst_port
+    else
+      error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
     end
   end
 
@@ -737,15 +769,22 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
       if packet then
         io.write("-------------------------------------------------------------------------[[\n");
         io.write(packet:info() .. "\n");
-        
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
-        local root_tree = wirebait.treeitem.new(buffer);
         if buffer then
-          --TODO: only dissect packet if the dissector is added to the dissector table for the corresponding udp or tcp port 
-          wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
+          local root_tree = wirebait.treeitem.new(buffer);
+          local proto_handle = nil;
+          if packet:getIPProtocol() == PROTOCOL_TYPES.UDP then
+            proto_handle = wirebait.state.dissector_table.udp.port[packet:getSrcPort()] or wirebait.state.dissector_table.udp.port[packet:getDstPort()];
+          else 
+            assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
+            proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
+          end
+          if proto_handle then
+            assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
+            proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+          end
         end
-        io.write("]]-------------------------------------------------------------------------\n\n");
-        break;
+        io.write("]]-------------------------------------------------------------------------\n\n\n");
       end
     until packet == nil
   end
@@ -754,9 +793,14 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
---test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
+--local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
+local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", "C:/Users/Marko/Desktop/wirebait_test2.pcap");
+--local test = wirebait.plugin_tester.new{
+--  dissector_path = "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+--  pcap_path = "C:/Users/Marko/Desktop/wirebait_test2.pcap"
+--  only_show_dissected_packets = true};
+test:run()
 
---test:run()
 ----buf = wirebait.buffer.new("AB123FC350DDB12D")
 
 --local function reverse_str(le_hex_str)

@@ -56,5 +56,5 @@ function p_smp.dissector(buffer, packet_info, root_tree)
 end
 
 local udp_encap_table = DissectorTable.get("udp.port")
-udp_encap_table:add(59121, p_smp)
+--udp_encap_table:add(59121, p_smp)
 udp_encap_table:add(7437, p_smp)
