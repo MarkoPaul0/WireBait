@@ -33,6 +33,16 @@
             <depending on message type>
 --]]--
 
+--[[Use this snipet of code to test your dissector. You can test your dissector without wireshark by running the dissector script directly!]]
+if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
+  local wirebait = require("wirebait");
+  local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
+  dissector_tester:dissectPcap("C:/Users/Marko/Desktop/wirebait_test2.pcap");
+  return
+end
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+
 local p_smp = Proto("smp", "Simple Protocol");
 local f_header = ProtoField.string("smp.Header", "Header"); --more of a place holder to organize the tree
 local f_seq_no = ProtoField.uint64("smp.seq_no", "Sequence Number");
@@ -40,6 +50,7 @@ local f_type = ProtoField.uint8("smp.type", "Type");
 local f_size = ProtoField.uint16("smp.size", "Size");
 local f_is_urgent = ProtoField.uint8("smp.is_urgent", "Urgent");
 local f_username = ProtoField.stringz("smp.", "Username");
+local f_username2 = ProtoField.stringz("smp.", "Username");
 
 p_smp.fields = {f_header, f_seq_no, f_type, f_size, f_is_urgent, f_username};
 

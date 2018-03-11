@@ -738,15 +738,17 @@ function wirebait.pcap_reader.new(filepath)
   return pcap_reader;
 end
 
-function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_table) --[[options_table uses named arguments]]
+function wirebait.plugin_tester.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
   options_table = options_table or {};
+  _WIREBAIT_ON_ = true; --globally scoped on purpose
   local plugin_tester = {
-    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath),
-    m_dissector_filepath = dissector_filepath,
+    m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
 
-  function plugin_tester:run()
+  function plugin_tester:dissectPcap(pcap_filepath)
+    assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
+    local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
     wirebait.state.dissector_table = newDissectorTable();
     
     Proto = wirebait.Proto.new;
@@ -756,7 +758,7 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
     
     local packet_no = 1;
     repeat
-      local packet = self.m_pcap_reader:getNextEthernetFrame()
+      local packet = pcap_reader:getNextEthernetFrame()
       if packet then
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         if buffer then
@@ -787,24 +789,10 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath, options_t
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
---local test = wirebait.plugin_tester.new("C:/Users/Marko/Documents/GitHub/wirebait/dev/dev_dissector.lua", "C:/Users/Marko/Desktop/pcaptest.pcap");
-local test = wirebait.plugin_tester.new( "C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
-  "C:/Users/Marko/Desktop/wirebait_test2.pcap",
-  {only_show_dissected_packets = true});
-test:run()
+--local test = wirebait.plugin_tester.new({dissector_filepath="C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+--    only_show_dissected_packets = true});
+--test:dissectPcap("C:/Users/Marko/Desktop/wirebait_test2.pcap")
 
-----buf = wirebait.buffer.new("AB123FC350DDB12D")
-
---local function reverse_str(le_hex_str)
---  local hex_str = "";
---  for i=1,math.min(#le_hex_str/2,8) do
---    hex_str = le_hex_str:sub(2*i-1,2*i) .. hex_str;
---  end
---  return hex_str;
---end
-
---print(wirebait.buffer.new("EC086B703682"):eth())
---print(wirebait.buffer.new("3fd5555555555555"):float())
 return wirebait
 
 
