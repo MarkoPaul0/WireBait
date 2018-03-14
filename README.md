@@ -25,7 +25,7 @@ Getting started takes less than a minute:
   4. Execute your dissector script. Enjoy :smiley:
   
  ## Example
- If you run the example dissector script **[simple_dissector.lua](https://github.com/MarkoPaul0/WireBait/blob/master/example/simple_dissector.lua)** with the provided **smp_sample.pcap** file, you should get the following output:
+ If you run the example dissector script **[simple_dissector.lua](example/simple_dissector.lua)** with the provided **[smp_sample.pcap](example/smp_sample.pcap)** file, you should get the following output:
 ```
  ------------------------------------------------------------------------------------------------------------------------------[[
 Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
