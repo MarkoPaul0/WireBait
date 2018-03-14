@@ -30,10 +30,11 @@ local wirebait = {
   state = { --[[ state to keep track of the dissector wirebait is testing ]]
     dissector_filepath = nil,
     proto = nil,
-    packet_info = {
+    packet_info = { --TODO should be reset after each packet
       cols={
         protocol = nil
-      }
+      },
+      treeitems_array = {}
     },
     dissector_table = {
         udp = { port = nil },
@@ -155,10 +156,9 @@ function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(n
 function wirebait.treeitem.new(protofield, buffer, parent) 
   local treeitem = {
     m_protofield = protofield,
-    m_parent = parent,
-    m_child = nil,
     m_depth = 0,
-    m_buffer = buffer;
+    m_buffer = buffer,
+    m_text = nil
   }
   if parent then
     treeitem.m_depth = parent.m_depth + 1;
@@ -189,12 +189,13 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
+    local child_tree = wirebait.treeitem.new(protofield, buffer, tree);
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      io.write(prefix(tree.m_depth) .. proto.m_description .. "\n");
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. proto.m_description .. "\n");
     end
-    tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
+    return child_tree;
   end
 
   --[[ Private function adding a protofield to the provided treeitem ]]
@@ -225,18 +226,24 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
+    local child_tree = wirebait.treeitem.new(protofield, buffer, tree);
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " ") .. "\n");
     else
       local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      io.write(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
-    tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
+    return child_tree;
   end
 
   --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
-  local function addTreeItem(tree, proto, buffer_or_value, texts)
-    error("TvbRange no supported yet!");
+  --[[ Very (like VERY) lazy, and hacky, and poor logic but it works ]]
+  -- TODO: clean this up!
+  local function addTreeItem(tree, buffer, value, texts)
+    local protofield = nil;
+    table.insert(texts, 1, value); --insert value in first position
+    table.insert(texts, 1, "");
+    return addProtoField(tree, protofield, buffer, texts)
   end
   
   --[[ Checks if a protofield was registered]]
@@ -254,16 +261,48 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
       os.exit()
     end
+    local new_treeitem = nil;
     if proto_or_protofield_or_buffer._struct_type == "Proto" then
-      addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+      new_treeitem = addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
-      addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
-    elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
-      addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+      new_treeitem = addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+    elseif proto_or_protofield_or_buffer._struct_type == "buffer" then --adding a tree item without protofield
+      new_treeitem = addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     else
-      error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
+      error("First argument in treeitem:add() should be a Proto or Profofield");
     end
-    return self.m_child;
+    table.insert(wirebait.state.packet_info.treeitems_array, new_treeitem);
+    return new_treeitem;
+  end
+  
+  function treeitem:set_text(text)
+    text:gsub("\n", " ");
+    self.m_text = text .. "\n"
+  end
+  
+  function treeitem:append_text(text)
+    text:gsub("\n", " ");
+    self.m_text = self.m_text:gsub("\n", "") .. text .. "\n"
+  end
+  
+  function treeitem:set_len(length)
+    io.write("WIREBAIT WARNING: treeitem:set_length() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_generated()
+    io.write("WIREBAIT WARNING: treeitem:set_generated() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_hidden()
+    io.write("WIREBAIT WARNING: treeitem:set_hidden() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_expert_flags()
+    io.write("WIREBAIT WARNING: treeitem:set_expert_flags() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_expert_info()
+    io.write("WIREBAIT WARNING: treeitem:set_expert_info() is not supported by wirebait yet.");
   end
 
   return treeitem;
@@ -568,14 +607,23 @@ local function newDissectorTable()
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+--[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
+local function newPacketInfo()
+  local packet_info = {
+    cols = { 
+      protocol = nil
+    },
+    treeitems_array = {}
+  }
+  return packet_info;
+end
 
 --[----------PCAP READING LOGIC-------------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
      At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
      is that you can visualize what the struct would look like once populated]]
-function wirebait.packet.new (packet_buffer, packet_no)
+function wirebait.packet.new (packet_buffer)
   local packet = {
-    packet_number = packet_no,
     ethernet = {
       dst_mac = nil, --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
       src_mac = nil,
@@ -665,19 +713,19 @@ function wirebait.packet.new (packet_buffer, packet_no)
   function packet:info()
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
-        return "Frame #" .. self.packet_number .. ". UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
+        return "UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
       elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
-        return "Frame #" .. self.packet_number .. ". TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
+        return "TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
         .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
       else
         --[[Unknown transport layer]]
-        return "Frame #" .. self.packet_number .. ". IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
+        return "IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
       end
     else
-      return "Frame #" .. self.packet_number .. ". Ethernet packet (non ipv4)";
+      return "Ethernet packet (non ipv4)";
     end
   end
   
@@ -713,14 +761,12 @@ end
 function wirebait.pcap_reader.new(filepath)
   local pcap_reader = {
     m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
-    m_packet_number = 1
   }
-
   --[[Performing various checks before reading the packet data]]
   assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
   local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
   assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
-  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported!"); 
+  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported! (Note that pcapng file are not supported either)"); 
 
   --[[Reading pcap file and returning the next ethernet frame]]
   function pcap_reader:getNextEthernetFrame()
@@ -729,34 +775,29 @@ function wirebait.pcap_reader.new(filepath)
     if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
       return nil;
     end
-    --print("Pcap Header: " .. tostring(pcap_hdr_buffer));
     local packet_length = pcap_hdr_buffer(8,4):le_uint();
-
     local packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
     if packet_buffer:len() < packet_length then -- this does not handle live capture
       return nil;
     end
-    --print("     Packet: " .. tostring(packet_buffer));
     assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
-    local ethernet_frame = wirebait.packet.new(packet_buffer, self.m_packet_number);
-    self.m_packet_number = self.m_packet_number + 1;
+    local ethernet_frame = wirebait.packet.new(packet_buffer);
     return ethernet_frame;
   end
-
---	self_pcap_reader:getNextIPPayload = getNextIPPayload;
---	setmetatable(self_pcap_reader, self)
---	self.__index = self
   return pcap_reader;
 end
 
-function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
+function wirebait.plugin_tester.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
+  options_table = options_table or {};
+  _WIREBAIT_ON_ = true; --globally scoped on purpose
   local plugin_tester = {
-    m_pcap_reader = wirebait.pcap_reader.new(pcap_filepath),
-    m_dissector_filepath = dissector_filepath
+    m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
+    m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
-  --wireshark.wirebait_handle = plugin_tester;
 
-  function plugin_tester:run()
+  function plugin_tester:dissectPcap(pcap_filepath)
+    assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
+    local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
     wirebait.state.dissector_table = newDissectorTable();
     
     Proto = wirebait.Proto.new;
@@ -764,11 +805,11 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
     DissectorTable = wirebait.state.dissector_table;
     dofile(self.m_dissector_filepath);
     
+    local packet_no = 1;
     repeat
-      local packet = self.m_pcap_reader:getNextEthernetFrame()
+      local packet = pcap_reader:getNextEthernetFrame()
       if packet then
-        io.write("-------------------------------------------------------------------------[[\n");
-        io.write(packet:info() .. "\n");
+        wirebait.state.packet_info = newPacketInfo();
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         if buffer then
           local root_tree = wirebait.treeitem.new(buffer);
@@ -779,13 +820,21 @@ function wirebait.plugin_tester.new(dissector_filepath, pcap_filepath)
             assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
             proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
           end
-          if proto_handle then
-            assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
-            proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+          if proto_handle or not self.m_only_show_dissected_packets then
+            io.write("-------------------------------------------------------------------------[[\n");
+            io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
+            if proto_handle then
+              assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
+              proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+              for k,v in ipairs(wirebait.state.packet_info.treeitems_array) do
+                io.write(v.m_text);
+              end
+            end
+            io.write("]]-------------------------------------------------------------------------\n\n\n");
           end
         end
-        io.write("]]-------------------------------------------------------------------------\n\n\n");
       end
+      packet_no = packet_no + 1;
     until packet == nil
   end
 
