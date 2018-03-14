@@ -1,6 +1,6 @@
 # WireBait
-Lua library to create Wireshark dissectors. 
-!!! It is STILL UNDER DEVELOPMENT and is unusable in its current state !!!
+Lua library to facilitate the development of Wireshark dissectors.
+[Wirebait on Github](https://github.com/MarkoPaul0/WireBait)[Wirebait on Github](https://github.com/MarkoPaul0/WireBait)[Wirebait on Github](https://github.com/MarkoPaul0/WireBait)[Wirebait on Github](https://github.com/MarkoPaul0/WireBait)Wirebait on Github: https://github.com/MarkoPaul0/WireBait
 
 # Licensing (c.f. LICENSE.txt)
 WireBait for Wireshark is a lua package to help create Wireshark Dissectors

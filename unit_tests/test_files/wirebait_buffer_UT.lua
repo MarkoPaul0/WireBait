@@ -1,7 +1,7 @@
-
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
     Dissectors in lua
+    [Wirebait on Github](https://github.com/MarkoPaul0/WireBait)
     Copyright (C) 2015-2017 Markus Leballeux
 
     This program is free software; you can redistribute it and/or modify
