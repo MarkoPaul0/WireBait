@@ -11,7 +11,7 @@ Note that WireBait does not interact at all with Wireshark, so the Lua version d
 
 ## Quick start
 Getting started takes less than a minute:
-  1. Download *wirebait.lua*
+  1. Download **wirebait.lua**
   2. Add the following snippet of code on top of the script you want to run/debug. (Checkout the example [simple_dissector.lua](https://github.com/MarkoPaul0/WireBait/blob/master/example/simple_dissector.lua) to see how that looks)
 ```lua
     if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
@@ -25,8 +25,23 @@ Getting started takes less than a minute:
   4. Execute your dissector script. Enjoy :smiley:
   
  ## Example
- Coming soon
- 
+ If you run the **simple_dissector.lua** script with the provided **smp_sample.pcap** file, you should get the following output:
+```
+ ------------------------------------------------------------------------------------------------------------------------------[[
+Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
+	 00 00 00 00 00 00 0B 24   02 AA 00 01 57 69 72 65	|	Simple Protocol
+	 62 61 69 74 5C 30 00 00   00 00 00 00 00 00 00 00	|	└─ Header appendix :)
+	 00 00 00 00 72 63 68 65   72 20 43 39 20 76 31 00	|	   └─ Sequence Number: 2852
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Type: 2
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Size: 170
+	 00 00 00 00 00 00 00 31   2E 30 32 2E 36 35 2E 00	|	   └─ Urgent: 1
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 01 00 00	|	   └─ Username: Wirebait\0
+	 00 01 00 00 00 02 00 00   00 02 00 00 00 00 00 00	|	   └─ Protofiel-less item
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	
+	 00 00 00 00 00 00 00 00   00 00 00 00 00       	|	
+]]------------------------------------------------------------------------------------------------------------------------------
+```
   
 ## How does it work?
 It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a simple version of the tree in the console along with the payload in hexadecimal format.
