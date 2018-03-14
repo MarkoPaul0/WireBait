@@ -156,8 +156,6 @@ function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(n
 function wirebait.treeitem.new(protofield, buffer, parent) 
   local treeitem = {
     m_protofield = protofield,
-    --m_parent = parent,
-   -- m_child = nil,
     m_depth = 0,
     m_buffer = buffer,
     m_text = nil
@@ -197,7 +195,6 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     else
       child_tree.m_text = tostring(prefix(tree.m_depth) .. proto.m_description .. "\n");
     end
-    --tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
     return child_tree;
   end
 
@@ -236,13 +233,17 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
       child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
-    --tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
     return child_tree;
   end
 
   --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
-  local function addTreeItem(tree, proto, buffer_or_value, texts)
-    error("TvbRange no supported yet!");
+  --[[ Very (like VERY) lazy, and hacky, and poor logic but it works ]]
+  -- TODO: clean this up!
+  local function addTreeItem(tree, buffer, value, texts)
+    local protofield = nil;
+    table.insert(texts, 1, value); --insert value in first position
+    table.insert(texts, 1, "");
+    return addProtoField(tree, protofield, buffer, texts)
   end
   
   --[[ Checks if a protofield was registered]]
@@ -265,13 +266,43 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       new_treeitem = addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
       new_treeitem = addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
-    elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
+    elseif proto_or_protofield_or_buffer._struct_type == "buffer" then --adding a tree item without protofield
       new_treeitem = addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     else
-      error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
+      error("First argument in treeitem:add() should be a Proto or Profofield");
     end
     table.insert(wirebait.state.packet_info.treeitems_array, new_treeitem);
     return new_treeitem;
+  end
+  
+  function treeitem:set_text(text)
+    text:gsub("\n", " ");
+    self.m_text = text .. "\n"
+  end
+  
+  function treeitem:append_text(text)
+    text:gsub("\n", " ");
+    self.m_text = self.m_text:gsub("\n", "") .. text .. "\n"
+  end
+  
+  function treeitem:set_len(length)
+    io.write("WIREBAIT WARNING: treeitem:set_length() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_generated()
+    io.write("WIREBAIT WARNING: treeitem:set_generated() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_hidden()
+    io.write("WIREBAIT WARNING: treeitem:set_hidden() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_expert_flags()
+    io.write("WIREBAIT WARNING: treeitem:set_expert_flags() is not supported by wirebait yet.");
+  end
+  
+  function treeitem:set_expert_info()
+    io.write("WIREBAIT WARNING: treeitem:set_expert_info() is not supported by wirebait yet.");
   end
 
   return treeitem;
@@ -796,9 +827,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
               for k,v in ipairs(wirebait.state.packet_info.treeitems_array) do
-                --if v.m_text then 
-                  io.write(v.m_text);
-                --end
+                io.write(v.m_text);
               end
             end
             io.write("]]-------------------------------------------------------------------------\n\n\n");

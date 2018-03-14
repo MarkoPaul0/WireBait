@@ -63,7 +63,9 @@ function p_smp.dissector(buffer, packet_info, root_tree)
   hdr_tree:add(f_type, buffer(8,1));
   hdr_tree:add(f_size, buffer(9,2));
   hdr_tree:add(f_is_urgent, buffer(11,1));
+  hdr_tree:append_text(" appendix :)")
   hdr_tree:add(f_username, buffer(12,24), buffer(12,24):stringz());
+  hdr_tree:add(buffer(36,4), "Protofiel-less item");
 end
 
 local udp_encap_table = DissectorTable.get("udp.port")
