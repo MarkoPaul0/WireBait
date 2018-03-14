@@ -1,8 +1,10 @@
 # WireBait
-Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/)dissectors by enabling you to run them against pcap files without Wireshark.
+Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling you to run them against pcap files without Wireshark.
 [WireBait on Github](https://github.com/MarkoPaul0/WireBait)
-## What is wirebait?
-WireBait is a simple one-file lua library allowing you to run and debug your Wireshark dissector without the need for Wireshark itself . You can simply exectute your dissector script and even step through it to see what it would do if it were run from Wireshark. Note that **WireBait is currently only compatible with Lua 5.3**. However, it does not interact at all with Wireshark, so the Lua version displayed in *Wireshark > Help > About Wireshark* has nothing to to do with this.
+## Requirements
+  * You have a Lua interpreter 5.3
+  * You have a Lua debugger. (I like [ZeroBrane Studio](https://studio.zerobrane.com/))
+Note that WireBait does not interact at all with Wireshark, so the Lua version displayed under *Wireshark > Help > About Wireshark* has nothing to to do with this.
 
 ## Quick start
 Getting started takes less than a minute:
