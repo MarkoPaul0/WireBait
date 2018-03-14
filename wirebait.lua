@@ -198,7 +198,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      child_tree.m_text = tostring(prefix(tree.m_depth) .. proto.m_description .. "\n");
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. proto.m_description);
     end
     return child_tree;
   end
@@ -233,10 +233,10 @@ function wirebait.treeitem.new(protofield, buffer, parent)
 
     local child_tree = wirebait.treeitem.new(protofield, buffer, tree);
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " ") .. "\n");
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
       local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value); --TODO review the or buffer:len
     end
     return child_tree;
   end
@@ -294,12 +294,12 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   
   function treeitem:set_text(text)
     text:gsub("\n", " ");
-    self.m_text = text .. "\n"
+    self.m_text = text
   end
   
   function treeitem:append_text(text)
     text:gsub("\n", " ");
-    self.m_text = self.m_text:gsub("\n", "") .. text .. "\n"
+    self.m_text = self.m_text .. text
   end
   
   function treeitem:set_len(length)
@@ -731,11 +731,11 @@ function wirebait.packet.new (packet_buffer)
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
         return "UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port --.. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
       elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         return "TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port .. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port --.. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
         --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
       else
         --[[Unknown transport layer]]
@@ -770,6 +770,41 @@ function wirebait.packet.new (packet_buffer)
     else
       error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
     end
+  end
+
+  function packet:getFormattedBytes() --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
+    local buffer = self.ethernet.ipv4.tcp.data or self.ethernet.ipv4.udp.data;
+    local bytes_per_col = 8;
+    local cols_count = 2;
+    if buffer:len() == 0 then
+      return {"\t<empty>"}
+    end
+    local array_of_lines = {};
+    local col_id = 1;
+    local byte_id = 0;
+    local str = "";
+    local last_id = 0;
+    for i=1,buffer:len() do
+      str = str .. " " .. buffer(i-1,1):hex_string();
+      byte_id = byte_id + 1;
+      if byte_id == bytes_per_col then
+        if col_id == cols_count then
+          table.insert(array_of_lines, str)
+          --str = str .. "\n\t";
+          str = ""
+          last_id = i;
+          col_id = 1;
+        else
+          str = str .. "  ";
+          col_id = col_id + 1;
+        end
+        byte_id = 0;
+      end
+    end
+    if #str > 0 then
+      table.insert(array_of_lines, str)
+    end
+    return array_of_lines;
   end
 
   return packet;
@@ -838,16 +873,22 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
             proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
           end
           if proto_handle or not self.m_only_show_dissected_packets then
-            io.write("-------------------------------------------------------------------------[[\n");
+            io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
             io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
             if proto_handle then
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
-              for k,v in ipairs(wirebait.state.packet_info.treeitems_array) do
-                io.write(v.m_text);
+              
+              local packet_bytes_lines = packet:getFormattedBytes();
+              local treeitems_array = wirebait.state.packet_info.treeitems_array;
+              local size = math.max(#packet_bytes_lines, #treeitems_array);
+              for i=1,size do
+                local bytes_str = string.format("%-48s",packet_bytes_lines[i] or "")
+                local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
+                io.write("\t" .. bytes_str .. "\t|\t" .. treeitem_str .. "\n");
               end
             end
-            io.write("]]-------------------------------------------------------------------------\n\n\n");
+            io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
           end
         end
       end
