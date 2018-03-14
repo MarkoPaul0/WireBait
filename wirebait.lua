@@ -30,10 +30,11 @@ local wirebait = {
   state = { --[[ state to keep track of the dissector wirebait is testing ]]
     dissector_filepath = nil,
     proto = nil,
-    packet_info = {
+    packet_info = { --TODO should be reset after each packet
       cols={
         protocol = nil
-      }
+      },
+      treeitems_array = {}
     },
     dissector_table = {
         udp = { port = nil },
@@ -155,10 +156,11 @@ function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(n
 function wirebait.treeitem.new(protofield, buffer, parent) 
   local treeitem = {
     m_protofield = protofield,
-    m_parent = parent,
-    m_child = nil,
+    --m_parent = parent,
+   -- m_child = nil,
     m_depth = 0,
-    m_buffer = buffer;
+    m_buffer = buffer,
+    m_text = nil
   }
   if parent then
     treeitem.m_depth = parent.m_depth + 1;
@@ -189,12 +191,14 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
+    local child_tree = wirebait.treeitem.new(protofield, buffer, tree);
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      io.write(prefix(tree.m_depth) .. proto.m_description .. "\n");
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. proto.m_description .. "\n");
     end
-    tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
+    --tree.m_child = wirebait.treeitem.new(proto, buffer, tree);
+    return child_tree;
   end
 
   --[[ Private function adding a protofield to the provided treeitem ]]
@@ -225,13 +229,15 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
+    local child_tree = wirebait.treeitem.new(protofield, buffer, tree);
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
-      print(prefix(tree.m_depth) .. table.concat(texts, " "));
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " ") .. "\n");
     else
       local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      io.write(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value .. "\n"); --TODO review the or buffer:len
     end
-    tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
+    --tree.m_child = wirebait.treeitem.new(protofield, buffer, tree);
+    return child_tree;
   end
 
   --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
@@ -254,16 +260,18 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
       os.exit()
     end
+    local new_treeitem = nil;
     if proto_or_protofield_or_buffer._struct_type == "Proto" then
-      addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+      new_treeitem = addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
-      addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+      new_treeitem = addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     elseif proto_or_protofield_or_buffer._struct_type == "Buffer" then --adding a tree item without protofield
-      addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
+      new_treeitem = addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
     else
       error("First argument in treeitem:add() should be a Proto or Profofield or a TvbRange");
     end
-    return self.m_child;
+    table.insert(wirebait.state.packet_info.treeitems_array, new_treeitem);
+    return new_treeitem;
   end
 
   return treeitem;
@@ -568,6 +576,16 @@ local function newDissectorTable()
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+--[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
+local function newPacketInfo()
+  local packet_info = {
+    cols = { 
+      protocol = nil
+    },
+    treeitems_array = {}
+  }
+  return packet_info;
+end
 
 --[----------PCAP READING LOGIC-------------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
@@ -760,6 +778,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     repeat
       local packet = pcap_reader:getNextEthernetFrame()
       if packet then
+        wirebait.state.packet_info = newPacketInfo();
         local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
         if buffer then
           local root_tree = wirebait.treeitem.new(buffer);
@@ -776,6 +795,11 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
             if proto_handle then
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+              for k,v in ipairs(wirebait.state.packet_info.treeitems_array) do
+                --if v.m_text then 
+                  io.write(v.m_text);
+                --end
+              end
             end
             io.write("]]-------------------------------------------------------------------------\n\n\n");
           end
@@ -789,9 +813,9 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
---local test = wirebait.plugin_tester.new({dissector_filepath="C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
---    only_show_dissected_packets = true});
---test:dissectPcap("C:/Users/Marko/Desktop/wirebait_test2.pcap")
+local test = wirebait.plugin_tester.new({dissector_filepath="C:/Users/Marko/Documents/GitHub/wirebait/example/simple_dissector.lua", 
+    only_show_dissected_packets = true});
+test:dissectPcap("C:/Users/Marko/Desktop/wirebait_test2.pcap")
 
 return wirebait
 
