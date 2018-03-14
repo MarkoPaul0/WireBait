@@ -37,7 +37,7 @@
 if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
   local wirebait = require("wirebait");
   local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
-  dissector_tester:dissectPcap("C:/Users/Marko/Desktop/wirebait_test2.pcap");
+  dissector_tester:dissectPcap("example/smp_sample.pcap");
   return
 end
 ----------------------------------------------------------------------------------------------------------------------------------------------
