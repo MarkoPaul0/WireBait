@@ -1,5 +1,5 @@
 # WireBait [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling you to run them against pcap files without Wireshark.
+Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against pcap files without Wireshark.
 [WireBait on Github](https://github.com/MarkoPaul0/WireBait)
 ## Requirements
   * You have a Lua interpreter 5.3
@@ -12,7 +12,7 @@ Note that WireBait does not interact at all with Wireshark, so the Lua version d
 ## Quick start
 Getting started takes less than a minute:
   1. Download **wirebait.lua**
-  2. Add the following snippet of code on top of the script you want to run/debug. (Checkout the example [simple_dissector.lua](https://github.com/MarkoPaul0/WireBait/blob/master/example/simple_dissector.lua) to see how that looks)
+  2. Add the following snippet of code on top of the script you want to run/debug:
 ```lua
     if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
       local wirebait = require("wirebait");
@@ -21,11 +21,11 @@ Getting started takes less than a minute:
       return
     end
 ```
-  3. Edit the code snippet to have your dissector read the pcap file you want.
+  3. Edit the code snippet to have your dissector read the pcap file of your choice
   4. Execute your dissector script. Enjoy :smiley:
   
  ## Example
- If you run the **simple_dissector.lua** script with the provided **smp_sample.pcap** file, you should get the following output:
+ If you run the example dissector script **[simple_dissector.lua](https://github.com/MarkoPaul0/WireBait/blob/master/example/simple_dissector.lua)** with the provided **smp_sample.pcap** file, you should get the following output:
 ```
  ------------------------------------------------------------------------------------------------------------------------------[[
 Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
@@ -48,7 +48,7 @@ Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
   ![](example/smp_sample_in_wireshark.png)
   
 ## How does it work?
-It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a simple version of the tree in the console along with the payload in hexadecimal format.
+It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a text version of the tree along with the payload in hexadecimal format.
 A few notes about the current state of the project:
   * Only compatible with Lua 5.3
   * TCP reassembly is not supported
