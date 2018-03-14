@@ -1,6 +1,6 @@
-# WireBait [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against pcap files without Wireshark.
-[WireBait on Github](https://github.com/MarkoPaul0/WireBait)
+# [WireBait](https://github.com/MarkoPaul0/WireBait)  -  [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against pcap files without Wireshark. The goal here is to provide a tool reducing development time when creating a new dissector.
+
 ## Requirements
   * You have a Lua interpreter 5.3
   * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/))
