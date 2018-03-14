@@ -1,6 +1,7 @@
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
-    Dissectors in lua
+    Dissectors in lua.
+    [Wirebait on Github](https://github.com/MarkoPaul0/WireBait)
     Copyright (C) 2015-2017 Markus Leballeux
 
     This program is free software; you can redistribute it and/or modify
@@ -42,6 +43,10 @@ local wirebait = {
     }
   }
 }
+
+if _VERSION ~= "Lua 5.3" then
+  error("WireBait has only been developed with Lua 5.3. Try it with another version at your own risk OR feel free to create a ticket @ https://github.com/MarkoPaul0/WireBait")
+end
 
 --[[----------LOCAL HELPER METHODS (only used within the library)---------------------------------------------------------------------------------------------------------]]
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
@@ -256,6 +261,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     return false;
   end
 
+  --[[TODO: add uni tests]]
   function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
     if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
       print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
@@ -273,6 +279,17 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     table.insert(wirebait.state.packet_info.treeitems_array, new_treeitem);
     return new_treeitem;
+  end
+  
+  --[[TODO: add unit tests]]
+  function treeitem:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
+    assert(proto_or_protofield_or_buffer._struct_type == "buffer" or buffer._struct_type == "buffer", "Expecting a tvbrange somewhere in the arguments!")
+    if proto_or_protofield_or_buffer._struct_type == "buffer" then
+      proto_or_protofield_or_buffer = wirebait.buffer.new(proto_or_protofield_or_buffer:swapped_bytes());
+    else
+      buffer = wirebait.buffer.new(buffer:swapped_bytes());
+    end
+    return self:add(proto_or_protofield_or_buffer, buffer, value, ...)
   end
   
   function treeitem:set_text(text)

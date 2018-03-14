@@ -61,7 +61,7 @@ function p_smp.dissector(buffer, packet_info, root_tree)
   hdr_tree = main_tree:add(f_header, buffer(0,28), "", "Header");
   hdr_tree:add(f_seq_no, buffer(0,8));
   hdr_tree:add(f_type, buffer(8,1));
-  hdr_tree:add(f_size, buffer(9,2));
+  hdr_tree:add_le(f_size, buffer(9,2));
   hdr_tree:add(f_is_urgent, buffer(11,1));
   hdr_tree:append_text(" appendix :)")
   hdr_tree:add(f_username, buffer(12,24), buffer(12,24):stringz());
