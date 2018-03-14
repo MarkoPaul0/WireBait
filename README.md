@@ -1,4 +1,4 @@
-# WireBait
+# WireBait [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling you to run them against pcap files without Wireshark.
 [WireBait on Github](https://github.com/MarkoPaul0/WireBait)
 ## Requirements
