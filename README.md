@@ -3,8 +3,11 @@ Lua library to facilitate the development of [Wireshark](https://www.wireshark.o
 [WireBait on Github](https://github.com/MarkoPaul0/WireBait)
 ## Requirements
   * You have a Lua interpreter 5.3
-  * You have a Lua debugger. (I like [ZeroBrane Studio](https://studio.zerobrane.com/))
-Note that WireBait does not interact at all with Wireshark, so the Lua version displayed under *Wireshark > Help > About Wireshark* has nothing to to do with this.
+  * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/))
+  * You have a dissector and a pcap file to test it
+  
+Note that WireBait does not interact at all with Wireshark, so the Lua version displayed under 
+*Wireshark > Help > About Wireshark* has nothing to to do with this.
 
 ## Quick start
 Getting started takes less than a minute:
