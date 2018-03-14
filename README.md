@@ -42,6 +42,10 @@ Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
 	 00 00 00 00 00 00 00 00   00 00 00 00 00       	|	
 ]]------------------------------------------------------------------------------------------------------------------------------
 ```
+
+  In wireshark the same dissection would look like this:
+  
+  ![](example/smp_sample_in_wireshark.png)
   
 ## How does it work?
 It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a simple version of the tree in the console along with the payload in hexadecimal format.
