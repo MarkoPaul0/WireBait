@@ -1,4 +1,3 @@
-
 --[[
     WireBait for Wireshark is a lua package to help write Wireshark 
     Dissectors in lua
@@ -37,9 +36,8 @@
 if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
   local wirebait = require("wirebait");
   local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
-  dissector_tester:dissectPcap("example/smp_sample.pcap");
-  --dissector_tester:dissectHexData("00 00 00 00 00 00 0B 2402 aa 00 01 57 69 72 65 62 61 69 74 5C 30 00 0000 00 00 00 00 00 00 0000 00 00 00 72 63 68 6572 20 43 39 20 76 31 00"..
-	-- "00 00 00 00 00 00 00 0000 00 00 00 00 0000000000000000000000000000000000000000000000000000312E30322E36352E0000000000000000000000000000010000");
+  --Example 2: dissecting data from a pcap file
+  dissector_tester:dissectPcap("./example/smp_sample.pcap");
   return
 end
 ----------------------------------------------------------------------------------------------------------------------------------------------
