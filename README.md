@@ -1,5 +1,6 @@
 # [WireBait](https://github.com/MarkoPaul0/WireBait)  -  [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against pcap files without Wireshark. The goal here is to provide a tool reducing development time when creating a new dissector.
+Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from hexadecimal string or a *.pcap* file.
+The goal here is to provide a tool reducing development time when creating a new dissector.
 
 ## Requirements
   * You have a Lua interpreter 5.3
@@ -14,20 +15,41 @@ Getting started takes less than a minute:
   1. Download **wirebait.lua**
   2. Add the following snippet of code on top of the script you want to run/debug:
 ```lua
-    if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
+    if disable_lua == nil and not _WIREBAIT_ON_ then
       local wirebait = require("wirebait");
       local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
-      dissector_tester:dissectPcap("path_to_your_pcap_file.pcap");
+      dissector_tester:dissectPcap("path_to_your_pcap_file.pcap");  --dissecting data from a pcap file
+      dissector_tester:dissectHexData("72ABE636AFC86572");	    --dissecting data from a hex string	
       return
     end
 ```
-  3. Edit the code snippet to have your dissector read the pcap file of your choice
+  3. Edit the code snippet to have your dissector read the *hexadecimal data* **and/or** *pcap file* of your choice
   4. Execute your dissector script. Enjoy :smiley:
   
- ## Example
- If you run the example dissector script **[simple_dissector.lua](example/simple_dissector.lua)** with the provided **[smp_sample.pcap](example/smp_sample.pcap)** file, you should get the following output:
+ ## Example 1 Dissecting Data From a Hexadecimal String
+ If you run the example dissector script **[smp_dissector_ex1.lua](example/smp_dissector_ex2.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
 ```
  ------------------------------------------------------------------------------------------------------------------------------[[
+Dissecting hexadecimal data (no pcap provided)
+	 00 00 00 00 00 00 0B 24   02 AA 00 01 57 69 72 65	|	Simple Protocol
+	 62 61 69 74 5C 30 00 00   00 00 00 00 00 00 00 00	|	└─ Header appendix :)
+	 00 00 00 00 72 63 68 65   72 20 43 39 20 76 31 00	|	   └─ Sequence Number: 2852
+	                                                	|	   └─ Type: 2
+	                                                	|	   └─ Size: 170
+	                                                	|	   └─ Urgent: 1
+	                                                	|	   └─ Username: Wirebait\0
+	                                                	|	└─ Protofield-less item
+	                                                	|	└─ Child 1 Protofield-less item
+	                                                	|	   └─ Child 2 Protofield-less item
+	                                                	|	      └─ Child 3 Protofield-less item
+	                                                	|	         └─ Child 4 Protofield-less item
+]]------------------------------------------------------------------------------------------------------------------------------
+```
+ 
+ ## Example 2 Dissecting Data From a *.pcap* File
+ If you run the example dissector script **[smp_dissector_ex2.lua](example/smp_dissector_ex2.lua)**, which dissects the provided **[smp_sample.pcap](example/smp_sample.pcap)** file, you should get the following output:
+```
+------------------------------------------------------------------------------------------------------------------------------[[
 Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
 	 00 00 00 00 00 00 0B 24   02 AA 00 01 57 69 72 65	|	Simple Protocol
 	 62 61 69 74 5C 30 00 00   00 00 00 00 00 00 00 00	|	└─ Header appendix :)
@@ -36,10 +58,11 @@ Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
 	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Size: 170
 	 00 00 00 00 00 00 00 31   2E 30 32 2E 36 35 2E 00	|	   └─ Urgent: 1
 	 00 00 00 00 00 00 00 00   00 00 00 00 00 01 00 00	|	   └─ Username: Wirebait\0
-	 00 01 00 00 00 02 00 00   00 02 00 00 00 00 00 00	|	   └─ Protofiel-less item
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	
-	 00 00 00 00 00 00 00 00   00 00 00 00 00       	|	
+	 00 01 00 00 00 02 00 00   00 02 00 00 00 00 00 00	|	└─ Protofield-less item
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	└─ Child 1 Protofield-less item
+	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Child 2 Protofield-less item
+	 00 00 00 00 00 00 00 00   00 00 00 00 00       	|	      └─ Child 3 Protofield-less item
+	                                                	|	         └─ Child 4 Protofield-less item
 ]]------------------------------------------------------------------------------------------------------------------------------
 ```
 
