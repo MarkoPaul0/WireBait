@@ -1,14 +1,13 @@
 # [WireBait](https://github.com/MarkoPaul0/WireBait)  -  [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from hexadecimal string or a *.pcap* file.
+Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from a hexadecimal string or a *.pcap* file.
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
 ## Requirements
   * You have a Lua interpreter 5.3
-  * You have a dissector and a pcap file to test it
+  * You have a dissector and data to test it (hex string or pcap file)
   * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/)) [only a requirement for step by step debugging]
   
-Note that WireBait does not interact at all with Wireshark, so the Lua version displayed under 
-*Wireshark > Help > About Wireshark* has nothing to to do with this.
+Note that WireBait does not interact at all with Wireshark.
 
 ## Quick start
 Getting started takes less than a minute:
