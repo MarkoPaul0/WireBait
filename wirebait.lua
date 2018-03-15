@@ -331,12 +331,13 @@ end
 --[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
 function wirebait.buffer.new(data_as_hex_string)
   assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
-  assert(string.len(data_as_hex_string:gsub('%X','')) >= 0 or data_as_hex_string:len() == 0, "String should be hexadecimal!")
+  data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
+  assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
   assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
 
   local buffer = {
     _struct_type = "buffer",
-    m_data_as_hex_str = data_as_hex_string,
+    m_data_as_hex_str = data_as_hex_string:upper(),
   }
   local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
@@ -786,6 +787,13 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
   
+  --Setting up the environment before invoking dofile() on the dissector script
+  wirebait.state.dissector_table = newDissectorTable();
+  Proto = wirebait.Proto.new;
+  ProtoField = wirebait.ProtoField;
+  DissectorTable = wirebait.state.dissector_table;
+  dofile(plugin_tester.m_dissector_filepath);
+  
   local function formatBytesInArray(buffer, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
     if buffer:len() == 0 then
       return {"<empty>"}
@@ -814,13 +822,6 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   function plugin_tester:dissectPcap(pcap_filepath)
     assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
     local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
-    wirebait.state.dissector_table = newDissectorTable();
-
-    Proto = wirebait.Proto.new;
-    ProtoField = wirebait.ProtoField;
-    DissectorTable = wirebait.state.dissector_table;
-    dofile(self.m_dissector_filepath);
-
     local packet_no = 1;
     repeat
       local packet = pcap_reader:getNextEthernetFrame()
@@ -861,16 +862,10 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
 
   function plugin_tester:dissectHexData(hex_data)
     io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
-    --io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
-    
-    wirebait.state.dissector_table = newDissectorTable();
-    Proto = wirebait.Proto.new;
-    ProtoField = wirebait.ProtoField;
-    DissectorTable = wirebait.state.dissector_table;
-    dofile(self.m_dissector_filepath);
+    io.write("Dissecting hexadecimal data (no pcap provided)\n");
     local buffer = wirebait.buffer.new(hex_data:gsub(" ",""));
     local root_tree = wirebait.treeitem.new(buffer);
-    
+    wirebait.state.packet_info = newPacketInfo();
     assert(wirebait.state.proto, "It doens't seem like any proto was registered!")
     wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
     local packet_bytes_lines = formatBytesInArray(buffer);
