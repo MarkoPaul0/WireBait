@@ -38,8 +38,8 @@ local wirebait = {
       treeitems_array = {}
     },
     dissector_table = {
-        udp = { port = nil },
-        tcp = { port = nil }
+      udp = { port = nil },
+      tcp = { port = nil }
     }
   }
 }
@@ -250,7 +250,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     table.insert(texts, 1, "");
     return addProtoField(tree, protofield, buffer, texts)
   end
-  
+
   --[[ Checks if a protofield was registered]]
   local function checkProtofieldRegistered(protofield)
     for k, v in pairs(wirebait.state.proto.fields) do
@@ -280,7 +280,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     table.insert(wirebait.state.packet_info.treeitems_array, new_treeitem);
     return new_treeitem;
   end
-  
+
   --[[TODO: add unit tests]]
   function treeitem:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
     assert(proto_or_protofield_or_buffer._struct_type == "buffer" or buffer._struct_type == "buffer", "Expecting a tvbrange somewhere in the arguments!")
@@ -291,33 +291,33 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     end
     return self:add(proto_or_protofield_or_buffer, buffer, value, ...)
   end
-  
+
   function treeitem:set_text(text)
     text:gsub("\n", " ");
     self.m_text = text
   end
-  
+
   function treeitem:append_text(text)
     text:gsub("\n", " ");
     self.m_text = self.m_text .. text
   end
-  
+
   function treeitem:set_len(length)
     io.write("WIREBAIT WARNING: treeitem:set_length() is not supported by wirebait yet.");
   end
-  
+
   function treeitem:set_generated()
     io.write("WIREBAIT WARNING: treeitem:set_generated() is not supported by wirebait yet.");
   end
-  
+
   function treeitem:set_hidden()
     io.write("WIREBAIT WARNING: treeitem:set_hidden() is not supported by wirebait yet.");
   end
-  
+
   function treeitem:set_expert_flags()
     io.write("WIREBAIT WARNING: treeitem:set_expert_flags() is not supported by wirebait yet.");
   end
-  
+
   function treeitem:set_expert_info()
     io.write("WIREBAIT WARNING: treeitem:set_expert_info() is not supported by wirebait yet.");
   end
@@ -353,7 +353,7 @@ function wirebait.buffer.new(data_as_hex_string)
     assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
     return hexStringToUint64(self:bytes());
   end;
-  
+
   function buffer:le_uint()
     assert(self:len() <= 4, "tvbrange:le_uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
     return hexStringToUint64(self:swapped_bytes());
@@ -515,22 +515,22 @@ function wirebait.buffer.new(data_as_hex_string)
     str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
     return str
   end
-  
+
   --[[TODO: this is not utf-16]]
   function buffer:ustring()
     return self:string();
   end
-  
+
   --[[TODO: this is not utf-16]]
   function buffer:ustringz()
     return self:stringz();
   end
-  
+
   function buffer:le_ustring()
     local be_hex_str = swapBytes(self:hex_string());
     return wirebait.buffer.new(be_hex_str):ustring();
   end
-  
+
   function buffer:le_ustringz()
     local be_hex_str = swapBytes(self:hex_string());
     return wirebait.buffer.new(be_hex_str):ustringz();
@@ -566,11 +566,11 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:hex_string()
     return self.m_data_as_hex_str;
   end
-  
+
   function buffer:bytes()
     return self.m_data_as_hex_str;
   end
-  
+
   function buffer:swapped_bytes()
     return swapBytes(self.m_data_as_hex_str);
   end
@@ -586,7 +586,7 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:__tostring()
     return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
   end
-  
+
   setmetatable(buffer, buffer)
 
   return buffer;
@@ -600,18 +600,18 @@ local function newDissectorTable()
     udp = { port = {} },
     tcp = { port = {} },
   }
-  
+
   local function newPortTable()
     port_table = {}
-    
+
     function port_table:add(port, proto_handle)
       assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
       self[port] = proto_handle;
     end
-    
+
     return port_table;
   end
-  
+
   dissector_table.udp.port = newPortTable();
 
   function dissector_table.get(path)
@@ -619,7 +619,7 @@ local function newDissectorTable()
     path:gsub("%a+", function(split_path) obj = obj[split_path] end)
     return obj;
   end
-      
+
   return dissector_table;
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
@@ -701,32 +701,6 @@ function wirebait.packet.new (packet_buffer)
     end
   end
   
-  local function print_bytes(buffer, cols_count, bytes_per_col) --[[althought it is working, let's simplify this method]]
-    if buffer:len() == 0 then
-      return "\t<empty>"
-    end
-    local col_id = 1;
-    local byte_id = 0;
-    local str = "\t";
-    local last_id = 0;
-    for i=1,buffer:len() do
-      str = str .. " " .. buffer(i-1,1):hex_string();
-      byte_id = byte_id + 1;
-      if byte_id == bytes_per_col then
-        if col_id == cols_count then
-          str = str .. "\n\t";
-          last_id = i;
-          col_id = 1;
-        else
-          str = str .. "  ";
-          col_id = col_id + 1;
-        end
-        byte_id = 0;
-      end
-    end
-    return str;
-  end
-
   function packet:info()
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
@@ -745,11 +719,11 @@ function wirebait.packet.new (packet_buffer)
       return "Ethernet packet (non ipv4)";
     end
   end
-  
+
   function packet:getIPProtocol()
     return self.ethernet.ipv4.protocol;
   end
-  
+
   function packet:getSrcPort()
     local ip_proto = self:getIPProtocol();
     if ip_proto == PROTOCOL_TYPES.UDP then
@@ -760,7 +734,7 @@ function wirebait.packet.new (packet_buffer)
       error("Packet currently only support getSrcPort() for IP/UDP and IP/TCP protocols!")
     end
   end
-  
+
   function packet:getDstPort()
     local ip_proto = self:getIPProtocol();
     if ip_proto == PROTOCOL_TYPES.UDP then
@@ -770,41 +744,6 @@ function wirebait.packet.new (packet_buffer)
     else
       error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
     end
-  end
-
-  function packet:getFormattedBytes() --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
-    local buffer = self.ethernet.ipv4.tcp.data or self.ethernet.ipv4.udp.data;
-    local bytes_per_col = 8;
-    local cols_count = 2;
-    if buffer:len() == 0 then
-      return {"\t<empty>"}
-    end
-    local array_of_lines = {};
-    local col_id = 1;
-    local byte_id = 0;
-    local str = "";
-    local last_id = 0;
-    for i=1,buffer:len() do
-      str = str .. " " .. buffer(i-1,1):hex_string();
-      byte_id = byte_id + 1;
-      if byte_id == bytes_per_col then
-        if col_id == cols_count then
-          table.insert(array_of_lines, str)
-          --str = str .. "\n\t";
-          str = ""
-          last_id = i;
-          col_id = 1;
-        else
-          str = str .. "  ";
-          col_id = col_id + 1;
-        end
-        byte_id = 0;
-      end
-    end
-    if #str > 0 then
-      table.insert(array_of_lines, str)
-    end
-    return array_of_lines;
   end
 
   return packet;
@@ -846,17 +785,51 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
+  
+  local function formatBytesInArray(buffer) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
+    local bytes_per_col = 8;
+    local cols_count = 2;
+    if buffer:len() == 0 then
+      return {"\t<empty>"}
+    end
+    local array_of_lines = {};
+    local col_id = 1;
+    local byte_id = 0;
+    local str = "";
+    local last_id = 0;
+    for i=1,buffer:len() do
+      str = str .. " " .. buffer(i-1,1):hex_string();
+      byte_id = byte_id + 1;
+      if byte_id == bytes_per_col then
+        if col_id == cols_count then
+          table.insert(array_of_lines, str)
+          --str = str .. "\n\t";
+          str = ""
+          last_id = i;
+          col_id = 1;
+        else
+          str = str .. "  ";
+          col_id = col_id + 1;
+        end
+        byte_id = 0;
+      end
+    end
+    if #str > 0 then
+      table.insert(array_of_lines, str)
+    end
+    return array_of_lines;
+  end
 
   function plugin_tester:dissectPcap(pcap_filepath)
     assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
     local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
     wirebait.state.dissector_table = newDissectorTable();
-    
+
     Proto = wirebait.Proto.new;
     ProtoField = wirebait.ProtoField;
     DissectorTable = wirebait.state.dissector_table;
     dofile(self.m_dissector_filepath);
-    
+
     local packet_no = 1;
     repeat
       local packet = pcap_reader:getNextEthernetFrame()
@@ -878,8 +851,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
             if proto_handle then
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
-              
-              local packet_bytes_lines = packet:getFormattedBytes();
+              local packet_bytes_lines = formatBytesInArray(buffer);
               local treeitems_array = wirebait.state.packet_info.treeitems_array;
               local size = math.max(#packet_bytes_lines, #treeitems_array);
               for i=1,size do
@@ -894,6 +866,32 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
       end
       packet_no = packet_no + 1;
     until packet == nil
+  end
+
+  function plugin_tester:dissectHexData(hex_data)
+    io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
+    --io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
+    
+    wirebait.state.dissector_table = newDissectorTable();
+    Proto = wirebait.Proto.new;
+    ProtoField = wirebait.ProtoField;
+    DissectorTable = wirebait.state.dissector_table;
+    dofile(self.m_dissector_filepath);
+    local buffer = wirebait.buffer.new(hex_data:gsub(" ",""));
+    local root_tree = wirebait.treeitem.new(buffer);
+    
+    assert(wirebait.state.proto, "It doens't seem like any proto was registered!")
+    wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
+    local packet_bytes_lines = formatBytesInArray(buffer);
+    local treeitems_array = wirebait.state.packet_info.treeitems_array;
+    local size = math.max(#packet_bytes_lines, #treeitems_array);
+    for i=1,size do
+      local bytes_str = string.format("%-48s",packet_bytes_lines[i] or "")
+      local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
+      io.write("\t" .. bytes_str .. "\t|\t" .. treeitem_str .. "\n");
+    end
+
+    io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
   end
 
   return plugin_tester;

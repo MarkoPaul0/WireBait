@@ -37,7 +37,9 @@
 if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
   local wirebait = require("wirebait");
   local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
-  dissector_tester:dissectPcap("example/smp_sample.pcap");
+  --dissector_tester:dissectPcap("example/smp_sample.pcap");
+  dissector_tester:dissectHexData("00 00 00 00 00 00 0B 2402 AA 00 01 57 69 72 65 62 61 69 74 5C 30 00 0000 00 00 00 00 00 00 0000 00 00 00 72 63 68 6572 20 43 39 20 76 31 00"..
+	 "00 00 00 00 00 00 00 0000 00 00 00 00 00 00 0000 00 00 00 00 00 00 0000 00 00 00 00 00 00 0000 00 00 00 00 00 00 312E 30 32 2E 36 35 2E 0000 00 00 00 00 00 00 0000 00 00 00 00 01 00 00");
   return
 end
 ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -65,7 +67,11 @@ function p_smp.dissector(buffer, packet_info, root_tree)
   hdr_tree:add(f_is_urgent, buffer(11,1));
   hdr_tree:append_text(" appendix :)")
   hdr_tree:add(f_username, buffer(12,24), buffer(12,24):stringz());
-  hdr_tree:add(buffer(36,4), "Protofiel-less item");
+  main_tree:add(buffer(36), "Protofiel-less item");
+  tr = main_tree:add(buffer(36,10), "Child 1 Protofiel-less item");
+  tr2 = tr:add(buffer(36,2), "Child 2 Protofiel-less item");
+  tr3 = tr2:add(buffer(38,2), "Child 3 Protofiel-less item");
+  tr4 = tr3:add(buffer(40,2), "Child 4 Protofiel-less item");
 end
 
 local udp_encap_table = DissectorTable.get("udp.port")
