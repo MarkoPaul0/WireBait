@@ -4,8 +4,8 @@ The goal here is to provide a tool reducing development time when creating a new
 
 ## Requirements
   * You have a Lua interpreter 5.3
-  * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/))
   * You have a dissector and a pcap file to test it
+  * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/)) [only a requirement for step by step debugging]
   
 Note that WireBait does not interact at all with Wireshark, so the Lua version displayed under 
 *Wireshark > Help > About Wireshark* has nothing to to do with this.
