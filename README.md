@@ -79,7 +79,7 @@ A few notes about the current state of the project:
   * Pcap files must be written in native byte order
   
 
-# Licensing (c.f. LICENSE.txt)
+# Licensing 
 WireBait for Wireshark is a lua package to help create Wireshark Dissectors
 Copyright (C) 2015-2017 Markus Leballeux
 
@@ -96,3 +96,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+**(Checkout the full [license](LICENSE.txt))**
