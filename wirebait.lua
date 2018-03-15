@@ -786,32 +786,23 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
   
-  local function formatBytesInArray(buffer) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
-    local bytes_per_col = 8;
-    local cols_count = 2;
+  local function formatBytesInArray(buffer, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
     if buffer:len() == 0 then
-      return {"\t<empty>"}
+      return {"<empty>"}
     end
+    bytes_per_col = bytes_per_col or 8;
+    cols_count = cols_count or 2;
     local array_of_lines = {};
-    local col_id = 1;
-    local byte_id = 0;
     local str = "";
-    local last_id = 0;
     for i=1,buffer:len() do
       str = str .. " " .. buffer(i-1,1):hex_string();
-      byte_id = byte_id + 1;
-      if byte_id == bytes_per_col then
-        if col_id == cols_count then
+      if i % bytes_per_col == 0 then
+        if i % (cols_count * bytes_per_col) == 0 then
           table.insert(array_of_lines, str)
-          --str = str .. "\n\t";
           str = ""
-          last_id = i;
-          col_id = 1;
         else
           str = str .. "  ";
-          col_id = col_id + 1;
         end
-        byte_id = 0;
       end
     end
     if #str > 0 then
