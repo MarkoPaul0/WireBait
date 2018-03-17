@@ -64,6 +64,7 @@ local function printIP(le_int_ip)
   return ip_str;
 end
 
+--[[Switches byte order of the given hex_str. For instance the input "12ABCDEF" will be turned into "EFCDAB12" ]]
 local function swapBytes(hex_str)
   local new_hex_str = "";
   for i=1,#hex_str/2 do
@@ -73,7 +74,7 @@ local function swapBytes(hex_str)
 end
 
 --[[Converts a string in hex format into a big endian uint64 ]]
---[[In lua there is no real integer type, and past 2^53 numbers a interpreted as double, which is why uin64t are handled in 2 words]]
+--[[In lua there is no real integer type, and past 2^53 numbers are interpreted as double, which is why uin64t are handled in 2 words]]
 local function hexStringToUint64(hex_str)
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
@@ -125,26 +126,25 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   assert(not fbase or type(fbase) == "number" and fbase == math.floor(fbase), "The optional ProtoField base must to be an integer!");
   assert(not mask or type(mask) == "number" and mask == math.floor(mask), "The optional ProtoField mask must to be an integer!");
   assert(not value_string or type(value_string) == "table", "The optional ProtoField valuestring must be a table!");
-  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8}; --TODO: this and m_size can be removed
   local protofield = {
     _struct_type = "ProtoField";
     m_name = name;
     m_abbr = abbr;
     m_type = ftype;
-    m_value_string = value_string;
-    m_base = fbase;
-    m_mask = mask; --[[mask only works for bytes that are by definition <= 8 bytes]]
+    m_value_string = value_string; --[[table of values and their corresponding string value ]]
+    m_base = fbase; --[[determines what base is used to display an treeitem value]]
+    m_mask = mask; --[[mask only works for types that are by definition <= 8 bytes]]
     m_description = desc; --[[The description is a text displayed in the Wireshark GUI when the field is selected. Irrelevant in wirebait]]
-    m_size = size_by_type[ftype] -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
   }
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
-      uint8 = function (buf) return buf(0,1):uint() & (mask or 0xFF) end,
-      uint16 = function (buf) return buf(0,2):uint() & (mask or 0xFFFF) end,
-      uint32 = function (buf) return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
-      uint64 = function (buf) return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
-      stringz = function (buffer) return buf(0):stringz() end,
+      uint8   = function (buf) return buf(0,1):uint() & (mask or 0xFF) end,
+      uint16  = function (buf) return buf(0,2):uint() & (mask or 0xFFFF) end,
+      uint32  = function (buf) return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
+      uint64  = function (buf) return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
+      stringz = function (buf) return buf(0):stringz() end,
+      bool    = function (buf) return buf(0):uint64() > 0 end
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -219,6 +219,7 @@ function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return
 function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint16", value_string, fbase, ...) end
 function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint32", value_string, fbase, ...) end
 function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint64", value_string, fbase, ...) end
+function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "bool", value_string, fbase, ...) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
@@ -951,6 +952,12 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   return plugin_tester;
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+--local dissector_tester = wirebait.plugin_tester.new({dissector_filepath="./example/smp_dissector_ex1.lua", only_show_dissected_packets=true});
+----Example 1: dissecting data from a hexadecimal string
+--dissector_tester:dissectHexData("0 \t\r\n  000 00 0 0 00 00 0 B24 11   aa  00 01 57 69 72 65 62 61 69 74 5c 30 00 " .. 
+--  "00000 0 000000 0 0 0 00000 00 00 00 72 63 68 657  2  20 4    3 39 20 76 3 1 0 0");
+
 
 return wirebait
 
