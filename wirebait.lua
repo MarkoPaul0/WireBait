@@ -120,10 +120,11 @@ end
 --[----------WIRESHARK PROTOFIELD-----------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
-  assert(name and abbr and ftype, "ProtoField name, abbr, and type must not be nil!")
-  assert(not mask or type(mask) == "number", "The ProtoField mask must be a number!");
-  assert(not mask or mask == math.floor(mask), "The ProtoField must to be an integer!");
-  assert(not value_string or type(value_string == "table"), "The ProtoField valuestring must be a table!");
+  assert(name and abbr and ftype, "ProtoField name, abbr, and type must not be nil!");
+  assert(type(name) == "string" and type(abbr) == "string" and type(ftype) == "string", "ProtoField name, abbr, and type must be strings!");
+  assert(not fbase or type(fbase) == "number" and fbase == math.floor(fbase), "The optional ProtoField base must to be an integer!");
+  assert(not mask or type(mask) == "number" and mask == math.floor(mask), "The optional ProtoField mask must to be an integer!");
+  assert(not value_string or type(value_string) == "table", "The optional ProtoField valuestring must be a table!");
   local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8}; --TODO: this and m_size can be removed
   local protofield = {
     _struct_type = "ProtoField";
@@ -206,7 +207,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       else
         str_value =  str_value .. " (0x" .. buffer:hex_string() .. ")";
       end
-    else 
+    else --treat any other base or no base set as base.DEC
       if value_string then
         str_value =  value_string .. " (" .. value .. ")";
       end
@@ -676,8 +677,9 @@ local function newDissectorTable()
     port_table = {}
 
     function port_table:add(port, proto_handle)
-      assert(port >= 0 and port <= 65535, "A port must be between 0 and 65535!")
-      self[port] = proto_handle;
+      local port_number = tonumber(port);
+      assert(port_number >= 0 and port_number <= 65535, "A port must be between 0 and 65535!")
+      self[port_number] = proto_handle;
     end
 
     return port_table;
