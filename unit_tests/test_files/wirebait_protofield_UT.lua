@@ -31,7 +31,7 @@ therefore forgetting the local keywork will not have a negative impact.
 local unit_tests = tester.newUnitTestsSet("Wireshark Protofield Unit Tests");
 
 unit_tests:addTest("Testing wireshark protofield construction with new()", function()
-        proto_field = wirebait.ProtoField.new("smp.someField", "Some Field", "uint16")
+        proto_field = wirebait.ProtoField.new("Some Field", "smp.someField", "uint16")
         tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
         tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
         tester.assert(proto_field.m_size, 2, "Wrong size!")

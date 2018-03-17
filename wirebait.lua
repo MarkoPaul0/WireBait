@@ -21,6 +21,7 @@
 
 local wirebait = { 
   Proto = {}, 
+  base = { NONE=0, DEC=1, HEX=2, OCT=3, DEC_HEX=4, HEX_DEC=5}, --[[c.f. [Wireshark Repo](https://github.com/wireshark/wireshark/blob/537705a8b20ee89bf1f713bc0c9959cf21b26900/test/lua/globals_2.2.txt) ]]
   ProtoField = {}, 
   treeitem = {}, 
   buffer = {}, 
@@ -118,41 +119,88 @@ end
 
 --[----------WIRESHARK PROTOFIELD-----------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
-function wirebait.ProtoField.new(abbr, name, _type, size)
-  assert(name and abbr and _type, "Protofiled argument should not be nil!")
-  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8};
+function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
+  assert(name and abbr and ftype, "Protofiled argument should not be nil!")
+  assert(not mask or type(mask) == "number", "The Protofield mask has to be a number!");
+  assert(not mask or mask == math.floor(mask), "The Protofield mask has to be an integer!");
+  local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8}; --TODO: this and m_size can be removed
   local protofield = {
     _struct_type = "ProtoField";
     m_name = name;
     m_abbr = abbr;
-    m_type = _type;
-    m_size = size_by_type[_type] or size -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
+    m_type = ftype;
+    m_base = fbase;
+    m_mask = mask; --[[mask only works for bytes that are by definition <= 8 bytes]]
+    m_description = desc; --[[The description is a text displayed in the Wireshark GUI when the field is selected. Irrelevant in wirebait]]
+    m_size = size_by_type[ftype] -- or error("Type " .. tostring(_type) .. " is of unknown size and no size is provided!");
   }
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
-      uint8 = function (buf) return buf(0,1):uint() end,
-      uint16 = function (buf) return buf(0,2):uint() end,
-      uint32 = function (buf) return buf(0,4):uint() end,
-      uint64 = function (buf) return buf(0,8):uint64() end,
-      string = function (buf) return buf(0):string() end,
-      stringz = function (buf) return buf(0):stringz() end,
+      uint8 = function (buf) 
+        return buf(0,1):uint() & (mask or 0xFF) end,
+      uint16 = function (buf) 
+        return buf(0,2):uint() & (mask or 0xFFFF) end,
+      uint32 = function (buf) 
+        return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
+      uint64 = function (buf) 
+        return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) 
+        end,
+      stringz = function (buffer) return buf(0):stringz() end,
     };
 
     local func = extractValueFuncByType[self.m_type];
     assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
     return func(buffer);
   end
+  
+  function protofield:getMaskPrefix(buffer)
+    if not self.m_mask then
+      return "";
+    end
+    local value = self:getValueFromBuffer(buffer);
+    local str_value = tostring(value);
+    local current_bit = 1;
+    local displayed_masked_value = "";
+    while current_bit <= self.m_mask do
+      if self.m_mask & current_bit == 0 then
+        displayed_masked_value = displayed_masked_value .. ".";
+      else 
+        if value & current_bit > 0 then
+          displayed_masked_value = displayed_masked_value .. "1";
+        else
+          displayed_masked_value = displayed_masked_value .. "0";
+        end
+      end
+      current_bit = current_bit << 1;
+    end
+    displayed_masked_value = string.format("%".. buffer:len()*8 .."s", displayed_masked_value):gsub(" ",".");
+    str_value = displayed_masked_value .. " = "; -- .. str_value;
+    return str_value;
+  end
+  
+  function protofield:getDisplayValueFromBuffer(buffer)
+    local value = self:getValueFromBuffer(buffer);
+    local str_value = tostring(value);
+      if self.m_base == wirebait.base.HEX then
+        str_value = "0x" .. buffer:hex_string();
+      elseif self.m_base == wirebait.base.HEX_DEC then 
+        str_value = "0x" .. buffer:hex_string() .. " (" .. str_value .. ")";
+      elseif self.m_base == wirebait.base.DEC_HEX then 
+        str_value =  str_value .. " (0x" .. buffer:hex_string() .. ")";
+      end 
+    return str_value;
+  end
 
   return protofield;
 end
 
-function wirebait.ProtoField.string(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "string") end
-function wirebait.ProtoField.stringz(name, abbr, ...) return wirebait.ProtoField.new(name, abbr, "stringz") end
-function wirebait.ProtoField.uint8(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint8") end
-function wirebait.ProtoField.uint16(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint16") end
-function wirebait.ProtoField.uint32(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint32") end
-function wirebait.ProtoField.uint64(name, abbr) return wirebait.ProtoField.new(name, abbr, "uint64") end
+function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, "string", nil, display, nil, desc) end
+function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, "stringz", nil, display, nil, desc) end
+function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "uint8", value_string, fbase, ...) end
+function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint16", value_string, fbase, ...) end
+function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint32", value_string, fbase, ...) end
+function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint64", value_string, fbase, ...) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
@@ -235,8 +283,8 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      local printed_value = tostring(value or protofield:getValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
-      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield.m_name .. ": " .. printed_value); --TODO review the or buffer:len
+      local printed_value = tostring(value or protofield:getDisplayValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield:getMaskPrefix(buffer) .. protofield.m_name .. ": " .. printed_value); --TODO review the or buffer:len
     end
     return child_tree;
   end
@@ -789,6 +837,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   
   --Setting up the environment before invoking dofile() on the dissector script
   wirebait.state.dissector_table = newDissectorTable();
+  base = wirebait.base;
   Proto = wirebait.Proto.new;
   ProtoField = wirebait.ProtoField;
   DissectorTable = wirebait.state.dissector_table;
