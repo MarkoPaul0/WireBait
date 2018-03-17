@@ -1,7 +1,6 @@
 # [WireBait](https://github.com/MarkoPaul0/WireBait)
 
 
-![GitHub issue author](https://img.shields.io/github/issues/detail/u/badges/shields/979.svg)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 ![GitHub last commit](https://img.shields.io/github/last-commit/google/skia.svg)
 	    
