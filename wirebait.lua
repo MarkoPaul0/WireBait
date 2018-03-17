@@ -140,15 +140,10 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
-      uint8 = function (buf) 
-        return buf(0,1):uint() & (mask or 0xFF) end,
-      uint16 = function (buf) 
-        return buf(0,2):uint() & (mask or 0xFFFF) end,
-      uint32 = function (buf) 
-        return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
-      uint64 = function (buf) 
-        return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) 
-        end,
+      uint8 = function (buf) return buf(0,1):uint() & (mask or 0xFF) end,
+      uint16 = function (buf) return buf(0,2):uint() & (mask or 0xFFFF) end,
+      uint32 = function (buf) return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
+      uint64 = function (buf) return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
       stringz = function (buffer) return buf(0):stringz() end,
     };
 
@@ -156,7 +151,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
     return func(buffer);
   end
-  
+
   function protofield:getMaskPrefix(buffer)
     if not self.m_mask then
       return "";
@@ -181,7 +176,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     str_value = displayed_masked_value .. " = "; -- .. str_value;
     return str_value;
   end
-  
+
   function protofield:getDisplayValueFromBuffer(buffer)
     local value = self:getValueFromBuffer(buffer);
     local str_value = tostring(value);
@@ -773,7 +768,7 @@ function wirebait.packet.new (packet_buffer)
       packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
     end
   end
-  
+
   function packet:info()
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
@@ -858,7 +853,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
-  
+
   --Setting up the environment before invoking dofile() on the dissector script
   wirebait.state.dissector_table = newDissectorTable();
   base = wirebait.base;
@@ -866,7 +861,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   ProtoField = wirebait.ProtoField;
   DissectorTable = wirebait.state.dissector_table;
   dofile(plugin_tester.m_dissector_filepath);
-  
+
   local function formatBytesInArray(buffer, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
     if buffer:len() == 0 then
       return {"<empty>"}
