@@ -120,15 +120,17 @@ end
 --[----------WIRESHARK PROTOFIELD-----------------------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
-  assert(name and abbr and ftype, "Protofiled argument should not be nil!")
-  assert(not mask or type(mask) == "number", "The Protofield mask has to be a number!");
-  assert(not mask or mask == math.floor(mask), "The Protofield mask has to be an integer!");
+  assert(name and abbr and ftype, "ProtoField name, abbr, and type must not be nil!")
+  assert(not mask or type(mask) == "number", "The ProtoField mask must be a number!");
+  assert(not mask or mask == math.floor(mask), "The ProtoField must to be an integer!");
+  assert(not value_string or type(value_string == "table"), "The ProtoField valuestring must be a table!");
   local size_by_type = {uint8=1, uint16=2, uint32=4, uint64=8}; --TODO: this and m_size can be removed
   local protofield = {
     _struct_type = "ProtoField";
     m_name = name;
     m_abbr = abbr;
     m_type = ftype;
+    m_value_string = value_string;
     m_base = fbase;
     m_mask = mask; --[[mask only works for bytes that are by definition <= 8 bytes]]
     m_description = desc; --[[The description is a text displayed in the Wireshark GUI when the field is selected. Irrelevant in wirebait]]
@@ -182,13 +184,33 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   function protofield:getDisplayValueFromBuffer(buffer)
     local value = self:getValueFromBuffer(buffer);
     local str_value = tostring(value);
-      if self.m_base == wirebait.base.HEX then
+    local value_string = nil;
+    if self.m_value_string and self.m_value_string[value] then
+      value_string = self.m_value_string[value];
+    end
+    if self.m_base == wirebait.base.HEX then
+      if value_string then 
+        str_value = value_string .. " (0x" .. buffer:hex_string() .. ")";
+      else
         str_value = "0x" .. buffer:hex_string();
-      elseif self.m_base == wirebait.base.HEX_DEC then 
+      end
+    elseif self.m_base == wirebait.base.HEX_DEC then 
+      if value_string then 
+        str_value =  value_string .. " (0x" .. buffer:hex_string() .. ")";
+      else
         str_value = "0x" .. buffer:hex_string() .. " (" .. str_value .. ")";
-      elseif self.m_base == wirebait.base.DEC_HEX then 
+      end
+    elseif self.m_base == wirebait.base.DEC_HEX then 
+      if value_string then 
+        str_value =  value_string .. " (" .. value .. ")";
+      else
         str_value =  str_value .. " (0x" .. buffer:hex_string() .. ")";
-      end 
+      end
+    else 
+      if value_string then
+        str_value =  value_string .. " (" .. value .. ")";
+      end
+    end 
     return str_value;
   end
 
