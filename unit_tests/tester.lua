@@ -41,12 +41,16 @@ end
 function tester.newUnitTestsSet(set_name)
 	local unit_tests_set = { 
 		name = set_name or "Unknown unit tests", 
-		tests = {} 
+		tests = {},
+    max_name_len = 0
 	}
 	function unit_tests_set:addTest(test_name, test_func)
 		local newgt = {}        -- create new environment
 		setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
 		setfenv(test_func, newgt)    -- set the new environment for the test function so as to prevent the test function to "contaminate" the global namespace
+    if #test_name > self.max_name_len then
+      self.max_name_len = #test_name;
+    end
 		self.tests[#self.tests+1] = {name = test_name, func=test_func};
 	end
 	return unit_tests_set;
@@ -71,10 +75,11 @@ end
 --runs all unit tests in a unit test set
 function tester.test(unit_tests_set) --iterate through a set of unit tests
     io.stdout:write("\n>>>> " .. string.upper(unit_tests_set.name) .. "\n");
+    local width = (unit_tests_set.max_name_len + 2) > 99 and 99 or unit_tests_set.max_name_len + 2;
     local index = 0;
     for test_number,test in pairs(unit_tests_set.tests) do 
         if type(test.func) == 'function' then
-            io.stdout:write(string.format("%-5d %-77s", index, test.name))
+            io.stdout:write(string.format("%-5d %-" .. width .. "s", index, test.name))
             tester.runTest(test.func);
             index = index + 1;
         end
