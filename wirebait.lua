@@ -166,7 +166,12 @@ function wirebait.UInt64.new(num, high_num)
     return uint_64.m_decimal_value_str;
   end
   
-  function uint_64.__lt(other, self)
+  function uint_64.__lt(self, other)
+    if type(other) == "table" and other._struct_type == "UInt64" then
+      local tmp = other;
+      self = other;
+      other = tmp;
+    end
     local o_low_word = 0;
     local o_high_word = 0;
     if type(other) == "number" then
@@ -185,7 +190,12 @@ function wirebait.UInt64.new(num, high_num)
     end
   end
   
-  function uint_64.__eq(other, self)
+  function uint_64.__eq(self, other)
+    if type(other) == "table" and other._struct_type == "UInt64" then
+      local tmp = other;
+      self = other;
+      other = tmp;
+    end
     local o_low_word = 0;
     local o_high_word = 0;
     if type(other) == "number" then
@@ -198,6 +208,51 @@ function wirebait.UInt64.new(num, high_num)
       error("Cannot compare UInt64 to " .. typeof(other));
     end
     return self.m_high_word == o_high_word and self.m_low_word == o_low_word;
+  end
+
+  local WORD_MASK = 0x00000000FFFFFFFF; --left shifts on 32 bit ints must be masked so their is no "64 bit splil"
+  function uint_64.__band(self, other) --[[bitwise AND operator (&)]]
+    if type(other) == "table" and other._struct_type == "UInt64" then
+      local tmp = other;
+      self = other;
+      other = tmp;
+    end
+    local o_low_word = 0;
+    local o_high_word = 0;
+    if type(other) == "number" then
+      o_low_word = other & WORD_MASK;
+      o_high_word = (other >> 32) & WORD_MASK;
+    elseif other._struct_type == "UInt64" then
+      o_low_word = other.m_low_word;
+      o_high_word = other.m_high_word;
+    else
+      error("Cannot perform bitwise operation between UInt64 and " .. typeof(other));
+    end
+    return wirebait.UInt64.new(self.m_low_word & o_low_word, self.m_high_word & o_high_word)
+  end
+  
+  function uint_64:__shl(shift) --[[bitwise left shift (<<)]]
+    assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
+    if shift < 32 then
+      local new_high_word = (self.m_low_word >> (32-shift)) + ((self.m_high_word << shift) & WORD_MASK);
+      return wirebait.UInt64.new((self.m_low_word << shift) & WORD_MASK, new_high_word);
+    elseif shift < 64 then
+      return wirebait.UInt64.new(0, (self.m_low_word << (shift-32)) & WORD_MASK);
+    else
+      return wirebait.UInt64.new(0, 0);
+    end
+  end
+  
+  function uint_64:__shr(shift) --[[bitwise right shift (>>)]]
+    assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
+    if shift < 32 then
+      local new_low_word = (self.m_low_word >> shift) + ((self.m_high_word << (32-shift)) & WORD_MASK);
+      return wirebait.UInt64.new(new_low_word, self.m_high_word >> shift);
+    elseif shift < 64 then
+      return wirebait.UInt64.new((self.m_high_word << (shift-32)) & WORD_MASK, 0);
+    else
+      return wirebait.UInt64.new(0, 0);
+    end
   end
 
   setmetatable(uint_64, uint_64)
