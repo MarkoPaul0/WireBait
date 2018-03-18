@@ -75,7 +75,51 @@ end
 
 --[[Converts a string in hex format into a big endian uint64 ]]
 --[[In lua there is no real integer type, and past 2^53 numbers are interpreted as double, which is why uin64t are handled in 2 words]]
+local power2_strings = {
+  [53] = "9007199254740992",
+  [54] = "18014398509481984",
+  [55] = "36028797018963968",
+  [56] = "72057594037927936",
+  [57] = "144115188075855872",
+  [58] = "288230376151711744",
+  [59] = "576460752303423488",
+  [60] = "1152921504606846976",
+  [61] = "2305843009213693952",
+  [62] = "4611686018427387904",
+  [63] = "9223372036854775808"
+}
+
 local function hexStringToUint64(hex_str)
+  local function bigUintStrAddition(str1, str2)
+    local long_str = str1;
+    local short_str = str2;
+    if #long_str < #short_str then
+      long_str = str2;
+      short_str = str1;
+    end
+    
+    local result = "";
+    local carry = 0;
+    for i = 1,#long_str do
+      local v = string.sub(long_str, -i, -i);
+      v = v + carry;
+      carry = 0;
+      if i <= #short_str then
+        v = v + string.sub(short_str, -i, -i);
+      end
+      if v >= 10 then
+        result = math.floor(v % 10) .. result;
+        carry = math.floor(v / 10)
+      else
+        result = math.floor(v) .. result;
+      end
+    end
+    if carry > 0 then
+      result = math.floor(carry) .. result;
+    end
+    return result;
+  end
+  
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
   if #hex_str <= 8 then
@@ -83,10 +127,25 @@ local function hexStringToUint64(hex_str)
   else
     local hex_str = string.format("%016s",hex_str) --left pad with zeros
     hex_str = hex_str:gsub(" ","0"); --for some reaon in lua 5.3 "%016s" letf pads with zeros. These version issues are annoying to say the least...
-    local first_word_val = tonumber(string.sub(hex_str, 1,8),16);
-    local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
-    local value = math.floor((first_word_val << 32) + second_word_val)
-    return value;
+    if tonumber(string.sub(hex_str, 1,8),16) < 0x200000 then
+      local first_word_val = tonumber(string.sub(hex_str, 1,8),16);
+      local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
+      local value = math.floor((first_word_val << 32) + second_word_val)
+      return value;
+    else 
+      local first_word_raw = tonumber(string.sub(hex_str, 1,8),16);
+      local first_word_val = tonumber(string.sub(hex_str, 1,8),16) & 0x1FFFFF;
+      local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
+      local value = math.floor((first_word_val << 32) + second_word_val)
+      local value_str = tostring(value);
+      for i=1,11 do 
+        local bit = 1 << (32 - i);
+        if first_word_raw & bit > 0 then
+          value_str = bigUintStrAddition(value_str, power2_strings[64-i]);
+        end
+      end
+      return value_str;
+    end
   end
 end
 
@@ -143,7 +202,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       uint16  = function (buf) return buf:uint() & (mask or 0xFFFF) end,
       uint24  = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
       uint32  = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
-      uint64  = function (buf) return buf:uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
+      uint64  = function (buf) assert(not mask, "mask not supported yet for uint64"); return buf:uint64() end,
       int8   = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
       int16  = function (buf) return buf:int(mask) end,
       int24  = function (buf) return buf:int(mask) end,

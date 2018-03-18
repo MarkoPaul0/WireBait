@@ -64,19 +64,15 @@ unit_tests:addTest("Testing wirebait buffer:uint() (Big-Endian)", function()
   end)
 
 unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian)", function()
-    tester.assert(wirebait.buffer.new("6D45D89F55C23601"):uint64(), 7873937702377371137);
+    tester.assert(wirebait.buffer.new("6D45D89F55C23601"):uint64(), "7873937702377371137");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian) Largest uint64", function()
-    b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
-    tester.assert(b:uint64(), 18446744073709551615); 
-    tester.assert(b:uint64(), -1); 
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):uint64(), "18446744073709551615"); 
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_uint64() (Little-Endian) Largest uint64", function()
-    b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
-    tester.assert(b:le_uint64(), 18446744073709551615); 
-    tester.assert(b:le_uint64(), -1); 
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):le_uint64(), "18446744073709551615"); 
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_uint() (Little-Endian)", function()
@@ -124,7 +120,7 @@ unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Largest Negativ
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Large Positive Number", function()
-    tester.assert(wirebait.buffer.new("7FFFFFFFFFFFFFFF"):int64(), 9223372036854775807);
+    tester.assert(wirebait.buffer.new("7FFFFFFFFFFFFFFF"):int64(), "9223372036854775807");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Negative Number", function()
@@ -164,7 +160,7 @@ unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Largest N
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Large Positive Number", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFF7F"):le_int64(), 9223372036854775807);
+    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFF7F"):le_int64(), "9223372036854775807");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:float() (Big-Endian Single Precision) 1", function()
