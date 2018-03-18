@@ -9,6 +9,9 @@
 Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from a hexadecimal string or a *.pcap* file.
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
+## What does it do?
+It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a text version of the tree along with the payload in hexadecimal format.
+
 ## Requirements
   * You have a Lua interpreter 5.3
   * You have a dissector and data to test it (hex string or pcap file)
@@ -18,7 +21,7 @@ Note that WireBait does not interact at all with Wireshark.
 
 ## Quick start
 Getting started takes less than a minute:
-  1. Download **wirebait.lua**
+  1. Add **wirebait.lua** somewhere in your Lua path
   2. Add the following snippet of code on top of the script you want to run/debug:
 ```lua
     if disable_lua == nil and not _WIREBAIT_ON_ then
@@ -75,14 +78,15 @@ Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
   In wireshark the same dissection would look like this:
   
   ![](example/smp_sample_in_wireshark.png)
-  
-## How does it work?
-It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a text version of the tree along with the payload in hexadecimal format.
+
+## State of the project
 A few notes about the current state of the project:
   * Only compatible with Lua 5.3
   * TCP reassembly is not supported
   * Only "*.pcap*" files are supported
   * Pcap files must be written in native byte order
+  
+For more information you can check what I'm up to in the [Project section](https://github.com/MarkoPaul0/WireBait/projects/1).
   
 
 # Licensing 
