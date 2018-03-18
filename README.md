@@ -3,8 +3,9 @@
 ![Author](https://img.shields.io/badge/author-MarkoPaul0-red.svg?style=flat-square)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg?style=flat-square)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 ![GitHub last commit](https://img.shields.io/github/last-commit/MarkoPaul0/WireBait.svg?style=flat-square&maxAge=40000)
+<!--
 ![GitHub release](https://img.shields.io/github/release/MarkoPaul0/WireBait.svg?style=flat-square)
-
+-->
 
 Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from a hexadecimal string or a *.pcap* file.
 The goal here is to provide a tool reducing development time when creating a new dissector.
