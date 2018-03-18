@@ -20,6 +20,7 @@
 ]]
 
 local wirebait = { 
+  UInt64 = {},
   Proto = {}, 
   base = { NONE=0, DEC=1, HEX=2, OCT=3, DEC_HEX=4, HEX_DEC=5}, --[[c.f. [Wireshark Repo](https://github.com/wireshark/wireshark/blob/537705a8b20ee89bf1f713bc0c9959cf21b26900/test/lua/globals_2.2.txt) ]]
   ProtoField = {}, 
@@ -71,6 +72,92 @@ local function swapBytes(hex_str)
     new_hex_str = hex_str:sub(2*i-1,2*i) .. new_hex_str;
   end
   return new_hex_str;
+end
+
+function wirebait.UInt64.new(num, high_num)
+  local uint_64 = {
+    _struct_type = "UInt64",
+    m_high_word = high_num,
+    m_low_word = num,
+    m_decimal_value_str = "",
+  }
+  
+  local POW_OF_2_STRS = {
+  [53] = "9007199254740992",    -- 2^53
+  [54] = "18014398509481984",   -- 2^54
+  [55] = "36028797018963968",   -- 2^55
+  [56] = "72057594037927936",   -- 2^56
+  [57] = "144115188075855872",  -- 2^57
+  [58] = "288230376151711744",  -- 2^58
+  [59] = "576460752303423488",  -- 2^59
+  [60] = "1152921504606846976", -- 2^60
+  [61] = "2305843009213693952", -- 2^61
+  [62] = "4611686018427387904", -- 2^62
+  [63] = "9223372036854775808"  -- 2^63
+}
+
+  local function decimalStrAddition(str1, str2)
+    local long_str = str1;
+    local short_str = str2;
+    if #long_str < #short_str then
+      long_str = str2;
+      short_str = str1;
+    end
+    
+    local result = "";
+    local carry = 0;
+    for i = 1,#long_str do
+      local v = string.sub(long_str, -i, -i);
+      v = v + carry;
+      carry = 0;
+      if i <= #short_str then
+        v = v + string.sub(short_str, -i, -i);
+      end
+      if v >= 10 then
+        result = math.floor(v % 10) .. result;
+        carry = math.floor(v / 10)
+      else
+        result = math.floor(v) .. result;
+      end
+    end
+    if carry > 0 then
+      result = math.floor(carry) .. result;
+    end
+    return result;
+  end
+
+  local function decimalStrFromWords(low_word, high_word)
+    if high_word < 0x200000 then --the uint64 value is less than 2^53-1
+      return tostring(math.floor((high_word << 32) + low_word));
+    else --above or equal to 2^53, values lose integer precision 
+      local high_word_low = high_word & 0x1FFFFF;
+      local value_str = tostring(math.floor((high_word_low << 32) + low_word)); --we get the value up until the 53rd bits in a "classic way"
+      for i=1,11 do --[[For the remaining 11 bits we have to use some trickery to not loose int precision]]
+        local bit = 1 << (32 - i);
+        if high_word & bit > 0 then
+          value_str = decimalStrAddition(value_str, POW_OF_2_STRS[64-i]);
+        end
+      end
+      return value_str;
+    end
+  end
+  
+  uint_64.m_decimal_value_str = decimalStrFromWords(num, high_num);
+  
+  function uint_64:__tostring()
+    return uint_64.m_decimal_value_str;
+  end
+
+  setmetatable(uint_64, uint_64)
+  return uint_64;
+end
+
+function wirebait.UInt64.fromHex(hex_str)
+  assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
+  assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
+  local high_num = tonumber(string.sub(hex_str, 1,8),16);
+  local num = tonumber(string.sub(hex_str, 9,16),16);
+  return wirebait.UInt64.new(num, high_num);
 end
 
 --[[Converts a string in hex format into a big endian uint64 ]]
@@ -938,6 +1025,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
 
   --Setting up the environment before invoking dofile() on the dissector script
   wirebait.state.dissector_table = newDissectorTable();
+  UInt64 = wirebait.UInt64;
   base = wirebait.base;
   Proto = wirebait.Proto.new;
   ProtoField = wirebait.ProtoField;
