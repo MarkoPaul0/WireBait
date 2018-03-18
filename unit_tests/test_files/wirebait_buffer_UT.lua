@@ -64,19 +64,15 @@ unit_tests:addTest("Testing wirebait buffer:uint() (Big-Endian)", function()
   end)
 
 unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian)", function()
-    tester.assert(wirebait.buffer.new("6D45D89F55C23601"):uint64(), 7873937702377371137);
+    tester.assert(tostring(wirebait.buffer.new("6D45D89F55C23601"):uint64()), "7873937702377371137");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian) Largest uint64", function()
-    b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
-    tester.assert(b:uint64(), 18446744073709551615); 
-    tester.assert(b:uint64(), -1); 
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):uint64()), "18446744073709551615"); 
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_uint64() (Little-Endian) Largest uint64", function()
-    b = wirebait.buffer.new("FFFFFFFFFFFFFFFF");
-    tester.assert(b:le_uint64(), 18446744073709551615); 
-    tester.assert(b:le_uint64(), -1); 
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):le_uint64()), "18446744073709551615"); 
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_uint() (Little-Endian)", function()
@@ -84,7 +80,7 @@ unit_tests:addTest("Testing wirebait buffer:le_uint() (Little-Endian)", function
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_uint64() (Little-Endian)", function()
-    tester.assert(wirebait.buffer.new("48454C4C28520000"):le_uint64(), 90333032236360);
+    tester.assert(tostring(wirebait.buffer.new("48454C4C28520000"):le_uint64()), "90333032236360");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Negative Number", function()
@@ -108,23 +104,23 @@ unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Largest Positive 
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Zero", function()
-    tester.assert(wirebait.buffer.new("0000000000000000"):int64(), 0);
+    tester.assert(tostring(wirebait.buffer.new("0000000000000000"):int64()), "0");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) -1", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):int64(), -1);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):int64()), "-1");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Large Negative Number", function()
-    tester.assert(wirebait.buffer.new("EFFFFFFFFFFFFFFF"):int64(), -1152921504606846977);
+    tester.assert(tostring(wirebait.buffer.new("EFFFFFFFFFFFFFFF"):int64()), "-1152921504606846977");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Largest Negative Number", function()
-    tester.assert(wirebait.buffer.new("8000000000000000"):int64(), -9223372036854775808);
+    tester.assert(tostring(wirebait.buffer.new("8000000000000000"):int64()), "-9223372036854775808");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Large Positive Number", function()
-    tester.assert(wirebait.buffer.new("7FFFFFFFFFFFFFFF"):int64(), 9223372036854775807);
+    tester.assert(tostring(wirebait.buffer.new("7FFFFFFFFFFFFFFF"):int64()), "9223372036854775807");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Negative Number", function()
@@ -148,23 +144,23 @@ unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Largest Pos
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Zero", function()
-    tester.assert(wirebait.buffer.new("0000000000000000"):le_int64(), 0);
+    tester.assert(tostring(wirebait.buffer.new("0000000000000000"):le_int64()), "0");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) -1", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):le_int64(), -1);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):le_int64()), "-1");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Large Negative Number", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFEF"):le_int64(), -1152921504606846977);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFEF"):le_int64()), "-1152921504606846977");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Largest Negative Number", function()
-    tester.assert(wirebait.buffer.new("0000000000000080"):le_int64(), -9223372036854775808);
+    tester.assert(tostring(wirebait.buffer.new("0000000000000080"):le_int64()), "-9223372036854775808");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Large Positive Number", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFF7F"):le_int64(), 9223372036854775807);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFF7F"):le_int64()), "9223372036854775807");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:float() (Big-Endian Single Precision) 1", function()
@@ -302,55 +298,55 @@ unit_tests:addTest("Testing wirebait buffer:eth() (Big-Endian) EC:08:6B:70:36:82
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(11,3) = 4", function()
-    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,3), 4);
+    tester.assert(tostring(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,3)), "4");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(11,5) = 18", function()
-    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,5), 18);
+    tester.assert(tostring(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(11,5)), "18");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,8) = 171", function()
-    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,8), 171);
+    tester.assert(tostring(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,8)), "171");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,33) = 5740199814", function()
-    tester.assert(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,33), 5740199814);
+    tester.assert(tostring(wirebait.buffer.new("AB123FC350DDB12D"):bitfield(0,33)), "5740199814");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,8) = 255", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,8), 255);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,8)), "255");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,16) = 65535", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,16), 65535);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,16)), "65535");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,32) = 4294967295", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,32), 4294967295);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,32)), "4294967295");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,33) = 8589934591", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,33), 8589934591);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,33)), "8589934591");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,56) = 72057594037927935", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,56), 72057594037927935);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,56)), "72057594037927935");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,57) = 144115188075855871", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,57), 144115188075855871);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,57)), "144115188075855871");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,58) = 288230376151711743", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,58), 288230376151711743);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,58)), "288230376151711743");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,63) = 9223372036854775807", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,63), 9223372036854775807);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,63)), "9223372036854775807");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,64) = -1", function()
-    tester.assert(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64), -1);
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64)), "-1");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:len()", function() 
