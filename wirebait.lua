@@ -139,12 +139,18 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
-      uint8   = function (buf) return buf(0,1):uint() & (mask or 0xFF) end,
-      uint16  = function (buf) return buf(0,2):uint() & (mask or 0xFFFF) end,
-      uint32  = function (buf) return buf(0,4):uint() & (mask or 0xFFFFFFFF) end,
-      uint64  = function (buf) return buf(0,8):uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
-      stringz = function (buf) return buf(0):stringz() end,
-      bool    = function (buf) return buf(0):uint64() > 0 end
+      uint8   = function (buf) return buf:uint() & (mask or 0xFF) end,
+      uint16  = function (buf) return buf:uint() & (mask or 0xFFFF) end,
+      uint24  = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
+      uint32  = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
+      uint64  = function (buf) return buf:uint64() & (mask or 0xFFFFFFFFFFFFFFFF) end,
+      int8   = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
+      int16  = function (buf) return buf:int(mask) end,
+      int24  = function (buf) return buf:int(mask) end,
+      int32  = function (buf) return buf:int(mask) end,
+      int64  = function (buf) return buf:int64(mask) end,
+      stringz = function (buf) return buf:stringz() end,
+      bool    = function (buf) return buf:uint64() > 0 end
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -217,8 +223,14 @@ function wirebait.ProtoField.string(abbr, name, display, desc)            return
 function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, "stringz", nil, display, nil, desc) end
 function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "uint8", value_string, fbase, ...) end
 function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint16", value_string, fbase, ...) end
+function wirebait.ProtoField.uint24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint24", value_string, fbase, ...) end
 function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint32", value_string, fbase, ...) end
 function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint64", value_string, fbase, ...) end
+function wirebait.ProtoField.int8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int8", value_string, fbase, ...) end
+function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int16", value_string, fbase, ...) end
+function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int24", value_string, fbase, ...) end
+function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int32", value_string, fbase, ...) end
+function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int64", value_string, fbase, ...) end
 function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "bool", value_string, fbase, ...) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
@@ -432,45 +444,55 @@ function wirebait.buffer.new(data_as_hex_string)
     return hexStringToUint64(self:swapped_bytes());
   end;
 
-  function buffer:int()
+  function buffer:int(mask)
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local uint = self:uint();
+    if mask then
+      uint = uint & mask;
+    end
     local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
     if uint & sign_mask > 0 then --we're dealing with a negative number
       local val_mask=tonumber("7F" .. string.rep("FF", size-1), 16);
-      return -((~uint & val_mask) + 1);
+      local val = -((~uint & val_mask) + 1);
+      return val;
     else --we are dealing with a positive number
       return uint;
     end
   end
 
-  function buffer:le_int()
+  function buffer:le_int(mask)
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
-    return wirebait.buffer.new(self:swapped_bytes()):int();
+    return wirebait.buffer.new(self:swapped_bytes()):int(mask);
   end
 
-  function buffer:int64()
+  function buffer:int64(mask)
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     if size <= 4 then
-      return self:uint();
+      return self:int();
     elseif self(0,1):uint() & 0x80 == 0 then --positive int
       return self:uint64();
     else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
       the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
-      local first_word_val = ~self(0,4):uint() & 0x7FFFFFFF;
-      local second_word_val = ~self(4,4):uint() & 0xFFFFFFFF;
+      local first_word_raw = self(0,4):uint();
+      local second_word_raw = self(4,4):uint();
+      if mask then
+        first_word_raw = first_word_raw & (mask >> 8);
+        second_word_raw = second_word_raw & (mask & 0x00000000FFFFFFFF);
+      end
+      local first_word_val = ~first_word_raw & 0x7FFFFFFF;
+      local second_word_val = ~second_word_raw & 0xFFFFFFFF;
       local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
       return result;
     end
   end
 
-  function buffer:le_int64()
+  function buffer:le_int64(mask)
     local size = self:len();
     assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:le_int() to work. (Buffer size: " .. self:len() ..")");
-    return wirebait.buffer.new(self:swapped_bytes()):int64();
+    return wirebait.buffer.new(self:swapped_bytes()):int64(mask);
   end
 
   function buffer:float()
