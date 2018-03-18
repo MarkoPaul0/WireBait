@@ -74,6 +74,24 @@ local function swapBytes(hex_str)
   return new_hex_str;
 end
 
+--[[Decode a uint32 from a hexadecimal string]]
+local function hexStringToUint32(hex_str)
+  --TODO: check if valid hexadecimal string [NO WHITE SPACE!]
+  assert(#hex_str > 0, "hexStringToUint32() requires strict positive number of bytes!");
+  assert(#hex_str <= 32, "hexStringToUint32() cannot convert more thant 4 bytes to a uint value!");
+  hex_str = string.format("%016s",hex_str):gsub(" ","0") --left pad with zeros
+  return tonumber(hex_str, 16);
+end
+
+local PROTOCOL_TYPES = {
+  IPV4 = 0x800,
+  UDP  = 0x11,
+  TCP  =  0x06
+};
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+--[----------WIRESHARK UINT64----------------------------------------------------------------------------------------------------------------------------------------------]]
 function wirebait.UInt64.new(num, high_num)
   local uint_64 = {
     _struct_type = "UInt64",
@@ -147,100 +165,39 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64:__tostring()
     return uint_64.m_decimal_value_str;
   end
+  
+  function uint_64.__lt(other, self)
+    local o_low_word = 0;
+    local o_high_word = 0;
+    if type(other) == "number" then
+      o_low_word = other & 0x00000000FFFFFFFF;
+      o_high_word = (other >> 32) & 0x00000000FFFFFFFF;
+    elseif other._struct_type == "UInt64" then
+      o_low_word = other.m_low_word;
+      o_high_word = other.m_high_word;
+    else
+      error("Cannot compare UInt64 to " .. typeof(other));
+    end
+    if self.m_high_word < o_high_word then
+        return true;
+    else
+      return self.m_low_word < o_low_word;
+    end
+  end
 
   setmetatable(uint_64, uint_64)
   return uint_64;
 end
 
 function wirebait.UInt64.fromHex(hex_str)
+  --TODO: check if valid hexadecimal string
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
+  hex_str = string.format("%016s",hex_str):gsub(" ","0")
   local high_num = tonumber(string.sub(hex_str, 1,8),16);
   local num = tonumber(string.sub(hex_str, 9,16),16);
   return wirebait.UInt64.new(num, high_num);
 end
-
---[[Converts a string in hex format into a big endian uint64 ]]
---[[In lua there is no real integer type, and past 2^53 numbers are interpreted as double, which is why uin64t are handled in 2 words]]
-local power2_strings = {
-  [53] = "9007199254740992",
-  [54] = "18014398509481984",
-  [55] = "36028797018963968",
-  [56] = "72057594037927936",
-  [57] = "144115188075855872",
-  [58] = "288230376151711744",
-  [59] = "576460752303423488",
-  [60] = "1152921504606846976",
-  [61] = "2305843009213693952",
-  [62] = "4611686018427387904",
-  [63] = "9223372036854775808"
-}
-
-local function hexStringToUint64(hex_str)
-  local function bigUintStrAddition(str1, str2)
-    local long_str = str1;
-    local short_str = str2;
-    if #long_str < #short_str then
-      long_str = str2;
-      short_str = str1;
-    end
-    
-    local result = "";
-    local carry = 0;
-    for i = 1,#long_str do
-      local v = string.sub(long_str, -i, -i);
-      v = v + carry;
-      carry = 0;
-      if i <= #short_str then
-        v = v + string.sub(short_str, -i, -i);
-      end
-      if v >= 10 then
-        result = math.floor(v % 10) .. result;
-        carry = math.floor(v / 10)
-      else
-        result = math.floor(v) .. result;
-      end
-    end
-    if carry > 0 then
-      result = math.floor(carry) .. result;
-    end
-    return result;
-  end
-  
-  assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
-  assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
-  if #hex_str <= 8 then
-    return tonumber(hex_str,16);
-  else
-    local hex_str = string.format("%016s",hex_str) --left pad with zeros
-    hex_str = hex_str:gsub(" ","0"); --for some reaon in lua 5.3 "%016s" letf pads with zeros. These version issues are annoying to say the least...
-    if tonumber(string.sub(hex_str, 1,8),16) < 0x200000 then
-      local first_word_val = tonumber(string.sub(hex_str, 1,8),16);
-      local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
-      local value = math.floor((first_word_val << 32) + second_word_val)
-      return value;
-    else 
-      local first_word_raw = tonumber(string.sub(hex_str, 1,8),16);
-      local first_word_val = tonumber(string.sub(hex_str, 1,8),16) & 0x1FFFFF;
-      local second_word_val = tonumber(string.sub(hex_str, 9,16),16);
-      local value = math.floor((first_word_val << 32) + second_word_val)
-      local value_str = tostring(value);
-      for i=1,11 do 
-        local bit = 1 << (32 - i);
-        if first_word_raw & bit > 0 then
-          value_str = bigUintStrAddition(value_str, power2_strings[64-i]);
-        end
-      end
-      return value_str;
-    end
-  end
-end
-
-local PROTOCOL_TYPES = {
-  IPV4 = 0x800,
-  UDP  = 0x11,
-  TCP  =  0x06
-};
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
@@ -338,21 +295,21 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     end
     if self.m_base == wirebait.base.HEX then
       if value_string then 
-        str_value = value_string .. " (0x" .. buffer:hex_string() .. ")";
+        str_value = value_string .. " (0x" .. buffer:bytes() .. ")";
       else
-        str_value = "0x" .. buffer:hex_string();
+        str_value = "0x" .. buffer:bytes();
       end
     elseif self.m_base == wirebait.base.HEX_DEC then 
       if value_string then 
-        str_value =  value_string .. " (0x" .. buffer:hex_string() .. ")";
+        str_value =  value_string .. " (0x" .. buffer:bytes() .. ")";
       else
-        str_value = "0x" .. buffer:hex_string() .. " (" .. str_value .. ")";
+        str_value = "0x" .. buffer:bytes() .. " (" .. str_value .. ")";
       end
     elseif self.m_base == wirebait.base.DEC_HEX then 
       if value_string then 
         str_value =  value_string .. " (" .. value .. ")";
       else
-        str_value =  str_value .. " (0x" .. buffer:hex_string() .. ")";
+        str_value =  str_value .. " (0x" .. buffer:bytes() .. ")";
       end
     else --treat any other base or no base set as base.DEC
       if value_string then
@@ -460,7 +417,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     if texts then --texts override the value displayed in the tree including the header defined in the protofield
       child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
     else
-      local printed_value = tostring(value or protofield:getDisplayValueFromBuffer(buffer)) -- buffer(0, size):hex_string()
+      local printed_value = tostring(value or protofield:getDisplayValueFromBuffer(buffer)) -- buffer(0, size):bytes()
       child_tree.m_text = tostring(prefix(tree.m_depth) .. protofield:getMaskPrefix(buffer) .. protofield.m_name .. ": " .. printed_value); --TODO review the or buffer:len
     end
     return child_tree;
@@ -572,12 +529,12 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:uint()
     assert(self:len() <= 4, "tvbrange:uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
-    return hexStringToUint64(self:bytes());
+    return hexStringToUint32(self:bytes());
   end
 
   function buffer:uint64()
     assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-    return hexStringToUint64(self:bytes());
+    return wirebait.UInt64.fromHex(self:bytes());
   end;
 
   function buffer:le_uint()
@@ -724,7 +681,7 @@ function wirebait.buffer.new(data_as_hex_string)
     local eth_addr = "";
     for i=1,self:len() do
       local sep = i == 1 and "" or ":";
-      eth_addr = eth_addr .. sep .. self(i-1,1):hex_string();
+      eth_addr = eth_addr .. sep .. self(i-1,1):bytes();
     end
     return eth_addr;
   end
@@ -763,12 +720,12 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:le_ustring()
-    local be_hex_str = swapBytes(self:hex_string());
+    local be_hex_str = swapBytes(self:bytes());
     return wirebait.buffer.new(be_hex_str):ustring();
   end
 
   function buffer:le_ustringz()
-    local be_hex_str = swapBytes(self:hex_string());
+    local be_hex_str = swapBytes(self:bytes());
     return wirebait.buffer.new(be_hex_str):ustringz();
   end
 
@@ -799,9 +756,9 @@ function wirebait.buffer.new(data_as_hex_string)
     end
   end
 
-  function buffer:hex_string()
-    return self.m_data_as_hex_str;
-  end
+--  function buffer:bytes()
+--    return self.m_data_as_hex_str;
+--  end
 
   function buffer:bytes()
     return self.m_data_as_hex_str;
@@ -903,8 +860,8 @@ function wirebait.packet.new (packet_buffer)
   }
   --assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
   --[[Ethernet layer parsing]]
-  packet.ethernet.dst_mac = packet_buffer(0,6):hex_string();
-  packet.ethernet.src_mac = packet_buffer(6,6):hex_string();
+  packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
+  packet.ethernet.src_mac = packet_buffer(6,6):bytes();
   packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
   if packet.ethernet.type ~= PROTOCOL_TYPES.IPV4 then
     packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
@@ -994,7 +951,7 @@ function wirebait.pcap_reader.new(filepath)
   assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
   local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
   assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
-  assert(global_header_buf(0,4):hex_string() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):hex_string() .. "' is not supported! (Note that pcapng file are not supported either)"); 
+  assert(global_header_buf(0,4):bytes() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):bytes() .. "' is not supported! (Note that pcapng file are not supported either)"); 
 
   --[[Reading pcap file and returning the next ethernet frame]]
   function pcap_reader:getNextEthernetFrame()
@@ -1041,7 +998,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     local array_of_lines = {};
     local str = "";
     for i=1,buffer:len() do
-      str = str .. " " .. buffer(i-1,1):hex_string();
+      str = str .. " " .. buffer(i-1,1):bytes();
       if i % bytes_per_col == 0 then
         if i % (cols_count * bytes_per_col) == 0 then
           table.insert(array_of_lines, str)
@@ -1121,12 +1078,6 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   return plugin_tester;
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
-
---local dissector_tester = wirebait.plugin_tester.new({dissector_filepath="./example/smp_dissector_ex1.lua", only_show_dissected_packets=true});
-----Example 1: dissecting data from a hexadecimal string
---dissector_tester:dissectHexData("0 \t\r\n  000 00 0 0 00 00 0 B24 11   aa  00 01 57 69 72 65 62 61 69 74 5c 30 00 " .. 
---  "00000 0 000000 0 0 0 00000 00 00 00 72 63 68 657  2  20 4    3 39 20 76 3 1 0 0");
-
 
 return wirebait
 
