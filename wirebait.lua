@@ -184,6 +184,21 @@ function wirebait.UInt64.new(num, high_num)
       return self.m_low_word < o_low_word;
     end
   end
+  
+  function uint_64.__eq(other, self)
+    local o_low_word = 0;
+    local o_high_word = 0;
+    if type(other) == "number" then
+      o_low_word = other & 0x00000000FFFFFFFF;
+      o_high_word = (other >> 32) & 0x00000000FFFFFFFF;
+    elseif other._struct_type == "UInt64" then
+      o_low_word = other.m_low_word;
+      o_high_word = other.m_high_word;
+    else
+      error("Cannot compare UInt64 to " .. typeof(other));
+    end
+    return self.m_high_word == o_high_word and self.m_low_word == o_low_word;
+  end
 
   setmetatable(uint_64, uint_64)
   return uint_64;
@@ -539,12 +554,12 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:le_uint()
     assert(self:len() <= 4, "tvbrange:le_uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
-    return hexStringToUint64(self:swapped_bytes());
+    return hexStringToUint32(self:swapped_bytes());
   end
 
   function buffer:le_uint64()
     assert(self:len() <= 8, "tvbrange:le_uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-    return hexStringToUint64(self:swapped_bytes());
+    return wirebait.UInt64.fromHex(self:swapped_bytes());
   end;
 
   function buffer:int(mask)
