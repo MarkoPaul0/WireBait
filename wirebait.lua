@@ -275,22 +275,22 @@ function wirebait.UInt64.new(num, high_num)
     local low_word1, high_word1 = getWords(uint_or_num1);
     local low_word2, high_word2 = getWords(uint_or_num2);
     
-    --[[simple case without wrap around]]
-    if high_word1 > high_word2 or (high_word1 == high_word2 and low_word1 > low_word2) then
-      if low_word1 >= low_word2 then --super simple case, no carry
+    if high_word1 > high_word2 or (high_word1 == high_word2 and low_word1 > low_word2) then --no wraparound
+      if low_word1 >= low_word2 then --no wraparound, no carry
         return wirebait.UInt64.new(low_word1 - low_word2, high_word1 - high_word2);
+      else --no wraparount, but carry
+        return wirebait.UInt64.new(WORD_MASK + 1 + low_word1 - low_word2, high_word1 - high_word2 - 1);
       end
+    else --wraparound
+      return wirebait.UInt64.new(WORD_MASK + low_word1 - low_word2, WORD_MASK - high_word2 + high_word1)
     end
-    
-    assert(false, "Substraction is not yet supported for UInt64");
-    --[[TODO substraction]]
   end
 
   function uint_64.__band(self, other) --[[bitwise AND operator (&)]]
     if type(other) == "table" and other._struct_type == "UInt64" then
       local tmp = other;
-      self = other;
-      other = tmp;
+      other = self;
+      self = tmp;
     end
     local o_low_word = 0;
     local o_high_word = 0;
@@ -313,8 +313,8 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64.__bor(self, other) --[[bitwise OR operator (|)]]
     if type(other) == "table" and other._struct_type == "UInt64" then
       local tmp = other;
-      self = other;
-      other = tmp;
+      other = self;
+      self = tmp;
     end
     local o_low_word = 0;
     local o_high_word = 0;
@@ -333,8 +333,8 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64.__bxor(self, other) --[[bitwise XOR operator (binary ~)]]
     if type(other) == "table" and other._struct_type == "UInt64" then
       local tmp = other;
-      self = other;
-      other = tmp;
+      other = self;
+      self = tmp;
     end
     local o_low_word = 0;
     local o_high_word = 0;
