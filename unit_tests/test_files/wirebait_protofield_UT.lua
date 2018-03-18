@@ -43,18 +43,18 @@ unit_tests:addTest("Wirebait protofield construction with new(name, abbr, type)"
 
 unit_tests:addTest("Wirebait protofield construction with new(name, abbr, ftype, value_string, fbase, mask, desc)", function()
     local value_string = {[0x01]="Value"};
-    local proto_field = wirebait.ProtoField.new("Some Field", "smp.someField", "uint16", value_string, base.HEX, 0xFFFF, "Some description")
+    local proto_field = wirebait.ProtoField.new("Some Field", "smp.someField", "uint16", value_string, wirebait.base.HEX, 0xFFFF, "Some description")
     tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
     tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
     tester.assert(proto_field.m_type, "uint16", "Wrong type!")
     tester.assert(proto_field.m_value_string, value_string, "Wrong value_string!")    
-    tester.assert(proto_field.m_base, base.HEX, "Wrong base!")
+    tester.assert(proto_field.m_base, wirebait.base.HEX, "Wrong base!")
     tester.assert(proto_field.m_mask, 0xFFFF, "Wrong mask!")
     tester.assert(proto_field.m_description, "Some description", "Wrong description!")
   end);
 
 unit_tests:addTest("Wirebait protofield construction with new(NIL name, abbr, ftype, value_string, fbase, mask, desc)", function()
-    local success,error_msg = pcall(wirebait.ProtoField.new, nil, "smp.someField", "uint16", nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, nil, "smp.someField", "uint16", nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must not be nil!", "Invalid error message!")
@@ -62,7 +62,7 @@ unit_tests:addTest("Wirebait protofield construction with new(NIL name, abbr, ft
 
 unit_tests:addTest("Wirebait protofield construction with new(INVALID name, abbr, ftype, value_string, fbase, mask, desc)", function()
     local invalid_name = 42;
-    local success,error_msg = pcall(wirebait.ProtoField.new, invalid_name, "smp.someField", "uint16", nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, invalid_name, "smp.someField", "uint16", nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must be strings!", "Invalid error message!")
@@ -71,7 +71,7 @@ unit_tests:addTest("Wirebait protofield construction with new(INVALID name, abbr
 
 
 unit_tests:addTest("Wirebait protofield construction with new(name, NIL abbr, ftype, value_string, fbase, mask, desc)", function()
-    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", nil, "uint16", nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", nil, "uint16", nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must not be nil!", "Invalid error message!")
@@ -79,14 +79,14 @@ unit_tests:addTest("Wirebait protofield construction with new(name, NIL abbr, ft
 
 unit_tests:addTest("Wirebait protofield construction with new(name, INVALID abbr, ftype, value_string, fbase, mask, desc)", function()
     local invalid_abbr = 42;
-    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", invalid_abbr, "uint16", nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", invalid_abbr, "uint16", nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must be strings!", "Invalid error message!")
   end);
 
 unit_tests:addTest("Wirebait protofield construction with new(name, abbr, NIL ftype, value_string, fbase, mask, desc)", function()
-    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", nil, nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", nil, nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must not be nil!", "Invalid error message!")
@@ -94,7 +94,7 @@ unit_tests:addTest("Wirebait protofield construction with new(name, abbr, NIL ft
 
 unit_tests:addTest("Wirebait protofield construction with new(name, abbr, INVALID ftype, value_string, fbase, mask, desc)", function()
     local invalid_ftype = 42;
-    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", invalid_ftype, nil, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", invalid_ftype, nil, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "ProtoField name, abbr, and type must be strings!", "Invalid error message!")
@@ -102,7 +102,7 @@ unit_tests:addTest("Wirebait protofield construction with new(name, abbr, INVALI
 
 unit_tests:addTest("Wirebait protofield construction with new(name, abbr, ftype, INVALID value_string, fbase, mask, desc)", function()
     local invalid_value_string = "invalid";
-    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", "uint16", invalid_value_string, base.HEX, 0xFFFF, "Some description");
+    local success,error_msg = pcall(wirebait.ProtoField.new, "Some Field", "smp.someField", "uint16", invalid_value_string, wirebait.base.HEX, 0xFFFF, "Some description");
     tester.assert(success, false, "This call should fail!")
     error_msg = error_msg:sub(error_msg:find(": ")+2) --remove the prepended error location
     tester.assert(error_msg, "The optional ProtoField valuestring must be a table!", "Invalid error message!")
@@ -137,12 +137,12 @@ unit_tests:addTest("Wirebait protofield construction with uint8(abbr, name)", fu
 
 unit_tests:addTest("Wirebait protofield construction with uint8(abbr, name, fbase, value_string, mask, desc)", function()
     local value_string = {[0x02]="Value2"};
-    local proto_field = wirebait.ProtoField.uint8("smp.someField", "Some Field", base.DEC, value_string, 0x4B, "some other description")
+    local proto_field = wirebait.ProtoField.uint8("smp.someField", "Some Field", wirebait.base.DEC, value_string, 0x4B, "some other description")
     tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
     tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
     tester.assert(proto_field.m_type, "uint8", "Wrong type!")
     tester.assert(proto_field.m_value_string, value_string, "Wrong value_string!")    
-    tester.assert(proto_field.m_base, base.DEC, "Wrong base!")
+    tester.assert(proto_field.m_base, wirebait.base.DEC, "Wrong base!")
     tester.assert(proto_field.m_mask, 0x4B, "Wrong mask!")
     tester.assert(proto_field.m_description, "some other description", "Wrong description!")
   end);
