@@ -10,7 +10,7 @@ Lua library to facilitate the development of [Wireshark](https://www.wireshark.o
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
 ## What does it do?
-It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and **attempts** to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a text version of the tree along with the payload in hexadecimal format.
+It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and attempts to reproduce its behavior. Instead of displaying the dissected packet in a GUI, it prints a text version of the tree along with the payload in hexadecimal format.
 
 ## Requirements
   * You have a Lua interpreter 5.3
