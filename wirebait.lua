@@ -93,9 +93,11 @@ local PROTOCOL_TYPES = {
 
 --[----------WIRESHARK UINT64----------------------------------------------------------------------------------------------------------------------------------------------]]
 function wirebait.UInt64.new(num, high_num)
+  assert(num and type(num) == "number" and num == math.floor(num) and num >= 0 and num <= 0xFFFFFFFF, "UInt64.new(num), num must be a positive 32 bit integer!");
+  assert(not high_num or (type(high_num) == "number" and high_num == math.floor(high_num) and high_num >= 0 and high_num <= 0xFFFFFFFF), "UInt64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!");
   local uint_64 = {
     _struct_type = "UInt64",
-    m_high_word = high_num,
+    m_high_word = high_num or 0,
     m_low_word = num,
     m_decimal_value_str = "",
   }
@@ -160,7 +162,7 @@ function wirebait.UInt64.new(num, high_num)
     end
   end
   
-  uint_64.m_decimal_value_str = decimalStrFromWords(num, high_num);
+  uint_64.m_decimal_value_str = decimalStrFromWords(uint_64.m_low_word, uint_64.m_high_word);
   
   function uint_64:__tostring()
     return uint_64.m_decimal_value_str;
