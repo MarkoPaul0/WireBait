@@ -22,6 +22,9 @@ local is_standalone_test = not tester; --if only this file is being tested (not 
 local tester = tester or require("unit_tests.tester")
 local wirebait = require("wirebait")
 
+--[[IMPORTANT NOTE: a simple and easy way to come up with test cases when testing uint64 addition is to use wolfram alpha
+for instance [0xFFFFFFCDEDF1 + 0x1234FF24FF01](https://www.wolframalpha.com/input/?i=0xFFFFFFCDEDF1+%2B+0x1234FF24FF01) ]]
+
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
 therefore forgetting the local keyword will not have a negative impact.
@@ -146,6 +149,48 @@ unit_tests:addTest("Testing wirebait UInt64.max()", function()
     tester.assert(uint_64.m_low_word, 0xFFFFFFFF, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0xFFFFFFFF, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "18446744073709551615", "Wrong decimal string value!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64.min()", function()
+    local uint_64 = wirebait.UInt64.min();
+    tester.assert(uint_64.m_low_word, 0, "Wrong low_word value!");
+    tester.assert(uint_64.m_high_word, 0, "Wrong high_word value!");
+    tester.assert(tostring(uint_64), "0", "Wrong decimal string value!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 1 + 1 = 2", function()
+    local uint_64 = wirebait.UInt64.new(1) + wirebait.UInt64.new(1);
+    tester.assert(tostring(uint_64), "2", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFFFFFFF + 1 = 4294967296", function()
+    local uint_64 = wirebait.UInt64.new(0xFFFFFFFF) + wirebait.UInt64.new(1);
+    tester.assert(tostring(uint_64), "4294967296", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1 + 0xFF24FF01 = 8572300530", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1) + wirebait.UInt64.new(0xFF24FF01);
+    tester.assert(tostring(uint_64), "8572300530", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF + 0xFF24FF01/0x1234 = 301493801643250", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF) + wirebait.UInt64.new(0xFF24FF01, 0x1234);
+    tester.assert(tostring(uint_64), "301493801643250", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFFFFFFF/0xFFFFFFFF + 1 = 0 (Wraparound)", function()
+    local uint_64 = wirebait.UInt64.new(0xFFFFFFFF, 0xFFFFFFFF) + wirebait.UInt64.new(1);
+    tester.assert(tostring(uint_64), "0", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFFFFFFF/0xFFFFFFFF + 0xAF = 174 (Wraparound)", function()
+    local uint_64 = wirebait.UInt64.new(0xFFFFFFFF, 0xFFFFFFFF) + wirebait.UInt64.new(0xAF);
+    tester.assert(tostring(uint_64), "174", "Wrong addition result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFFFFFFF/0xFFFFFFFF + 0x01FFFFFFFF = 8589934590 (Wraparound)", function()
+    local uint_64 = wirebait.UInt64.new(0xFFFFFFFF, 0xFFFFFFFF) + wirebait.UInt64.new(0xFFFFFFFF, 0x01);
+    tester.assert(tostring(uint_64), "8589934590", "Wrong addition result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64", function()

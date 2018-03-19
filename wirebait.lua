@@ -245,13 +245,13 @@ function wirebait.UInt64.new(num, high_num)
     local new_low_word = self.m_low_word + o_low_word;
     local carry = 0;
     if new_low_word > WORD_MASK then
-      carry = new_low_word % WORD_MASK;
-      new_low_word = new_low_word - WORD_MASK;
+      carry = new_low_word // WORD_MASK;
+      new_low_word = new_low_word - (carry*WORD_MASK) - 1;
     end
     
     local new_high_word = self.m_high_word + o_high_word + carry;
     if new_high_word > WORD_MASK then
-      new_low_word = new_high_word % WORD_MASK;
+      new_low_word = new_high_word % WORD_MASK - 1 + new_low_word;
       new_high_word = 0;
     end
     return wirebait.UInt64.new(new_low_word, new_high_word);
