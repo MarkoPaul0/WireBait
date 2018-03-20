@@ -290,6 +290,21 @@ unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF ~ 0xFF24FF01/0x12
     tester.assert(tostring(uint_64), "261456149438291", "Wrong XOR result!");
   end);
 
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF >> 2 = 70368743357308", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):rshift(2);
+    tester.assert(tostring(uint_64), "70368743357308", "Wrong RIGHT-SHIFT result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF << 2 = 1125899893716932", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):lshift(2);
+    tester.assert(tostring(uint_64), "1125899893716932", "Wrong LEFT-SHIFT result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, ~0xFFCDEDF1/0xFFFF = 1125899893716932", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF0000):bnot();
+    tester.assert(tostring(uint_64), "281470685024782", "Wrong NOT result!");
+  end);
+
 
 if is_standalone_test then
   tester.test(unit_tests);

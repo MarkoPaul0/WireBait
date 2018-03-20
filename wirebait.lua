@@ -423,6 +423,10 @@ function wirebait.UInt64.new(num, high_num)
     return result;
   end
   
+  function uint_64:bnot()
+    return ~self;
+  end
+  
   function uint_64:tonumber() --[[may lose integer precision if the number is greater than 2^53]]
     return tonumber(self.m_decimal_str);
   end
