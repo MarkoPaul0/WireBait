@@ -37,7 +37,7 @@ local wirebait = {
       cols={
         protocol = nil
       },
-      treeitems_array = {}
+      treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
     },
     dissector_table = {
       udp = { port = nil },
@@ -116,7 +116,7 @@ function wirebait.UInt64.new(num, high_num)
   [63] = "9223372036854775808"  -- 2^63
 }
 
-  local function decimalStrAddition(str1, str2)
+  local function decimalStrAddition(str1, str2)  --PRIVATE METHOD
     local long_str = str1;
     local short_str = str2;
     if #long_str < #short_str then
@@ -146,7 +146,7 @@ function wirebait.UInt64.new(num, high_num)
     return result;
   end
 
-  local function decimalStrFromWords(low_word, high_word)
+  local function decimalStrFromWords(low_word, high_word)  --PRIVATE METHOD
     if high_word < 0x200000 then --the uint64 value is less than 2^53-1
       return tostring(math.floor((high_word << 32) + low_word));
     else --above or equal to 2^53, values lose integer precision 
@@ -168,114 +168,74 @@ function wirebait.UInt64.new(num, high_num)
     return uint_64.m_decimal_value_str;
   end
   
-  function uint_64.__lt(self, other)
-    if type(other) == "table" and other._struct_type == "UInt64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    if type(other) == "number" then
-      o_low_word = other & 0x00000000FFFFFFFF;
-      o_high_word = (other >> 32) & 0x00000000FFFFFFFF;
-    elseif other._struct_type == "UInt64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot compare UInt64 to " .. typeof(other));
-    end
-    if self.m_high_word < o_high_word then
-        return true;
-    else
-      return self.m_low_word < o_low_word;
-    end
-  end
-  
-  function uint_64.__eq(self, other)
-    if type(other) == "table" and other._struct_type == "UInt64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    if type(other) == "number" then
-      o_low_word = other & 0x00000000FFFFFFFF;
-      o_high_word = (other >> 32) & 0x00000000FFFFFFFF;
-    elseif other._struct_type == "UInt64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot compare UInt64 to " .. typeof(other));
-    end
-    return self.m_high_word == o_high_word and self.m_low_word == o_low_word;
-  end
-  
-  function uint_64.__le(self, other)
-    return self < other or self == other;
-  end
-  
   local WORD_MASK = 0x00000000FFFFFFFF; -- 32 bit word
+  local UINT32_MAX = WORD_MASK;
   
-  function uint_64.__add(self, other)
-    if type(other) == "table" and other._struct_type == "UInt64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    local neg = false;
-    if type(other) == "number" then
-      neg = other < 0;
-      o_low_word = other & WORD_MASK;
-      o_high_word = (other >> 32) & WORD_MASK;
-    elseif other._struct_type == "UInt64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot compare UInt64 to " .. typeof(other));
-    end
-    
-    if neg then
-      return uint_64.__sub(self, -other);
-    end
-    
-    local new_low_word = self.m_low_word + o_low_word;
-    local carry = 0;
-    if new_low_word > WORD_MASK then
-      carry = 1;
-      if new_low_word % WORD_MASK == 0 then
-        new_low_word = WORD_MASK - 1;
-      else
-        local q = new_low_word // WORD_MASK; --quotient of new_low_word divided by WORD_MASK
-        new_low_word = new_low_word - (q * WORD_MASK) - 1;
-      end
-    end
-    
-    local new_high_word = self.m_high_word + o_high_word + carry;
-    if new_high_word > WORD_MASK then
-      new_high_word = new_high_word & WORD_MASK;
-    end
-    
-    return wirebait.UInt64.new(new_low_word, new_high_word);
-  end
-  
-  
-  local function getWords(num_or_uint)
+  local function getWords(num_or_uint) --PRIVATE METHOD
     local low_word = 0;
     local high_word = 0;
+    local is_negative_number = false;
     if type(num_or_uint) == "table" then
       assert(num_or_uint._struct_type == "UInt64", "Argument needs to be a number or a UInt64!")
       low_word = num_or_uint.m_low_word;
       high_word = num_or_uint.m_high_word;
     else
+      if num_or_uint < 0 then
+        is_negative_number = true;
+      end
       assert(type(num_or_uint) == "number", "Argument needs to be a number or a UInt64!")
       low_word = num_or_uint & WORD_MASK;
       high_word = (num_or_uint >> 32) & WORD_MASK;
     end
-    return low_word, high_word;
+    return low_word, high_word, is_negative_number;
+  end
+    
+  function uint_64.__lt(uint_or_num1, uint_or_num2)
+    local low_word1, high_word1 = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    if high_word1 < high_word2 then
+        return true;
+    else
+      return low_word1 < low_word2;
+    end
+  end
+  
+  function uint_64.__eq(uint_or_num1, uint_or_num2)
+    local low_word1, high_word1 = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    return low_word1 == low_word2 and high_word1 == high_word2;
+  end
+  
+  function uint_64.__le(uint_or_num1, uint_or_num2)
+    return uint_or_num1 < uint_or_num2 or uint_or_num1 == uint_or_num2;
+  end
+  
+  function uint_64.__add(uint_or_num1, uint_or_num2)
+    local low_word1, high_word1, negative = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    
+    if negative then --uint_or_num1 is a number, and it is negative 
+      return uint_64.__sub(uint_or_num2, -uint_or_num1);
+    end
+    
+    local new_low_word = low_word1 + low_word2;
+    local carry = 0;
+    if new_low_word > UINT32_MAX then
+      carry = 1;
+      if new_low_word % UINT32_MAX == 0 then
+        new_low_word = UINT32_MAX - 1;
+      else
+        local q = new_low_word // UINT32_MAX; --quotient of new_low_word divided by UINT32_MAX
+        new_low_word = new_low_word - (q * UINT32_MAX) - 1;
+      end
+    end
+    
+    local new_high_word = high_word1 + high_word2 + carry;
+    if new_high_word > UINT32_MAX then
+      new_high_word = new_high_word & WORD_MASK;
+    end
+    
+    return wirebait.UInt64.new(new_low_word, new_high_word);
   end
   
   function uint_64.__sub(uint_or_num1, uint_or_num2)
@@ -291,7 +251,7 @@ function wirebait.UInt64.new(num, high_num)
       if lw1 >= lw2 then --no wraparound, no carry
         return wirebait.UInt64.new(lw1 - lw2, hw1 - hw2);
       else --no wraparount, but carry
-        return wirebait.UInt64.new(WORD_MASK + 1 + lw1 - lw2, hw1 - hw2 - 1);
+        return wirebait.UInt64.new(UINT32_MAX + 1 + lw1 - lw2, hw1 - hw2 - 1);
       end
     end
     
@@ -299,7 +259,7 @@ function wirebait.UInt64.new(num, high_num)
       return positiveSub(low_word1, high_word1, low_word2, high_word2);
     else --wraparound
       local uint_64_abs_diff = positiveSub(low_word2, high_word2, low_word1, high_word1);
-      return positiveSub(0xFFFFFFFF, 0xFFFFFFFF, uint_64_abs_diff.m_low_word, uint_64_abs_diff.m_high_word) + 1
+      return positiveSub(UINT32_MAX, UINT32_MAX, uint_64_abs_diff.m_low_word, uint_64_abs_diff.m_high_word) + 1
     end
   end
 
