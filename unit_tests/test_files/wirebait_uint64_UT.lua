@@ -212,37 +212,82 @@ unit_tests:addTest("Testing wirebait UInt64, UINT64_MAX + UINT64_MAX = 184467440
 
 unit_tests:addTest("Testing wirebait UInt64, 0x04 - 0x02 = 2", function()
     local uint_64 = wirebait.UInt64.new(0x04) - wirebait.UInt64.new(0x02);
-    tester.assert(tostring(uint_64), "2", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "2", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, 0x02 - 0x03 = 18446744073709551615", function()
     local uint_64 = wirebait.UInt64.new(0x02) - wirebait.UInt64.new(0x03);
-    tester.assert(tostring(uint_64), "18446744073709551615", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "18446744073709551615", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, 0x02 - 0x02 = 0", function()
     local uint_64 = wirebait.UInt64.new(0x02) - wirebait.UInt64.new(0x02);
-    tester.assert(tostring(uint_64), "0", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "0", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, 0x02 -  0x00000000/0x01 = 0", function()
     local uint_64 = wirebait.UInt64.new(0x02) - wirebait.UInt64.new(0,1);
-    tester.assert(tostring(uint_64), "18446744069414584322", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "18446744069414584322", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, UINT64_MAX - (UINT64_MAX - 1) = 0", function()
     local uint_64 = wirebait.UInt64.new(UINT32_MAX,UINT32_MAX) - wirebait.UInt64.new(UINT32_MAX-1,UINT32_MAX);
-    tester.assert(tostring(uint_64), "1", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "1", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, (UINT64_MAX - 1) - UINT64_MAX = 0", function()
     local uint_64 = wirebait.UInt64.new(UINT32_MAX-1,UINT32_MAX) - wirebait.UInt64.new(UINT32_MAX,UINT32_MAX);
-    tester.assert(tostring(uint_64), "18446744073709551615", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "18446744073709551615", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF - 0xFF24FF01/0x1234 = 301493801643250", function()
     local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF) - wirebait.UInt64.new(0xFF24FF01, 0x1234);
-    tester.assert(tostring(uint_64), "261456145215216", "Wrong addition result!");
+    tester.assert(tostring(uint_64), "261456145215216", "Wrong substraction result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1 & 0xFF24FF01 = 4278512897", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1):band(wirebait.UInt64.new(0xFF24FF01));
+    tester.assert(tostring(uint_64), "4278512897", "Wrong AND result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF & 0xFF24FF01/0x1234 = 20018826112257", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):band(wirebait.UInt64.new(0xFF24FF01, 0x1234));
+    tester.assert(tostring(uint_64), "20018826112257", "Wrong AND result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF & 0xFF24FF01/0x1234 & 0x4DA3 = 19713", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):band(wirebait.UInt64.new(0xFF24FF01, 0x1234), wirebait.UInt64.new(0x4DA3));
+    tester.assert(tostring(uint_64), "19713", "Wrong AND result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1 | 0xFF24FF01 = 4293787633", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1):bor(wirebait.UInt64.new(0xFF24FF01));
+    tester.assert(tostring(uint_64), "4293787633", "Wrong OR result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF | 0xFF24FF01/0x1234 = 281474975530993", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):bor(wirebait.UInt64.new(0xFF24FF01, 0x1234));
+    tester.assert(tostring(uint_64), "281474975530993", "Wrong OR result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF | 0xFF24FF01/0x1234 | 0x4DA3 = 281474975530995", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):bor(wirebait.UInt64.new(0xFF24FF01, 0x1234), wirebait.UInt64.new(0x4DA3));
+    tester.assert(tostring(uint_64), "281474975530995", "Wrong OR result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1 ~ 0xFF24FF01 = 15274736", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1):bxor(wirebait.UInt64.new(0xFF24FF01));
+    tester.assert(tostring(uint_64), "15274736", "Wrong XOR result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF ~ 0xFF24FF01/0x1234 = 261456149418736", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):bxor(wirebait.UInt64.new(0xFF24FF01, 0x1234));
+    tester.assert(tostring(uint_64), "261456149418736", "Wrong XOR result!");
+  end);
+
+unit_tests:addTest("Testing wirebait UInt64, 0xFFCDEDF1/0xFFFF ~ 0xFF24FF01/0x1234 ~ 0x4DA3 = 261456149438291", function()
+    local uint_64 = wirebait.UInt64.new(0xFFCDEDF1, 0xFFFF):bxor(wirebait.UInt64.new(0xFF24FF01, 0x1234), wirebait.UInt64.new(0x4DA3));
+    tester.assert(tostring(uint_64), "261456149438291", "Wrong XOR result!");
   end);
 
 

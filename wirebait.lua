@@ -401,8 +401,24 @@ function wirebait.UInt64.new(num, high_num)
   
   function uint_64:band(...) --[[logical AND]]
     local result = self;
-    for _,val in ipairs(arg) do
+    for _,val in ipairs({...}) do
         result = result & val;
+      end
+    return result;
+  end
+  
+  function uint_64:bor(...) --[[logical OR]]
+    local result = self;
+    for _,val in ipairs({...}) do
+        result = result | val;
+      end
+    return result;
+  end
+  
+  function uint_64:bxor(...) --[[logical XOR]]
+    local result = self;
+    for _,val in ipairs({...}) do
+        result = result ~ val;
       end
     return result;
   end
