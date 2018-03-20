@@ -279,17 +279,27 @@ function wirebait.UInt64.new(num, high_num)
   end
   
   function uint_64.__sub(uint_or_num1, uint_or_num2)
+    if uint_or_num1 == uint_or_num2 then
+      return wirebait.UInt64.new(0);
+    end
+    
     local low_word1, high_word1 = getWords(uint_or_num1);
     local low_word2, high_word2 = getWords(uint_or_num2);
     
-    if high_word1 > high_word2 or (high_word1 == high_word2 and low_word1 > low_word2) then --no wraparound
-      if low_word1 >= low_word2 then --no wraparound, no carry
-        return wirebait.UInt64.new(low_word1 - low_word2, high_word1 - high_word2);
+    local function positiveSub(lw1, hw1, lw2, hw2)
+      assert(hw1 > hw2 or (hw1 == hw2 and lw1 > lw2), "This methods can only substract two number A and B if A > B");
+      if lw1 >= lw2 then --no wraparound, no carry
+        return wirebait.UInt64.new(lw1 - lw2, hw1 - hw2);
       else --no wraparount, but carry
-        return wirebait.UInt64.new(WORD_MASK + 1 + low_word1 - low_word2, high_word1 - high_word2 - 1);
+        return wirebait.UInt64.new(WORD_MASK + 1 + lw1 - lw2, hw1 - hw2 - 1);
       end
+    end
+    
+    if high_word1 > high_word2 or (high_word1 == high_word2 and low_word1 > low_word2) then --no wraparound
+      return positiveSub(low_word1, high_word1, low_word2, high_word2);
     else --wraparound
-      return wirebait.UInt64.new(WORD_MASK + low_word1 - low_word2, WORD_MASK - high_word2 + high_word1)
+      local uint_64_abs_diff = positiveSub(low_word2, high_word2, low_word1, high_word1);
+      return positiveSub(0xFFFFFFFF, 0xFFFFFFFF, uint_64_abs_diff.m_low_word, uint_64_abs_diff.m_high_word) + 1
     end
   end
 
