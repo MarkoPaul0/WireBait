@@ -442,39 +442,28 @@ function wirebait.Int64.new(num, high_num)
   --assert(num > 0 or not high_num, "num cannot be < 0 if high_num is provided!");
   local int_64 = {
     _struct_type = "Int64",
-    m_low_word = 0, --unsigned value in a UInt64 (I'm lazy so I will reuse as much of UInt64 as possible)
-    m_high_word = 0,
-    m_is_negative = false
+    m_low_word = num, --unsigned value in a UInt64 (I'm lazy so I will reuse as much of UInt64 as possible)
+    m_high_word = high_num or 0,
   }
   
   local SIGN_MASK = 0x80000000;
-  if not high_num then 
-    int_64.m_is_negative = false;
-    int_64.m_low_word = num;
-  else
-    assert(num >= 0);
-    int_64.m_is_negative = high_num & SIGN_MASK > 0;
-    int_64.m_low_word = num
-    int_64.m_high_word = high_num --& 0x7FFFFFFF;
+
+  local function twosComplement(low_word, high_word)
+    local new_low_word = ((~low_word) & WORD_MASK) + 1;
+    local new_high_word = (~high_word) & WORD_MASK;
+    if new_low_word > WORD_MASK then --there's a carry from low to high word
+      new_low_word = 0;
+      new_high_word = (new_high_word + 1) & WORD_MASK;
+    end
+    return new_low_word, new_high_word;
   end
   
   function int_64:__tostring()
-    local str = "";
-    if int_64.m_is_negative then
-      local low_word = ((~int_64.m_low_word)&WORD_MASK)+1;
-      local high_word = (~int_64.m_high_word) & WORD_MASK;
-      if low_word > WORD_MASK then
-        low_word = 0;
-        high_word = (high_word + 1) & WORD_MASK;
-      end
-      
-      return "-" .. tostring(wirebait.UInt64.new(low_word, high_word))
+    if int_64.m_high_word & SIGN_MASK > 0 then
+      return "-" .. tostring(wirebait.UInt64.new(twosComplement(int_64.m_low_word, int_64.m_high_word)))
     end
-    return str .. tostring(wirebait.UInt64.new(int_64.m_low_word, int_64.m_high_word & 0x7FFFFFFF));
+    return tostring(wirebait.UInt64.new(int_64.m_low_word, int_64.m_high_word));
   end
-  
-  local WORD_MASK = 0xFFFFFFFF; -- 32 bit word
-  local UINT32_MAX = WORD_MASK;
   
   local function getWords(num_or_uint) --PRIVATE METHOD
     local low_word = 0;
@@ -484,7 +473,7 @@ function wirebait.Int64.new(num, high_num)
       assert(num_or_uint._struct_type == "Int64", "Argument needs to be a number or an Int64!")
       low_word = num_or_uint.m_low_word;
       high_word = num_or_uint.m_high_word;
-      is_negative_number = num_or_uint.m_is_negative;
+      is_negative_number = high_word & SIGN_MASK > 0;
     else
       if num_or_uint < 0 then
         is_negative_number = true;
@@ -524,102 +513,31 @@ function wirebait.Int64.new(num, high_num)
     local low_word2, high_word2, neg2 = getWords(uint_or_num2);
     
     local function ADD(word1, word2, init_carry)
+      word1 = word1 & WORD_MASK;
+      word2 = word2 & WORD_MASK;
       local result = 0;
       local c = init_carry or 0;
       for i = 0,31 do
         local bw1 = (word1 >> i) & 1;
         local bw2 = (word2 >> i) & 1;
         result = result | ((bw1 ~ bw2 ~ c) << i);
-        local bs = bw1 + bw2 + c;
-        c = bs > 1 and 1 or 0;
+        c = (bw1 + bw2 + c) > 1 and 1 or 0;
       end
       return result, c;
     end
     
-    
     local new_low_word, carry = ADD(low_word1, low_word2);
     local new_high_word = ADD(high_word1, high_word2, carry);
     return wirebait.Int64.new(new_low_word, new_high_word);
-    
---    if neg1 == neg2 then
---      local uint_sum = wirebait.UInt64.new(low_word1, high_word1) + wirebait.UInt64.new(low_word2, high_word2);
---      --TODO: doesn't work if the sum takes 64 bits!!
---      local sign = neg1 and SIGN_MASK or 0;
---      return wirebait.Int64.new(uint_sum.m_low_word, uint_sum.m_high_word | sign);
---    else
---      local uint_subs = nil;
---      local sign = 0;
---      local uint_1 = wirebait.UInt64.new(low_word1, high_word1);
---      local uint_2 = wirebait.UInt64.new(low_word2, high_word2);
---      if neg1 then
---        sign = uint_2 > uint_1 and 0 or SIGN_MASK;
---        assert(uint_2 > uint_1, "This cannot work as wrap around will mess up the bit sign");
---        --TODO: doesnt work if uint_2 < uint_1 because wraparound will take over the bit sign
---        uint_subs = uint_2 - uint_1;
---      else
---        sign =  uint_1 > uint_2 and 0 or SIGN_MASK;
---        assert( uint_1 > uint_2, "This cannot work as wrap around will mess up the bit sign");
---        --TODO: doesnt work if uint_2 > uint_1 because wraparound will take over the bit sign
---        uint_subs = uint_1 - uint_2;
---      end
---      return wirebait.Int64.new(uint_subs.m_low_word, uint_subs.m_high_word | sign); 
---    end
-    
---      local new_low_word = low_word1 + low_word2;
---      local carry = 0;
---      if new_low_word > UINT32_MAX then
---        carry = 1;
---        if new_low_word % UINT32_MAX == 0 then
---          new_low_word = UINT32_MAX - 1;
---        else
---          local q = new_low_word // UINT32_MAX; --quotient of new_low_word divided by UINT32_MAX
---          new_low_word = new_low_word - (q * UINT32_MAX) - 1;
---        end
---      end
-    
---      local new_high_word = high_word1 + high_word2 + carry;
---      if new_high_word > UINT32_MAX then
---        new_high_word = new_high_word & WORD_MASK;
---      end
---      return wirebait.Int64.new(new_low_word, new_high_word);
---    if neg1 == neg2 then
---    end
-    
-    
-    
-    
-    
-    
-    
-    
-    
   end
   
   function int_64.__sub(uint_or_num1, uint_or_num2)
-    if uint_or_num1 == uint_or_num2 then
-      return wirebait.Int64.new(0);
-    end
-    
     local low_word1, high_word1, neg1 = getWords(uint_or_num1);
     local low_word2, high_word2, neg2 = getWords(uint_or_num2);
     
-    local function to2sComplement(word1, word2)
-      --if word2 & SIGN_MASK > 0 then
-      local low_word = ((~word1)&WORD_MASK) + 1
-      local high_word = (~word2)&WORD_MASK;
-      if low_word > WORD_MASK then
-        low_word = 0;
-        high_word = (high_word + 1) & WORD_MASK;
-      end
-        return low_word&WORD_MASK, high_word;
-      --end
-      --return num >= 0 and num or ~num + 1;
-      --return word1, word2
-    end
-    local aaa,bbb = to2sComplement(low_word2, high_word2)
-    local int1 = wirebait.Int64.new(low_word1, high_word1)-- | (neg1 and SIGN_MASK or 0));
-    local int2 = wirebait.Int64.new(to2sComplement(low_word2, high_word2)); --opposite of the input so we can use addition
-    return int1 + int2;
+    local int1 = wirebait.Int64.new(low_word1, high_word1)
+    local int2 = wirebait.Int64.new(twosComplement(low_word2, high_word2)); --oposite of uint_or_num2
+    return int1 + int2; --[[taking advantage of the fact that A-B = A+(-B)]]
   end
 
   function int_64.__band(self, other) --[[bitwise AND operator (&)]]

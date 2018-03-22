@@ -155,7 +155,6 @@ unit_tests:addTest("Testing wirebait Int64.max()", function()
     local int_64 = wirebait.Int64.max();
     tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0x7FFFFFFF, "Wrong high_word value!");
-    tester.assert(int_64.m_is_negative, false, "Wrong sign!");
     tester.assert(tostring(int_64), "9223372036854775807", "Wrong decimal string value!");
   end);
 
@@ -163,7 +162,6 @@ unit_tests:addTest("Testing wirebait Int64.min()", function()
     local int_64 = wirebait.Int64.min();
     tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, SIGN_MASK, "Wrong high_word value!");
-    tester.assert(int_64.m_is_negative, true, "Wrong sign!");
     tester.assert(tostring(int_64), "-9223372036854775808", "Wrong decimal string value!");
   end);
 
