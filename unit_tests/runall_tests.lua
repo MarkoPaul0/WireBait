@@ -28,5 +28,6 @@ print("\nRunning all unit tests")
 tester.test(dofile("unit_tests/test_files/wirebait_protofield_UT.lua"))
 tester.test(dofile("unit_tests/test_files/wirebait_buffer_UT.lua"))
 tester.test(dofile("unit_tests/test_files/wirebait_uint64_UT.lua"))
+tester.test(dofile("unit_tests/test_files/wirebait_int64_UT.lua"))
 
 tester.printReport();

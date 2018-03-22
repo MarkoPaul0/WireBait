@@ -35,6 +35,10 @@ local unit_tests = tester.newUnitTestsSet("wirebait Int64 Unit Tests");
 local UINT32_MAX  = 0xFFFFFFFF;
 local SIGN_MASK   = 0X80000000;
 
+local function to2sComplement(num)
+  return num >= 0 and num or ~num + 1;
+end
+
 unit_tests:addTest("Testing wirebait Int64.new(low_num)", function()
     local int_64 = wirebait.Int64.new(1);
     tester.assert(int_64.m_low_word, 1, "Wrong low_word value!");
@@ -157,10 +161,10 @@ unit_tests:addTest("Testing wirebait Int64.max()", function()
 
 unit_tests:addTest("Testing wirebait Int64.min()", function()
     local int_64 = wirebait.Int64.min();
-    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
-    tester.assert(int_64.m_high_word, 0x7FFFFFFF, "Wrong high_word value!");
+    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, SIGN_MASK, "Wrong high_word value!");
     tester.assert(int_64.m_is_negative, true, "Wrong sign!");
-    tester.assert(tostring(int_64), "-9223372036854775807", "Wrong decimal string value!");
+    tester.assert(tostring(int_64), "-9223372036854775808", "Wrong decimal string value!");
   end);
 
 unit_tests:addTest("Testing wirebait Int64, 1 + 1 = 2", function()
@@ -188,10 +192,10 @@ unit_tests:addTest("Testing wirebait Int64, 0xFFCDEDF1/0xFFFF + 0xFF24FF01/0x123
     tester.assert(tostring(int_64), "301493801643250", "Wrong addition result!");
   end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 1 = 0 (Wraparound)", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(1);
---    tester.assert(tostring(int_64), "0", "Wrong addition result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 1 = - (Wraparound)", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX, 0x7FFFFFFF) + wirebait.Int64.new(1);
+    tester.assert(tostring(int_64), "-9223372036854775808", "Wrong addition result!");
+  end);
 
 --unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 0xAF = 174 (Wraparound)", function()
 --    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(0xAF);
@@ -220,7 +224,7 @@ unit_tests:addTest("Testing wirebait Int64, 0x04 - 0x02 = 2", function()
 
 unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x03 = 18446744073709551615", function()
     local int_64 = wirebait.Int64.new(0x02) - wirebait.Int64.new(0x03);
-    tester.assert(tostring(int_64), "18446744073709551615", "Wrong substraction result!");
+    tester.assert(tostring(int_64), "-1", "Wrong substraction result!");
   end);
 
 unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x02 = 0", function()
@@ -230,7 +234,7 @@ unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x02 = 0", function()
 
 unit_tests:addTest("Testing wirebait Int64, 0x02 -  0x00000000/0x01 = 0", function()
     local int_64 = wirebait.Int64.new(0x02) - wirebait.Int64.new(0,1);
-    tester.assert(tostring(int_64), "18446744069414584322", "Wrong substraction result!");
+    tester.assert(tostring(int_64), "-4294967294", "Wrong substraction result!");
   end);
 
 --unit_tests:addTest("Testing wirebait Int64, Int64_MAX - (Int64_MAX - 1) = 0", function()
