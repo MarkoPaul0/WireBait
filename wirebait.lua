@@ -511,11 +511,9 @@ function wirebait.Int64.new(num, high_num)
   
   function int_64.__sub(uint_or_num1, uint_or_num2)
     local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = getWords(uint_or_num2);
-    
-    local int1 = wirebait.Int64.new(low_word1, high_word1)
-    local int2 = wirebait.Int64.new(twosComplement(low_word2, high_word2)); --oposite of uint_or_num2
-    return int1 + int2; --[[taking advantage of the fact that A-B = A+(-B)]]
+    local low_word2, high_word2, neg2 = twosComplement(getWords(uint_or_num2));
+    --taking advantage of the fact that A-B = A+(-B)
+    return wirebait.Int64.new(low_word1, high_word1) + wirebait.Int64.new(low_word2, high_word2)
   end
 
   function int_64.__band(self, other) --[[bitwise AND operator (&)]]
