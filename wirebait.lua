@@ -84,6 +84,19 @@ local function hexStringToUint32(hex_str)
   return tonumber(hex_str, 16);
 end
 
+--[[Two's complement of a 64 bit value ]]
+local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
+local WORD_MASK = UINT32_MAX; 
+local function twosComplement(low_word, high_word)
+  local new_low_word = ((~low_word) & WORD_MASK) + 1;
+  local new_high_word = (~high_word) & WORD_MASK;
+  if new_low_word > WORD_MASK then --there's a carry from low to high word
+    new_low_word = 0;
+    new_high_word = (new_high_word + 1) & WORD_MASK;
+  end
+  return new_low_word, new_high_word;
+end
+
 local PROTOCOL_TYPES = {
   IPV4 = 0x800,
   UDP  = 0x11,
@@ -91,8 +104,7 @@ local PROTOCOL_TYPES = {
 };
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
-local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
-local WORD_MASK = UINT32_MAX; 
+
 --[----------WIRESHARK UINT64----------------------------------------------------------------------------------------------------------------------------------------------]]
 function wirebait.UInt64.new(num, high_num)
   assert(num and type(num) == "number" and num == math.floor(num) and num >= 0 and num <= UINT32_MAX, "UInt64.new(num), num must be a positive 32 bit integer!");
@@ -210,56 +222,32 @@ function wirebait.UInt64.new(num, high_num)
   end
   
   function uint_64.__add(uint_or_num1, uint_or_num2)
-    local low_word1, high_word1, negative = getWords(uint_or_num1);
-    local low_word2, high_word2 = getWords(uint_or_num2);
+    local low_word1, high_word1, neg1 = getWords(uint_or_num1);
+    local low_word2, high_word2, neg2 = getWords(uint_or_num2);
     
-    if negative then --uint_or_num1 is a number, and it is negative 
-      return uint_64.__sub(uint_or_num2, -uint_or_num1);
-    end
-    
-    local new_low_word = low_word1 + low_word2;
-    local carry = 0;
-    if new_low_word > UINT32_MAX then
-      carry = 1;
-      if new_low_word % UINT32_MAX == 0 then
-        new_low_word = UINT32_MAX - 1;
-      else
-        local q = new_low_word // UINT32_MAX; --quotient of new_low_word divided by UINT32_MAX
-        new_low_word = new_low_word - (q * UINT32_MAX) - 1;
+    local function ADD(word1, word2, init_carry)
+      word1 = word1 & WORD_MASK;
+      word2 = word2 & WORD_MASK;
+      local result = 0;
+      local c = init_carry or 0;
+      for i = 0,31 do
+        local bw1 = (word1 >> i) & 1;
+        local bw2 = (word2 >> i) & 1;
+        result = result | ((bw1 ~ bw2 ~ c) << i);
+        c = (bw1 + bw2 + c) > 1 and 1 or 0;
       end
+      return result, c;
     end
     
-    local new_high_word = high_word1 + high_word2 + carry;
-    if new_high_word > UINT32_MAX then
-      new_high_word = new_high_word & WORD_MASK;
-    end
-    
+    local new_low_word, carry = ADD(low_word1, low_word2);
+    local new_high_word = ADD(high_word1, high_word2, carry);
     return wirebait.UInt64.new(new_low_word, new_high_word);
   end
   
   function uint_64.__sub(uint_or_num1, uint_or_num2)
-    if uint_or_num1 == uint_or_num2 then
-      return wirebait.UInt64.new(0);
-    end
-    
     local low_word1, high_word1 = getWords(uint_or_num1);
-    local low_word2, high_word2 = getWords(uint_or_num2);
-    
-    local function positiveSub(lw1, hw1, lw2, hw2)
-      assert(hw1 > hw2 or (hw1 == hw2 and lw1 > lw2), "This methods can only substract two number A and B if A > B");
-      if lw1 >= lw2 then --no wraparound, no carry
-        return wirebait.UInt64.new(lw1 - lw2, hw1 - hw2);
-      else --no wraparount, but carry
-        return wirebait.UInt64.new(UINT32_MAX + 1 + lw1 - lw2, hw1 - hw2 - 1);
-      end
-    end
-    
-    if high_word1 > high_word2 or (high_word1 == high_word2 and low_word1 > low_word2) then --no wraparound
-      return positiveSub(low_word1, high_word1, low_word2, high_word2);
-    else --wraparound
-      local uint_64_abs_diff = positiveSub(low_word2, high_word2, low_word1, high_word1);
-      return positiveSub(UINT32_MAX, UINT32_MAX, uint_64_abs_diff.m_low_word, uint_64_abs_diff.m_high_word) + 1
-    end
+    local low_word2, high_word2 = twosComplement(getWords(uint_or_num2));
+    return wirebait.UInt64.new(low_word1, high_word1) + wirebait.UInt64.new(low_word2, high_word2);
   end
 
   function uint_64.__band(self, other) --[[bitwise AND operator (&)]]
@@ -447,16 +435,6 @@ function wirebait.Int64.new(num, high_num)
   }
   
   local SIGN_MASK = 0x80000000;
-
-  local function twosComplement(low_word, high_word)
-    local new_low_word = ((~low_word) & WORD_MASK) + 1;
-    local new_high_word = (~high_word) & WORD_MASK;
-    if new_low_word > WORD_MASK then --there's a carry from low to high word
-      new_low_word = 0;
-      new_high_word = (new_high_word + 1) & WORD_MASK;
-    end
-    return new_low_word, new_high_word;
-  end
   
   function int_64:__tostring()
     if int_64.m_high_word & SIGN_MASK > 0 then
