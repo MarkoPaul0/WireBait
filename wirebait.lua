@@ -1484,6 +1484,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   --Setting up the environment before invoking dofile() on the dissector script
   wirebait.state.dissector_table = newDissectorTable();
   UInt64 = wirebait.UInt64;
+  Int64 = wirebait.Int64;
   base = wirebait.base;
   Proto = wirebait.Proto.new;
   ProtoField = wirebait.ProtoField;
