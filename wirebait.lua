@@ -1140,28 +1140,18 @@ function wirebait.buffer.new(data_as_hex_string)
     local byte_size = math.ceil((offset+length)/8) - byte_offset;
     local left_bits_count = offset % 8;
     local right_bits_count = (byte_size + byte_offset)*8 - (offset+length);
+    assert(length == 8*byte_size - left_bits_count - right_bits_count); --[[number of bits up]]
 
-    local bit_mask = tonumber(string.rep("FF", byte_size), 16);
-    for i=1,left_bits_count do 
-      bit_mask = bit_mask ~ (1 << (8*byte_size - i)); -- left bits need to be masked out of the value
-    end
-
-    if length > 56 then -- past 56 bits, lua starts to interpret numbers as floats
-      local first_word_val = self(0,4):uint();
-      local second_word_val = self(4, 4):uint() >> right_bits_count;
-      bit_mask = bit_mask >> 32;
-      first_word_val = first_word_val & bit_mask;
-      local result = math.floor((first_word_val << (32 - right_bits_count)) + second_word_val)
-      return result;
-    else
+    if length <= 32 then
       local uint_val = self(byte_offset, byte_size):uint64();
-      return (uint_val & bit_mask) >> right_bits_count;
+      local bit_mask = tonumber(string.rep("1", length),2);
+      return (uint_val >> right_bits_count) & bit_mask;
+    else
+      local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
+      local bytes_as_uint64 = wirebait.UInt64.fromHex(self(byte_offset, byte_size):bytes());
+      return wirebait.UInt64.new(bytes_as_uint64.m_low_word, bytes_as_uint64.m_high_word & high_bit_mask) >> right_bits_count;
     end
   end
-
---  function buffer:bytes()
---    return self.m_data_as_hex_str;
---  end
 
   function buffer:bytes()
     return self.m_data_as_hex_str;

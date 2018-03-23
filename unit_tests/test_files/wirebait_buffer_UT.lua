@@ -346,7 +346,7 @@ unit_tests:addTest("Testing wirebait buffer:bitfield(0,63) = 9223372036854775807
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(0,64) = -1", function()
-    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64)), "-1");
+    tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64)), "18446744073709551615");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:len()", function() 
