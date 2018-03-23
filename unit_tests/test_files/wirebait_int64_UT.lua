@@ -102,54 +102,54 @@ unit_tests:addTest("Testing wirebait Int64.new(low_num, TOO LARGE high_num)", fu
     tester.assert(error_msg, "Int64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!", "Wrong error message!", "Wrong error message!");
   end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(00) = 0", function()
---    local int_64 = wirebait.Int64.fromHex("00");
---    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(00) = 0", function()
+    local int_64 = wirebait.Int64.fromHex("00");
+    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(0000000000) = 0", function()
---    local int_64 = wirebait.Int64.fromHex("0000000000");
---    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(0000000000) = 0", function()
+    local int_64 = wirebait.Int64.fromHex("0000000000");
+    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFFFFFFFFFF) = Int64_max", function()
---    local int_64 = wirebait.Int64.fromHex("FFFFFFFFFFFFFFFF");
---    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "18446744073709551615", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFFFFFFFFFF) = -1", function()
+    local int_64 = wirebait.Int64.fromHex("FFFFFFFFFFFFFFFF");
+    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "-1", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF) = uint32_max", function()
---    local int_64 = wirebait.Int64.fromHex("FFFFFFFF");
---    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF) = 4294967295", function()
+    local int_64 = wirebait.Int64.fromHex("FFFFFFFF");
+    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(00000000FFFFFFFF) = uint32_max", function()
---    local int_64 = wirebait.Int64.fromHex("00000000FFFFFFFF");
---    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(00000000FFFFFFFF) = 4294967295", function()
+    local int_64 = wirebait.Int64.fromHex("00000000FFFFFFFF");
+    tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF00000000) = 18446744069414584320", function()
---    local int_64 = wirebait.Int64.fromHex("FFFFFFFF00000000");
---    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "18446744069414584320", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF00000000) = -4294967296", function()
+    local int_64 = wirebait.Int64.fromHex("FFFFFFFF00000000");
+    tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "-4294967296", "Wrong decimal string value!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64.fromHex(F1FAB2DC0143005F) = 17436445565302014047", function()
---    local int_64 = wirebait.Int64.fromHex("F1FAB2DC0143005F");
---    tester.assert(int_64.m_low_word, 0x0143005F, "Wrong low_word value!");
---    tester.assert(int_64.m_high_word, 0xF1FAB2DC, "Wrong high_word value!");
---    tester.assert(tostring(int_64), "17436445565302014047", "Wrong decimal string value!");
---  end);
+unit_tests:addTest("Testing wirebait Int64.fromHex(F1FAB2DC0143005F) = -1010298508407537569", function()
+    local int_64 = wirebait.Int64.fromHex("F1FAB2DC0143005F");
+    tester.assert(int_64.m_low_word, 0x0143005F, "Wrong low_word value!");
+    tester.assert(int_64.m_high_word, 0xF1FAB2DC, "Wrong high_word value!");
+    tester.assert(tostring(int_64), "-1010298508407537569", "Wrong decimal string value!");
+  end);
 
 unit_tests:addTest("Testing wirebait Int64.max()", function()
     local int_64 = wirebait.Int64.max();
@@ -190,37 +190,37 @@ unit_tests:addTest("Testing wirebait Int64, 0xFFCDEDF1/0xFFFF + 0xFF24FF01/0x123
     tester.assert(tostring(int_64), "301493801643250", "Wrong addition result!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 1 = - (Wraparound)", function()
+unit_tests:addTest("Testing wirebait Int64, UInt64_MAX + 1 = -9223372036854775808 (Wraparound)", function()
     local int_64 = wirebait.Int64.new(UINT32_MAX, 0x7FFFFFFF) + wirebait.Int64.new(1);
     tester.assert(tostring(int_64), "-9223372036854775808", "Wrong addition result!");
   end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 0xAF = 174 (Wraparound)", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(0xAF);
---    tester.assert(tostring(int_64), "174", "Wrong addition result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, UInt64_MAX + 0xAF = 174 (Wraparound)", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(0xAF);
+    tester.assert(tostring(int_64), "174", "Wrong addition result!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 0x01FFFFFFFF = 8589934590 (Wraparound)", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, 0x01);
---    tester.assert(tostring(int_64), "8589934590", "Wrong addition result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, UInt64_MAX + 0x01FFFFFFFF = 8589934590 (Wraparound)", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, 0x01);
+    tester.assert(tostring(int_64), "8589934590", "Wrong addition result!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX + 0xFFFFFFFF/0xFFFF = 281474976710654 (Wraparound)", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, 0xFFFF);
---    tester.assert(tostring(int_64), "281474976710654", "Wrong addition result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, UInt64_MAX + 0xFFFFFFFF/0xFFFF = 281474976710654 (Wraparound)", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, 0xFFFF);
+    tester.assert(tostring(int_64), "281474976710654", "Wrong addition result!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX + Int64_MAX = 18446744073709551614 (Wraparound)", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, UINT32_MAX);
---    tester.assert(tostring(int_64), "18446744073709551614", "Wrong addition result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, UInt64_MAX + UInt64_MAX = -2 (Wraparound)", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX, UINT32_MAX) + wirebait.Int64.new(UINT32_MAX, UINT32_MAX);
+    tester.assert(tostring(int_64), "-2", "Wrong addition result!");
+  end);
 
 unit_tests:addTest("Testing wirebait Int64, 0x04 - 0x02 = 2", function()
     local int_64 = wirebait.Int64.new(0x04) - wirebait.Int64.new(0x02);
     tester.assert(tostring(int_64), "2", "Wrong substraction result!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x03 = 18446744073709551615", function()
+unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x03 = -1", function()
     local int_64 = wirebait.Int64.new(0x02) - wirebait.Int64.new(0x03);
     tester.assert(tostring(int_64), "-1", "Wrong substraction result!");
   end);
@@ -230,22 +230,22 @@ unit_tests:addTest("Testing wirebait Int64, 0x02 - 0x02 = 0", function()
     tester.assert(tostring(int_64), "0", "Wrong substraction result!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64, 0x02 -  0x00000000/0x01 = 0", function()
+unit_tests:addTest("Testing wirebait Int64, 0x02 -  0x00000000/0x01 = -4294967294", function()
     local int_64 = wirebait.Int64.new(0x02) - wirebait.Int64.new(0,1);
     tester.assert(tostring(int_64), "-4294967294", "Wrong substraction result!");
   end);
 
---unit_tests:addTest("Testing wirebait Int64, Int64_MAX - (Int64_MAX - 1) = 0", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX,UINT32_MAX) - wirebait.Int64.new(UINT32_MAX-1,UINT32_MAX);
---    tester.assert(tostring(int_64), "1", "Wrong substraction result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, Int64_MAX - (Int64_MAX - 1) = 0", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX,UINT32_MAX) - wirebait.Int64.new(UINT32_MAX-1,UINT32_MAX);
+    tester.assert(tostring(int_64), "1", "Wrong substraction result!");
+  end);
 
---unit_tests:addTest("Testing wirebait Int64, (Int64_MAX - 1) - Int64_MAX = 0", function()
---    local int_64 = wirebait.Int64.new(UINT32_MAX-1,UINT32_MAX) - wirebait.Int64.new(UINT32_MAX,UINT32_MAX);
---    tester.assert(tostring(int_64), "18446744073709551615", "Wrong substraction result!");
---  end);
+unit_tests:addTest("Testing wirebait Int64, (UInt64_MAX - 1) - UInt64_MAX = -1", function()
+    local int_64 = wirebait.Int64.new(UINT32_MAX-1,UINT32_MAX) - wirebait.Int64.new(UINT32_MAX,UINT32_MAX);
+    tester.assert(tostring(int_64), "-1", "Wrong substraction result!");
+  end);
 
-unit_tests:addTest("Testing wirebait Int64, 0xFFCDEDF1/0xFFFF - 0xFF24FF01/0x1234 = 301493801643250", function()
+unit_tests:addTest("Testing wirebait Int64, 0xFFCDEDF1/0xFFFF - 0xFF24FF01/0x1234 = 261456145215216", function()
     local int_64 = wirebait.Int64.new(0xFFCDEDF1, 0xFFFF) - wirebait.Int64.new(0xFF24FF01, 0x1234);
     tester.assert(tostring(int_64), "261456145215216", "Wrong substraction result!");
   end);

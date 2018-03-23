@@ -395,16 +395,13 @@ end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
-
-
 --[----------WIRESHARK INT64----------------------------------------------------------------------------------------------------------------------------------------------]]
 function wirebait.Int64.new(num, high_num)
   assert(num and type(num) == "number" and num >= 0 and num <= UINT32_MAX and num == math.floor(num), "Int64.new(num), num must be a positive 32 bit integer!");
   assert(not high_num or (type(high_num) == "number" and high_num >= 0 and high_num <= UINT32_MAX and high_num == math.floor(high_num)), "Int64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!");
-  --assert(num > 0 or not high_num, "num cannot be < 0 if high_num is provided!");
   local int_64 = {
     _struct_type = "Int64",
-    m_low_word = num, --unsigned value in a UInt64 (I'm lazy so I will reuse as much of UInt64 as possible)
+    m_low_word = num,
     m_high_word = high_num or 0,
   }
   
@@ -418,19 +415,16 @@ function wirebait.Int64.new(num, high_num)
   end
   
   local function getWords(num_or_uint) --PRIVATE METHOD
+    assert(num_or_uint and type(num_or_uint) == number or typeof(num_or_uint) == "Int64", "Argument #1 must be a number or Int64!");
     local low_word = 0;
     local high_word = 0;
     local is_negative_number = false;
-    if type(num_or_uint) == "table" then
-      assert(num_or_uint._struct_type == "Int64", "Argument needs to be a number or an Int64!")
+    if typeof(num_or_uint) == "Int64" then
       low_word = num_or_uint.m_low_word;
       high_word = num_or_uint.m_high_word;
       is_negative_number = high_word & SIGN_MASK > 0;
     else
-      if num_or_uint < 0 then
-        is_negative_number = true;
-      end
-      assert(type(num_or_uint) == "number", "Argument needs to be a number or an Int64!")
+      is_negative_number = num_or_uint < 0;
       low_word = num_or_uint & WORD_MASK;
       high_word = (num_or_uint >> 32) & WORD_MASK;
     end
@@ -464,7 +458,7 @@ function wirebait.Int64.new(num, high_num)
     local low_word1, high_word1, neg1 = getWords(uint_or_num1);
     local low_word2, high_word2, neg2 = getWords(uint_or_num2);
     
-    local function ADD(word1, word2, init_carry)
+    local function local_add(word1, word2, init_carry)
       word1 = word1 & WORD_MASK;
       word2 = word2 & WORD_MASK;
       local result = 0;
@@ -478,84 +472,41 @@ function wirebait.Int64.new(num, high_num)
       return result, c;
     end
     
-    local new_low_word, carry = ADD(low_word1, low_word2);
-    local new_high_word = ADD(high_word1, high_word2, carry);
+    local new_low_word, carry = local_add(low_word1, low_word2);
+    local new_high_word = local_add(high_word1, high_word2, carry);
     return wirebait.Int64.new(new_low_word, new_high_word);
   end
   
   function int_64.__sub(uint_or_num1, uint_or_num2)
     local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = twosComplement(getWords(uint_or_num2));
-    --taking advantage of the fact that A-B = A+(-B)
+    local low_word2, high_word2, neg2 = twosComplement(getWords(uint_or_num2)); --taking advantage of the fact that A-B = A+(-B) and (-B) = twosComplement of B
     return wirebait.Int64.new(low_word1, high_word1) + wirebait.Int64.new(low_word2, high_word2)
   end
 
-  function int_64.__band(self, other) --[[bitwise AND operator (&)]]
-    if type(other) == "table" and other._struct_type == "Int64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    if type(other) == "number" then
-      o_low_word = other & WORD_MASK;
-      o_high_word = (other >> 32) & WORD_MASK;
-    elseif other._struct_type == "Int64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot perform bitwise operation between Int64 and " .. type(other));
-    end
-    return wirebait.Int64.new(self.m_low_word & o_low_word, self.m_high_word & o_high_word)
+  function int_64.__band(uint_or_num1, uint_or_num2) --[[bitwise AND operator (&)]]
+    local low_word1, high_word1 = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    return wirebait.Int64.new(low_word1 & low_word2, high_word1 & high_word2)
   end
   
   function int_64:__bnot() --[[bitwise NOT operator (unary ~)]]
     return wirebait.Int64.new(~self.m_low_word & WORD_MASK, ~self.m_high_word & WORD_MASK)
   end
   
-  function int_64.__bor(self, other) --[[bitwise OR operator (|)]]
-    if type(other) == "table" and other._struct_type == "Int64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    if type(other) == "number" then
-      o_low_word = other & WORD_MASK;
-      o_high_word = (other >> 32) & WORD_MASK;
-    elseif other._struct_type == "Int64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot perform bitwise operation between Int64 and " .. type(other));
-    end
-    return wirebait.Int64.new(self.m_low_word | o_low_word, self.m_high_word | o_high_word)
+  function int_64.__bor(uint_or_num1, uint_or_num2) --[[bitwise OR operator (|)]]
+    local low_word1, high_word1 = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    return wirebait.Int64.new(low_word1 | low_word2, high_word1 | high_word2)
   end
   
-  function int_64.__bxor(self, other) --[[bitwise XOR operator (binary ~)]]
-    if type(other) == "table" and other._struct_type == "Int64" then
-      local tmp = other;
-      other = self;
-      self = tmp;
-    end
-    local o_low_word = 0;
-    local o_high_word = 0;
-    if type(other) == "number" then
-      o_low_word = other & WORD_MASK;
-      o_high_word = (other >> 32) & WORD_MASK;
-    elseif other._struct_type == "Int64" then
-      o_low_word = other.m_low_word;
-      o_high_word = other.m_high_word;
-    else
-      error("Cannot perform bitwise operation between Int64 and " .. type(other));
-    end
-    return wirebait.Int64.new(self.m_low_word ~ o_low_word, self.m_high_word ~ o_high_word)
+  function int_64.__bxor(uint_or_num1, uint_or_num2) --[[bitwise XOR operator (binary ~)]]
+    local low_word1, high_word1 = getWords(uint_or_num1);
+    local low_word2, high_word2 = getWords(uint_or_num2);
+    return wirebait.Int64.new(low_word1 ~ low_word2, high_word1 ~ high_word2)
   end
   
   function int_64:__shl(shift) --[[bitwise left shift (<<)]]
-    assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
+    assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
       local new_high_word = (self.m_low_word >> (32-shift)) + ((self.m_high_word << shift) & WORD_MASK);
       return wirebait.UInt64.new((self.m_low_word << shift) & WORD_MASK, new_high_word);
@@ -567,7 +518,7 @@ function wirebait.Int64.new(num, high_num)
   end
   
   function int_64:__shr(shift) --[[bitwise right shift (>>)]]
-    assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
+    assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
       local new_low_word = (self.m_low_word >> shift) + ((self.m_high_word << (32-shift)) & WORD_MASK);
       return wirebait.UInt64.new(new_low_word, self.m_high_word >> shift);
@@ -615,10 +566,11 @@ function wirebait.Int64.new(num, high_num)
   end
   
   function int_64:tonumber() --[[may lose integer precision if the number is greater than 2^53]]
-    return tonumber(self.m_decimal_str);
+    assert(false, "int64:tonumber() is not available yet!")
   end
   
   function int_64:tohex(num_chars)
+    assert(not num_chars or (type(num_chars) == "number" and math.floor(num_chars) == num_chars and num_chars > 0), "If provided argument #1 needs to be a positive integer!");
     num_chars = num_chars or 16;
     local hex_str = string.format("%8X", self.m_high_word) .. string.format("%8X", self.m_low_word);
     if num_chars < 16 then
@@ -642,38 +594,24 @@ function wirebait.Int64.new(num, high_num)
 end
 
 function wirebait.Int64.fromHex(hex_str)
-  --TODO: check if valid hexadecimal string
+  assert(hex_str and type(hex_str) == "string", "Argurment #1 should be a string!");
   assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
   assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
   hex_str = string.format("%016s",hex_str):gsub(" ","0")
+  assert(hex_str:find("%X") == nil, "String contains non hexadecimal characters!");
   local high_num = tonumber(string.sub(hex_str, 1,8),16);
   local num = tonumber(string.sub(hex_str, 9,16),16);
-  return wirebait.UInt64.new(num, high_num);
+  return wirebait.Int64.new(num, high_num);
 end
 
   function wirebait.Int64.max()
-    return wirebait.Int64.new(0xFFFFFFFF, 0x7FFFFFFF);
+    return wirebait.Int64.new(UINT32_MAX, 0x7FFFFFFF);
   end
   
   function wirebait.Int64.min()
     return wirebait.Int64.new(0, 0x80000000);
   end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 --[----------WIRESHARK PROTO----------------------------------------------------------------------------------------------------------------------------------------------]]
