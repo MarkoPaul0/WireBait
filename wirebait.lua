@@ -864,8 +864,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
   --[[TODO: add uni tests]]
   function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
     if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
-      print("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
-      os.exit()
+      io.write("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
     end
     local new_treeitem = nil;
     if proto_or_protofield_or_buffer._struct_type == "Proto" then
@@ -883,8 +882,8 @@ function wirebait.treeitem.new(protofield, buffer, parent)
 
   --[[TODO: add unit tests]]
   function treeitem:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
-    assert(proto_or_protofield_or_buffer._struct_type == "buffer" or buffer._struct_type == "buffer", "Expecting a tvbrange somewhere in the arguments!")
-    if proto_or_protofield_or_buffer._struct_type == "buffer" then
+    assert(typeof(proto_or_protofield_or_buffer) == "buffer" or typeof(buffer) == "buffer", "Expecting a tvbrange somewhere in the arguments list!")
+    if typeof(proto_or_protofield_or_buffer) == "buffer" then
       proto_or_protofield_or_buffer = wirebait.buffer.new(proto_or_protofield_or_buffer:swapped_bytes());
     else
       buffer = wirebait.buffer.new(buffer:swapped_bytes());
@@ -970,6 +969,7 @@ function wirebait.buffer.new(data_as_hex_string)
     assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local uint = self:uint();
     if mask then
+      assert(type(mask) == "number" and mask == math.floor(mask) and mask <= UINT32_MAX, "When provided, the mask should be a 32 bit unsigned integer!");
       uint = uint & mask;
     end
     local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
@@ -989,25 +989,10 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:int64(mask)
-    local size = self:len();
-    assert(size == 1 or size == 2 or size == 4 or size == 8, "Buffer must be 1, 2, 4, or 8 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
-    if size <= 4 then
-      return self:int();
-    elseif self(0,1):uint() & 0x80 == 0 then --positive int
-      return self:uint64();
-    else --[[when dealing with really large uint64, uint64() returns float instead of integers, which means I can't use bitwise operations. To get around that I treat
-      the 64 bit int as 2 separate words on which I perform the bitwise operation, then I "reassemble" the int]]
-      local first_word_raw = self(0,4):uint();
-      local second_word_raw = self(4,4):uint();
-      if mask then
-        first_word_raw = first_word_raw & (mask >> 8);
-        second_word_raw = second_word_raw & (mask & 0x00000000FFFFFFFF);
-      end
-      local first_word_val = ~first_word_raw & 0x7FFFFFFF;
-      local second_word_val = ~second_word_raw & 0xFFFFFFFF;
-      local result = -(math.floor(first_word_val * 16^8) + second_word_val + 1)
-      return result;
+    if mask then
+      return wirebait.Int64.fromHex(self:bytes()) & mask
     end
+    return wirebait.Int64.fromHex(self:bytes());
   end
 
   function buffer:le_int64(mask)
