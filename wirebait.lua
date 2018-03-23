@@ -665,6 +665,8 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       int24  = function (buf) return buf:int(mask) end,
       int32  = function (buf) return buf:int(mask) end,
       int64  = function (buf) return buf:int64(mask) end,
+      float  = function (buf) return buf:float() end,
+      double  = function (buf) return buf:float() end,
       stringz = function (buf) return buf:stringz() end,
       bool    = function (buf) return buf:uint64() > 0 end
     };
@@ -674,6 +676,8 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     return func(buffer);
   end
 
+  --[[If the protofield has a mask, the mask is applied to the buffer and the value is printed as bits.
+  For instance a mask of 10010001 applied to a buffer of 11101111 will give the result "1..0...1"]]
   function protofield:getMaskPrefix(buffer)
     if not self.m_mask then
       return "";
@@ -695,7 +699,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       current_bit = current_bit << 1;
     end
     displayed_masked_value = string.format("%".. buffer:len()*8 .."s", displayed_masked_value):gsub(" ",".");
-    str_value = displayed_masked_value .. " = "; -- .. str_value;
+    str_value = displayed_masked_value .. " = ";
     return str_value;
   end
 
@@ -742,11 +746,13 @@ function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return
 function wirebait.ProtoField.uint24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint24", value_string, fbase, ...) end
 function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint32", value_string, fbase, ...) end
 function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint64", value_string, fbase, ...) end
-function wirebait.ProtoField.int8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int8", value_string, fbase, ...) end
-function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int16", value_string, fbase, ...) end
-function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int24", value_string, fbase, ...) end
-function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int32", value_string, fbase, ...) end
-function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "int64", value_string, fbase, ...) end
+function wirebait.ProtoField.int8(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "int8", value_string, fbase, ...) end
+function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int16", value_string, fbase, ...) end
+function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int24", value_string, fbase, ...) end
+function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int32", value_string, fbase, ...) end
+function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int64", value_string, fbase, ...) end
+function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, "float", value_string, nil, nil, desc) end
+function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, "double", value_string, nil, nil, desc) end
 function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "bool", value_string, fbase, ...) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
@@ -756,13 +762,10 @@ function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return
 function wirebait.treeitem.new(protofield, buffer, parent) 
   local treeitem = {
     m_protofield = protofield,
-    m_depth = 0,
+    m_depth = parent and parent.m_depth + 1 or 0,
     m_buffer = buffer,
     m_text = nil
   }
-  if parent then
-    treeitem.m_depth = parent.m_depth + 1;
-  end
 
   local function prefix(depth)
     assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
@@ -775,7 +778,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
     if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
       --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
       value = buffer_or_value;
-    else
+    elseif typeof(buffer_or_value) == "buffer" then
       --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
       buffer = buffer_or_value
       assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
@@ -786,6 +789,8 @@ function wirebait.treeitem.new(protofield, buffer, parent)
       if #texts == 0 then
         texts = nil
       end
+    else
+      error("buffer_or_value cannot be of type " .. type(buffer_or_value));
     end
     assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
