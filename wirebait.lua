@@ -35,9 +35,7 @@ local wirebait = {
     dissector_filepath = nil,
     proto = nil,
     packet_info = { --TODO should be reset after each packet
-      cols={
-        protocol = nil
-      },
+      cols={},
       treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
     },
     dissector_table = {
@@ -1252,8 +1250,49 @@ end
 --[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
 local function newPacketInfo()
   local packet_info = {
-    cols = { 
-      protocol = nil
+    cols = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
+      number = nil,
+      abs_time = nil,
+      utc_time = nil,
+      cls_time = nil,
+      rel_time = nil,
+      date = nil,
+      utc_date = nil,
+      delta_time = nil,
+      delta_time_displayed = nil,
+      src = nil,
+      src_res = nil,
+      src_unres = nil,
+      dl_src = nil,
+      dl_src_res = nil,
+      dl_src_unres = nil,
+      net_src = nil,
+      net_src_res = nil,
+      net_src_unres = nil,
+      dst = nil,
+      dst_res = nil,
+      dst_unres = nil,
+      dl_dst = nil,
+      dl_dst_res = nil,
+      dl_dst_unres = nil,
+      net_dst = nil,
+      net_dst_res = nil,
+      net_dst_unres = nil,
+      src_port = nil,
+      src_port_res = nil,
+      src_port_unres = nil,
+      dst_port = nil,
+      dst_port_res = nil,
+      dst_port_unres = nil,
+      protocol = nil,
+      info = nil,
+      packet_len = nil,
+      cumulative_bytes = nil,
+      direction = nil,
+      vsan = nil,
+      tx_rate = nil,
+      rssi = nil,
+      dce_call = nil
     },
     treeitems_array = {}
   }
