@@ -1162,7 +1162,7 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:__call(start, length) --allows buffer to be called as a function 
-    assert(start >= 0, "Start position should be positive positive!");
+    assert(start and start >= 0, "Start position should be positive positive!");
     length = length or self:len() - start; --add unit test for the case where no length was provided
     assert(length >= 0, "Length should be positive!");
     assert(start + length <= self:len(), "Index get out of bounds!")
@@ -1191,6 +1191,7 @@ local function newDissectorTable()
     port_table = {}
 
     function port_table:add(port, proto_handle)
+      assert(port and proto_handle, "port and proto_handle cannot be nil!");
       local port_number = tonumber(port);
       assert(port_number >= 0 and port_number <= 65535, "A port must be between 0 and 65535!")
       self[port_number] = proto_handle;
@@ -1251,7 +1252,7 @@ function wirebait.packet.new (packet_buffer)
       other_data = nil -- exist if pkt is not ip
     }
   }
-  --assert(packet_buffer:len() > 14, "Invalid packet " .. packet_buffer .. ". It is too small!");
+  assert(buffer and typeof(buffer) == "buffer", "Packet cannot be constructed without a buffer!");
   --[[Ethernet layer parsing]]
   packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
   packet.ethernet.src_mac = packet_buffer(6,6):bytes();
@@ -1274,13 +1275,9 @@ function wirebait.packet.new (packet_buffer)
       --[[TCP layer parsing]]
       packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
       packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
-      -- for Lua 5.3 and above
       local tcp_hdr_len = 4 * ((packet_buffer(46,1):uint() & 0xF0) >> 4);
-      -- for Lua 5.2 and below
-      --local tcp_hdr_len = bit32.arshift(bit32.band(packet_buffer(46,1):uint(), 0xF0)) * 4;
       local tcp_payload_start_index = 34 + tcp_hdr_len;
       assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
-      --if packet_buffer:len() > tcp_payload_start_index then
       packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
     else
       --[[Unknown transport layer]]
@@ -1292,12 +1289,10 @@ function wirebait.packet.new (packet_buffer)
     if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
       if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
         return "UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port --.. "\n" .. print_bytes(self.ethernet.ipv4.udp.data, 2,8)
-        --.. ". Payload: " .. tostring(self.ethernet.ipv4.udp.data);
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port;
       elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         return "TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port --.. "\n" .. print_bytes(self.ethernet.ipv4.tcp.data, 2,8)
-        --.. ". Payload: " .. tostring(self.ethernet.ipv4.tcp.data);
+        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port; 
       else
         --[[Unknown transport layer]]
         return "IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
@@ -1337,6 +1332,7 @@ function wirebait.packet.new (packet_buffer)
 end
 
 function wirebait.pcap_reader.new(filepath)
+  assert(filepath and type(filepath) == "string" and #filepath > 0, "A valid filepath must be provided!");
   local pcap_reader = {
     m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
   }
