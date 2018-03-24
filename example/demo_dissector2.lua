@@ -66,7 +66,7 @@ p_demo.fields = {f_bool,
   f_ether, f_bytes, f_ipv4, f_guid,};
 
 function p_demo.dissector(buffer, packet_info, root_tree)
-  packet_info.cols.protocol = p_demo.name
+  packet_info.cols.protocol = "Demo";
   main_tree = root_tree:add(p_demo, buffer(0,86))
   
   uints_tree = main_tree:add(buffer(0,18), "Unsigned integers:");

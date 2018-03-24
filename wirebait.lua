@@ -1275,7 +1275,7 @@ end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 --[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
-local function newPacketInfo()
+local function newPacketInfo(packet)
   local packet_info = {
     cols = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
       number = nil,
@@ -1323,6 +1323,14 @@ local function newPacketInfo()
     },
     treeitems_array = {}
   }
+  if packet then
+    packet_info.cols.src = packet:getSrcIP();
+    packet_info.cols.dst = packet:getDstIP();
+    packet_info.cols.src_port = packet:getSrcPort();
+    packet_info.cols.dst_port = packet:getDstPort();
+    packet_info.cols.protocol = packet:protocol();
+    packet_info.cols.info = packet_info.cols.src_port .. " → " .. packet_info.cols.dst_port .. "  Len=" .. packet:len();
+  end
   return packet_info;
 end
 
@@ -1409,6 +1417,15 @@ function wirebait.packet.new (packet_buffer)
     return self.ethernet.ipv4.protocol;
   end
 
+
+  function packet:getSrcIP()
+    return printIP(self.ethernet.ipv4.src_ip);
+  end
+
+  function packet:getDstIP()
+    return printIP(self.ethernet.ipv4.dst_ip);
+  end
+
   function packet:getSrcPort()
     local ip_proto = self:getIPProtocol();
     if ip_proto == PROTOCOL_TYPES.UDP then
@@ -1429,6 +1446,48 @@ function wirebait.packet.new (packet_buffer)
     else
       error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
     end
+  end
+
+  function packet:protocol()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return "UDP";
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return "TCP";
+    else
+      error("packet:protocol() only supports IP/UDP and IP/TCP protocols!")
+    end
+  end
+
+  function packet:len()
+    local ip_proto = self:getIPProtocol();
+    if ip_proto == PROTOCOL_TYPES.UDP then
+      return self.ethernet.ipv4.udp.data:len();
+    elseif ip_proto == PROTOCOL_TYPES.TCP then
+      return self.ethernet.ipv4.tcp.data:len();
+    else
+      error("Packet:len() only supports IP/UDP and IP/TCP protocols!")
+    end
+  end
+
+  function packet:printInfo(frame_number, cols)
+    local function ellipsis(value, char_count)
+      local val_str = tostring(value);
+      if #val_str > char_count then
+        return val_str:sub(0,char_count-3) .. "..";
+      end
+      return val_str;
+    end
+    assert(self.ethernet.type == PROTOCOL_TYPES.IPV4, "Only IPv4 packets are supported!");
+    local src = self:getSrcIP();
+    local dst = self:getDstIP();
+    local src_port = self:getSrcPort();
+    local dst_port = self:getDstPort();
+    local length = (self.ethernet.ipv4.udp.data or self.ethernet.ipv4.tcp.data):len();
+    io.write(string.format("%-12s| %-20s| %-18s| %-18s| %-10s| %-10s| %-50s\n", 
+        "No.", "Time", "Source", "Destination", "Protocol", "Length", "Info"));
+    io.write(string.format("%-12s| %-20s| %-18s| %-18s| %-10s| %-10d| %-50s\n", 
+        frame_number, "<Not supported>", src, dst, ellipsis(cols.protocol,10), length, ellipsis(cols.info, 50)));
   end
 
   return packet;
@@ -1516,15 +1575,15 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   local function runDissector(buffer, proto_handle, packet_no, packet)
     assert(buffer and proto_handle and packet_no);
     io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
+    local root_tree = wirebait.treeitem.new(buffer);
+    assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!")
+    wirebait.state.packet_info = newPacketInfo(packet);
+    proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
     if packet then 
-      io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n\n")
+      packet:printInfo(packet_no, wirebait.state.packet_info.cols); io.write("\n");
     else
       io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
     end
-    local root_tree = wirebait.treeitem.new(buffer);
-    assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!")
-    wirebait.state.packet_info = newPacketInfo();
-    proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
     local packet_bytes_lines = formatBytesInArray(buffer);
     local treeitems_array = wirebait.state.packet_info.treeitems_array;
     local size = math.max(#packet_bytes_lines, #treeitems_array);
