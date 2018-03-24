@@ -1338,8 +1338,12 @@ end
 --[[ Data structure holding an ethernet packet, which is used by wirebait to hold packets read from pcap files 
      At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
      is that you can visualize what the struct would look like once populated]]
-function wirebait.packet.new (packet_buffer)
+function wirebait.packet.new (packet_buffer, pkt_timestamp)
   local packet = {
+    timestamp = {
+      sec = pkt_timestamp.sec,
+      u_sec = pkt_timestamp.u_sec,
+    },
     ethernet = {
       dst_mac = nil, --string in hex format e.g. "EC086B703682" (which would correspond to the mac address ec:08:6b:70:36:82
       src_mac = nil,
@@ -1396,27 +1400,9 @@ function wirebait.packet.new (packet_buffer)
     end
   end
 
-  function packet:info()
-    if self.ethernet.type == PROTOCOL_TYPES.IPV4 then
-      if self.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
-        return "UDP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.udp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.udp.dst_port;
-      elseif self.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
-        return "TCP packet from " .. printIP(self.ethernet.ipv4.src_ip) .. ":" ..  self.ethernet.ipv4.tcp.src_port 
-        .. " to " .. printIP(self.ethernet.ipv4.dst_ip) .. ":" ..  self.ethernet.ipv4.tcp.dst_port; 
-      else
-        --[[Unknown transport layer]]
-        return "IPv4 packet from " .. self.ethernet.ipv4.src_ip .. " to " .. self.ethernet.ipv4.dst_ip;
-      end
-    else
-      return "Ethernet packet (non ipv4)";
-    end
-  end
-
   function packet:getIPProtocol()
     return self.ethernet.ipv4.protocol;
   end
-
 
   function packet:getSrcIP()
     return printIP(self.ethernet.ipv4.src_ip);
@@ -1484,10 +1470,14 @@ function wirebait.packet.new (packet_buffer)
     local src_port = self:getSrcPort();
     local dst_port = self:getDstPort();
     local length = (self.ethernet.ipv4.udp.data or self.ethernet.ipv4.tcp.data):len();
+    --[[Creating a UTC timestamp string. 
+    For instance: if the date is sept 1st 2017 2:02 am  the timestamp will be "2017-09-01 02:02:47.23864" ]]
+    --local timestamp_str = os.date("!%Y-%m-%d", self.timestamp.sec) .. " " .. os.date("!%H:%M:%S.".. self.timestamp.u_sec , self.timestamp.sec)
+    local timestamp_str = os.date("!%H:%M:%S.".. self.timestamp.u_sec , self.timestamp.sec) --only displaying the time
     io.write(string.format("%-12s| %-20s| %-18s| %-18s| %-10s| %-10s| %-50s\n", 
         "No.", "Time", "Source", "Destination", "Protocol", "Length", "Info"));
     io.write(string.format("%-12s| %-20s| %-18s| %-18s| %-10s| %-10d| %-50s\n", 
-        frame_number, "<Not supported>", src, dst, ellipsis(cols.protocol,10), length, ellipsis(cols.info, 50)));
+        frame_number, ellipsis(timestamp_str, 20), src, dst, ellipsis(cols.protocol,10), length, ellipsis(cols.info, 50)));
   end
 
   return packet;
@@ -1497,13 +1487,14 @@ function wirebait.pcap_reader.new(filepath)
   assert(filepath and type(filepath) == "string" and #filepath > 0, "A valid filepath must be provided!");
   local pcap_reader = {
     m_file = io.open(filepath, "rb"), --b is for binary, and is only there for windows
+    m_timestamp_correction_sec = 0;
   }
   --[[Performing various checks before reading the packet data]]
   assert(pcap_reader.m_file, "File at '" .. filepath .. "' not found!");
   local global_header_buf = wirebait.buffer.new(readFileAsHex(pcap_reader.m_file, 24));
   assert(global_header_buf:len() == 24, "Pcap file is not large enough to contain a full global header.");
   assert(global_header_buf(0,4):bytes() == "D4C3B2A1", "Pcap file with magic number '" .. global_header_buf(0,4):bytes() .. "' is not supported! (Note that pcapng file are not supported either)"); 
-
+   pcap_reader.m_timestamp_correction_sec = global_header_buf(8,4):le_uint();
   --[[Reading pcap file and returning the next ethernet frame]]
   function pcap_reader:getNextEthernetFrame()
     --Reading pcap packet header (this is not part of the actual ethernet frame)
@@ -1511,13 +1502,16 @@ function wirebait.pcap_reader.new(filepath)
     if pcap_hdr_buffer:len() < 16 then -- this does not handle live capture
       return nil;
     end
+    local frame_timestamp={};
+    frame_timestamp.sec = pcap_hdr_buffer(0,4):le_uint() + self.m_timestamp_correction_sec;
+    frame_timestamp.u_sec = pcap_hdr_buffer(4,4):le_uint();
     local packet_length = pcap_hdr_buffer(8,4):le_uint();
     local packet_buffer = wirebait.buffer.new(readFileAsHex(self.m_file, packet_length));
     if packet_buffer:len() < packet_length then -- this does not handle live capture
       return nil;
     end
     assert(packet_buffer:len() > 14, "Unexpected packet in pcap! This frame cannot be an ethernet frame! (frame: " .. tostring(packet_buffer) .. ")");
-    local ethernet_frame = wirebait.packet.new(packet_buffer);
+    local ethernet_frame = wirebait.packet.new(packet_buffer, frame_timestamp);
     return ethernet_frame;
   end
   return pcap_reader;
@@ -1600,20 +1594,20 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
     local packet_no = 1;
     repeat
-      local packet = pcap_reader:getNextEthernetFrame()
-      if packet then
-        local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
+      local frame = pcap_reader:getNextEthernetFrame()
+      if frame then
+        local buffer = frame.ethernet.ipv4.udp.data or frame.ethernet.ipv4.tcp.data;
         if buffer then
           assert(typeof(buffer) == "buffer");
           local proto_handle = nil;
-          if packet:getIPProtocol() == PROTOCOL_TYPES.UDP then
-            proto_handle = wirebait.state.dissector_table.udp.port[packet:getSrcPort()] or wirebait.state.dissector_table.udp.port[packet:getDstPort()];
+          if frame:getIPProtocol() == PROTOCOL_TYPES.UDP then
+            proto_handle = wirebait.state.dissector_table.udp.port[frame:getSrcPort()] or wirebait.state.dissector_table.udp.port[frame:getDstPort()];
           else 
-            assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
-            proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
+            assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP)
+            proto_handle = wirebait.state.dissector_table.tcp.port[frame:getSrcPort()] or wirebait.state.dissector_table.tcp.port[frame:getDstPort()];
           end
           if proto_handle or not self.m_only_show_dissected_packets then
-            runDissector(buffer, proto_handle, packet_no, packet);
+            runDissector(buffer, proto_handle, packet_no, frame);
           end
         end
       end
