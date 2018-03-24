@@ -1569,8 +1569,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   local function runDissector(buffer, proto_handle, packet_no, packet)
     assert(buffer and proto_handle and packet_no);
     local root_tree = wirebait.treeitem.new(buffer);
-    assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!")
-    wirebait.state.packet_info = newPacketInfo(packet);
+    assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!");
     local result = proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
     if wirebait.state.packet_info.desegment_len and wirebait.state.packet_info.desegment_len > 0 then
       io.write(string.rep("WARNING! (please read below)\n", 4));
@@ -1578,11 +1577,8 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
       io.write("Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
       io.write("\n\n.");
     end
-    io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
     if packet then 
       packet:printInfo(packet_no, wirebait.state.packet_info.cols); io.write("\n");
-    else
-      io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
     end
     local packet_bytes_lines = formatBytesInArray(buffer);
     local treeitems_array = wirebait.state.packet_info.treeitems_array;
@@ -1592,7 +1588,6 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
       local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
       io.write(bytes_str .. "  |  " .. treeitem_str .. "\n");
     end
-    io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
   end
 
   function plugin_tester:dissectPcap(pcap_filepath)
@@ -1612,18 +1607,28 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
             assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP)
             proto_handle = wirebait.state.dissector_table.tcp.port[frame:getSrcPort()] or wirebait.state.dissector_table.tcp.port[frame:getDstPort()];
           end
-          if proto_handle or not self.m_only_show_dissected_packets then
+          wirebait.state.packet_info = newPacketInfo(frame);
+          if proto_handle then
+            io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n\n");
             runDissector(buffer, proto_handle, packet_no, frame);
+            io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
+          elseif not self.m_only_show_dissected_packets then
+            io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
+            frame:printInfo(packet_no, wirebait.state.packet_info.cols);
+            io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
           end
         end
       end
       packet_no = packet_no + 1;
-    until packet == nil
+    until frame == nil
   end
 
   function plugin_tester:dissectHexData(hex_data)
+    io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
+    io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
     local buffer = wirebait.buffer.new(hex_data);
     runDissector(buffer, wirebait.state.proto, 0);
+    io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
   end
 
   return plugin_tester;
