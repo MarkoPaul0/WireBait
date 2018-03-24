@@ -19,7 +19,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("unit_tests.tester")
+local tester = tester or require("tests.tester")
 local wirebait = require("wirebait")
 
 --[[IMPORTANT NOTE: a simple and easy way to come up with test cases when testing uint64 addition is to use wolfram alpha

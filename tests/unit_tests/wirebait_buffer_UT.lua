@@ -19,7 +19,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
-local tester = tester or require("unit_tests.tester")
+local tester = tester or require("tests.tester")
 local wirebait = require("wirebait")
 
 --[[ All variables here need to be kept local, however the unit test framework will run

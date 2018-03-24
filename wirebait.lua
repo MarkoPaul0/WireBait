@@ -45,11 +45,31 @@ local wirebait = {
   }
 }
 
+function wirebait:clear()
+  self.state.proto = nil;
+end
+
 if _VERSION ~= "Lua 5.3" then
   error("WireBait has only been developed with Lua 5.3. Try it with another version at your own risk OR feel free to create a ticket @ https://github.com/MarkoPaul0/WireBait")
 end
 
 --[[----------LOCAL HELPER METHODS (only used within the library)---------------------------------------------------------------------------------------------------------]]
+--[[For forward compatibility past lua 5.1. Indeed starting from lua 5.2, setfenv() is no longer available]]
+if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then 
+  function setfenv(fn, env)
+    local i = 1
+    repeat
+      local name = debug.getupvalue(fn, i)
+      if name == "_ENV" then
+        debug.upvaluejoin(fn, i, (function() return env end), 1)
+        break
+      end
+      i = i + 1
+    until name == "_ENV" or not name;
+    return fn
+  end
+end
+
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
 local function readFileAsHex(file, byte_count)
   local data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
@@ -1439,22 +1459,26 @@ end
 
 function wirebait.plugin_tester.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
   options_table = options_table or {};
-  _WIREBAIT_ON_ = true; --globally scoped on purpose
   local plugin_tester = {
     m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
     m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
   };
 
   --Setting up the environment before invoking dofile() on the dissector script
+  local newgt = {}        -- create new environment
+  setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
   wirebait.state.dissector_table = newDissectorTable();
-  UInt64 = wirebait.UInt64;
-  Int64 = wirebait.Int64;
-  ftypes = wirebait.ftypes;
-  base = wirebait.base;
-  Proto = wirebait.Proto.new;
-  ProtoField = wirebait.ProtoField;
-  DissectorTable = wirebait.state.dissector_table;
-  dofile(plugin_tester.m_dissector_filepath);
+  newgt._WIREBAIT_ON_ = true;
+  newgt.UInt64 = wirebait.UInt64
+  newgt.Int64 = wirebait.Int64
+  newgt.ftypes = wirebait.ftypes
+  newgt.base = wirebait.base
+  newgt.Proto = wirebait.Proto.new
+  newgt.ProtoField = wirebait.ProtoField
+  newgt.DissectorTable = wirebait.state.dissector_table
+  local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
+  setfenv(dofile_func, newgt);
+  dofile_func();
 
   local function formatBytesInArray(buffer, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
     if buffer:len() == 0 then
