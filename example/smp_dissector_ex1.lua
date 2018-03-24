@@ -35,7 +35,6 @@
 --[[Use this snipet of code to test your dissector. You can test your dissector without wireshark by running the dissector script directly!]]
 if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
   local wirebait = require("wirebait");
-  local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
   local dissector_tester = wirebait.plugin_tester.new({dissector_filepath="example/smp_dissector_ex1.lua", only_show_dissected_packets=true});
   --Example 1: dissecting data from a hexadecimal string
   dissector_tester:dissectHexData("0 \t\r\n  000 00 0 0 00 00 0 B2402   aa  00 01 57 69 72 65 62 61 69 74 5c 30 00 " .. 
