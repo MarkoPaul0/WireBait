@@ -67,7 +67,8 @@ Dissecting hexadecimal data (no pcap provided)
                                                      |     └─ GUID: abcdef12-3456-7890-abcd-ef1234567890
 ]]------------------------------------------------------------------------------------------------------------------------------
   ```
-In wireshark the same dissection would look like this:
+**In wireshark the same dissection would look like this:**
+
 ![](example/screenshots/demo_in_wireshark.png)
 
 **Something to note is that the hex string only contains the IP payload**, i.e. only the data to be dissected. No need to worry about adding ethernet, IP, TCP/UDP, headers.
