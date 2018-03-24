@@ -295,8 +295,8 @@ unit_tests:addTest("Testing wirebait buffer:le_ipv4() (Little-Endian) 192.168.0.
     tester.assert(wirebait.buffer.new("0100A8C0"):le_ipv4(), "192.168.0.1");
   end)
 
-unit_tests:addTest("Testing wirebait buffer:eth() (Big-Endian) EC:08:6B:70:36:82", function()
-    tester.assert(wirebait.buffer.new("EC086B703682"):eth(), "EC:08:6B:70:36:82");
+unit_tests:addTest("Testing wirebait buffer:eth() (Big-Endian) ec:08:6b:70:36:82", function()
+    tester.assert(wirebait.buffer.new("EC086B703682"):eth(), "ec:08:6b:70:36:82");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:bitfield(11,3) = 4", function()

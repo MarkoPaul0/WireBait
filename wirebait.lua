@@ -680,7 +680,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       FT_UINT32   = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
       FT_UINT64   = function (buf) return buf:uint64() & (mask or wirebait.UInt64.max()) end,
       FT_INT8     = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
-      FT_INT26    = function (buf) return buf:int(mask) end,
+      FT_INT16    = function (buf) return buf:int(mask) end,
       FT_INT24    = function (buf) return buf:int(mask) end,
       FT_INT32    = function (buf) return buf:int(mask) end,
       FT_INT64    = function (buf) return buf:int64(mask) end,
@@ -689,7 +689,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       FT_STRING   = function (buf) return buf:string() end,
       FT_STRINGZ  = function (buf) return buf:stringz() end,
       FT_ETHER    = function (buf) return buf:eth() end,
-      FT_BYTES    = function (buf) return buf:bytes() end,
+      FT_BYTES    = function (buf) return buf:__tostring(); end,
       FT_IPv4     = function (buf) return buf:ipv4() end,
       FT_GUID     = function (buf) return buf:__guid() end
     };
@@ -795,7 +795,7 @@ function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...)  return
 function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT24, value_string, fbase, ...) end
 function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT32, value_string, fbase, ...) end
 function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT64, value_string, fbase, ...) end
-function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.FLAOT, value_string, nil, nil, desc) end
+function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.FLOAT, value_string, nil, nil, desc) end
 function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.DOUBLE, value_string, nil, nil, desc) end
 function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRING, nil, display, nil, desc) end
 function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRINGZ, nil, display, nil, desc) end
@@ -912,6 +912,7 @@ function wirebait.treeitem.new(protofield, buffer, parent)
 
   --[[TODO: add uni tests]]
   function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
+    assert(proto_or_protofield_or_buffer and buffer, "treeitem:add() requires at least 2 arguments!");
     if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
       io.write("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
     end
@@ -1015,7 +1016,7 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:int(mask)
     local size = self:len();
-    assert(size == 1 or size == 2 or size == 4, "Buffer must be 1, 2, or 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
+    assert(size >= 1 and size <= 4, "Buffer must be between 1 and 4 bytes long for buffer:int() to work. (Buffer size: " .. self:len() ..")");
     local uint = self:uint();
     if mask then
       assert(type(mask) == "number" and mask == math.floor(mask) and mask <= UINT32_MAX, "When provided, the mask should be a 32 bit unsigned integer!");
@@ -1135,13 +1136,16 @@ function wirebait.buffer.new(data_as_hex_string)
       local sep = i == 1 and "" or ":";
       eth_addr = eth_addr .. sep .. self(i-1,1):bytes();
     end
-    return eth_addr;
+    return string.lower(eth_addr);
   end
 
   function buffer:string()
     local str = ""
     for i=1,self:len() do
-      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
+      local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i) --[[even a Protofield.string() stops printing after null character]]
+      if byte_ == '00' then --null char termination
+        return str
+      end
       str = str .. string.char(tonumber(byte_, 16))
     end
     str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
@@ -1225,7 +1229,10 @@ function wirebait.buffer.new(data_as_hex_string)
   end
 
   function buffer:__tostring()
-    return "[buffer: 0x" .. self.m_data_as_hex_str .. "]";
+    if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
+      return string.format("%48s", string.lower(self.m_data_as_hex_str)) .. "...";
+    end
+    return  string.lower(self.m_data_as_hex_str);
   end
 
   setmetatable(buffer, buffer)

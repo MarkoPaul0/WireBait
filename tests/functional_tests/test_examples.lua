@@ -41,6 +41,12 @@ local functional_tests = tester.newUnitTestsSet("Functional Tests on Examples");
     wirebait:clear();
   end);
 
+  functional_tests:addTest("Ensuring demo_dissector.lua runs smoothly", function()
+    io.write = function() end --silencing the ouptut before running the dissector. We don't care about its output
+    local test = dofile("example/demo_dissector.lua");
+    wirebait:clear();
+  end);
+
 if is_standalone_test then
   tester.test(functional_tests);
   tester.printReport();
