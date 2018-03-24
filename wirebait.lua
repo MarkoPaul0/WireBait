@@ -1512,55 +1512,19 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     return array_of_lines;
   end
 
-  function plugin_tester:dissectPcap(pcap_filepath)
-    assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
-    local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
-    local packet_no = 1;
-    repeat
-      local packet = pcap_reader:getNextEthernetFrame()
-      if packet then
-        wirebait.state.packet_info = newPacketInfo();
-        local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
-        if buffer then
-          local root_tree = wirebait.treeitem.new(buffer);
-          local proto_handle = nil;
-          if packet:getIPProtocol() == PROTOCOL_TYPES.UDP then
-            proto_handle = wirebait.state.dissector_table.udp.port[packet:getSrcPort()] or wirebait.state.dissector_table.udp.port[packet:getDstPort()];
-          else 
-            assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
-            proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
-          end
-          if proto_handle or not self.m_only_show_dissected_packets then
-            io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
-            io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n\n");
-            if proto_handle then
-              assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
-              proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
-              local packet_bytes_lines = formatBytesInArray(buffer);
-              local treeitems_array = wirebait.state.packet_info.treeitems_array;
-              local size = math.max(#packet_bytes_lines, #treeitems_array);
-              for i=1,size do
-                local bytes_str = string.format("%-50s",packet_bytes_lines[i] or "")
-                local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
-                io.write(bytes_str .. "  |  " .. treeitem_str .. "\n");
-              end
-            end
-            io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
-          end
-        end
-      end
-      packet_no = packet_no + 1;
-    until packet == nil
-  end
 
-  function plugin_tester:dissectHexData(hex_data)
+  local function runDissector(buffer, proto_handle, packet_no, packet)
+    assert(buffer and proto_handle and packet_no);
     io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
-    io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
-    local buffer = wirebait.buffer.new(hex_data:gsub(" ",""));
+    if packet then 
+      io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n\n")
+    else
+      io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
+    end
     local root_tree = wirebait.treeitem.new(buffer);
+    assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!")
     wirebait.state.packet_info = newPacketInfo();
-    assert(wirebait.state.proto, "It doens't seem like any proto was registered!")
-    wirebait.state.proto.dissector(buffer, wirebait.state.packet_info, root_tree);
+    proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
     local packet_bytes_lines = formatBytesInArray(buffer);
     local treeitems_array = wirebait.state.packet_info.treeitems_array;
     local size = math.max(#packet_bytes_lines, #treeitems_array);
@@ -1569,8 +1533,38 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
       local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
       io.write(bytes_str .. "  |  " .. treeitem_str .. "\n");
     end
-
     io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
+  end
+
+  function plugin_tester:dissectPcap(pcap_filepath)
+    assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
+    local pcap_reader = wirebait.pcap_reader.new(pcap_filepath)
+    local packet_no = 1;
+    repeat
+      local packet = pcap_reader:getNextEthernetFrame()
+      if packet then
+        local buffer = packet.ethernet.ipv4.udp.data or packet.ethernet.ipv4.tcp.data;
+        if buffer then
+          assert(typeof(buffer) == "buffer");
+          local proto_handle = nil;
+          if packet:getIPProtocol() == PROTOCOL_TYPES.UDP then
+            proto_handle = wirebait.state.dissector_table.udp.port[packet:getSrcPort()] or wirebait.state.dissector_table.udp.port[packet:getDstPort()];
+          else 
+            assert(packet:getIPProtocol() == PROTOCOL_TYPES.TCP)
+            proto_handle = wirebait.state.dissector_table.tcp.port[packet:getSrcPort()] or wirebait.state.dissector_table.tcp.port[packet:getDstPort()];
+          end
+          if proto_handle or not self.m_only_show_dissected_packets then
+            runDissector(buffer, proto_handle, packet_no, packet);
+          end
+        end
+      end
+      packet_no = packet_no + 1;
+    until packet == nil
+  end
+
+  function plugin_tester:dissectHexData(hex_data)
+    local buffer = wirebait.buffer.new(hex_data);
+    runDissector(buffer, wirebait.state.proto, 0);
   end
 
   return plugin_tester;
