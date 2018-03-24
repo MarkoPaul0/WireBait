@@ -1532,7 +1532,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
           end
           if proto_handle or not self.m_only_show_dissected_packets then
             io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
-            io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n");
+            io.write("Frame# " .. packet_no .. ": " .. packet:info() .. "\n\n");
             if proto_handle then
               assert(proto_handle == wirebait.state.proto, "The proto handler found in the dissector table should match the proto handle stored in wirebait.state.proto!")
               proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
@@ -1540,9 +1540,9 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
               local treeitems_array = wirebait.state.packet_info.treeitems_array;
               local size = math.max(#packet_bytes_lines, #treeitems_array);
               for i=1,size do
-                local bytes_str = string.format("%-48s",packet_bytes_lines[i] or "")
+                local bytes_str = string.format("%-50s",packet_bytes_lines[i] or "")
                 local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
-                io.write("\t" .. bytes_str .. "\t|\t" .. treeitem_str .. "\n");
+                io.write(bytes_str .. "  |  " .. treeitem_str .. "\n");
               end
             end
             io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
@@ -1555,7 +1555,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
 
   function plugin_tester:dissectHexData(hex_data)
     io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
-    io.write("Dissecting hexadecimal data (no pcap provided)\n");
+    io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
     local buffer = wirebait.buffer.new(hex_data:gsub(" ",""));
     local root_tree = wirebait.treeitem.new(buffer);
     wirebait.state.packet_info = newPacketInfo();
@@ -1565,9 +1565,9 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
     local treeitems_array = wirebait.state.packet_info.treeitems_array;
     local size = math.max(#packet_bytes_lines, #treeitems_array);
     for i=1,size do
-      local bytes_str = string.format("%-48s",packet_bytes_lines[i] or "")
+      local bytes_str = string.format("%-50s",packet_bytes_lines[i] or "")
       local treeitem_str = treeitems_array[i] and treeitems_array[i].m_text or "";
-      io.write("\t" .. bytes_str .. "\t|\t" .. treeitem_str .. "\n");
+      io.write(bytes_str .. "  |  " .. treeitem_str .. "\n");
     end
 
     io.write("]]------------------------------------------------------------------------------------------------------------------------------\n\n\n");
