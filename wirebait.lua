@@ -1568,11 +1568,17 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
 
   local function runDissector(buffer, proto_handle, packet_no, packet)
     assert(buffer and proto_handle and packet_no);
-    io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
     local root_tree = wirebait.treeitem.new(buffer);
     assert(proto_handle == wirebait.state.proto, "The proto handle found in the dissector table should match the proto handle stored in wirebait.state.proto!")
     wirebait.state.packet_info = newPacketInfo(packet);
-    proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+    local result = proto_handle.dissector(buffer, wirebait.state.packet_info, root_tree);
+    if wirebait.state.packet_info.desegment_len and wirebait.state.packet_info.desegment_len > 0 then
+      io.write(string.rep("WARNING! (please read below)\n", 4));
+      io.write("##################    WRIEBAIT DOES NOT SUPPORT TCP REASSEMBLY YET!!!!!!   ############################################\n");
+      io.write("Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
+      io.write("\n\n.");
+    end
+    io.write("------------------------------------------------------------------------------------------------------------------------------[[\n");
     if packet then 
       packet:printInfo(packet_no, wirebait.state.packet_info.cols); io.write("\n");
     else
