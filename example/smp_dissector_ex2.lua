@@ -37,7 +37,7 @@ if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if
   local wirebait = require("wirebait");
   local dissector_tester = wirebait.plugin_tester.new({dissector_filepath="example/smp_dissector_ex2.lua", only_show_dissected_packets=true});
   --Example 2: dissecting data from a pcap file
-  dissector_tester:dissectPcap("./example/smp_sample.pcap");
+  dissector_tester:dissectPcap("./example/captures/smp_sample.pcap");
   return
 end
 ----------------------------------------------------------------------------------------------------------------------------------------------

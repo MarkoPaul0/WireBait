@@ -28,21 +28,28 @@ local wirebait = require("wirebait");
 --]]--
 ----Creating functional tests
 local functional_tests = tester.newUnitTestsSet("Functional Tests on Examples");
+local hide_dissection_output = true;
 
   functional_tests:addTest("Ensuring smp_dissector_ex2.lua runs smoothly", function()
-    io.write = function() end --silencing the ouptut before running the dissector. We don't care about its output
+    if hide_dissection_output then
+      io.write = function() end --silencing the ouptut before running the dissector
+    end
     local test = dofile("example/smp_dissector_ex2.lua");
     wirebait:clear();
   end);
   
   functional_tests:addTest("Ensuring smp_dissector_ex2.lua runs smoothly", function()
-    io.write = function() end --silencing the ouptut before running the dissector. We don't care about its output
+    if hide_dissection_output then
+      io.write = function() end --silencing the ouptut before running the dissector
+    end
     local test = dofile("example/smp_dissector_ex2.lua");
     wirebait:clear();
   end);
 
   functional_tests:addTest("Ensuring demo_dissector.lua runs smoothly", function()
-    io.write = function() end --silencing the ouptut before running the dissector. We don't care about its output
+    if hide_dissection_output then
+      io.write = function() end --silencing the ouptut before running the dissector
+    end
     local test = dofile("example/demo_dissector.lua");
     wirebait:clear();
   end);
