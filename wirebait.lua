@@ -655,21 +655,22 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
-      uint8   = function (buf) return buf:uint() & (mask or 0xFF) end,
-      uint16  = function (buf) return buf:uint() & (mask or 0xFFFF) end,
-      uint24  = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
-      uint32  = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
-      uint64  = function (buf) return buf:uint64() & (mask or wirebait.UInt64.max()) end,
-      int8    = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
-      int16   = function (buf) return buf:int(mask) end,
-      int24   = function (buf) return buf:int(mask) end,
-      int32   = function (buf) return buf:int(mask) end,
-      int64   = function (buf) return buf:int64(mask) end,
-      float   = function (buf) return buf:float() end,
-      double  = function (buf) return buf:float() end,
-      stringz = function (buf) return buf:stringz() end,
-      bool    = function (buf) return buf:uint64() > 0 end,
-      bytes   = function (buf) return buf:bytes() end
+      FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
+      FT_UINT8    = function (buf) return buf:uint() & (mask or 0xFF) end,
+      FT_UINT16   = function (buf) return buf:uint() & (mask or 0xFFFF) end,
+      FT_UINT24   = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
+      FT_UINT32   = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
+      FT_UINT64   = function (buf) return buf:uint64() & (mask or wirebait.UInt64.max()) end,
+      FT_INT8     = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
+      FT_INT26    = function (buf) return buf:int(mask) end,
+      FT_INT24    = function (buf) return buf:int(mask) end,
+      FT_INT32    = function (buf) return buf:int(mask) end,
+      FT_INT64    = function (buf) return buf:int64(mask) end,
+      FT_FLOAT    = function (buf) return buf:float() end,
+      FT_DOUBLE   = function (buf) return buf:float() end,
+      FT_STRING   = function (buf) return buf:string() end,
+      FT_STRINGZ  = function (buf) return buf:stringz() end,
+      FT_BYTES    = function (buf) return buf:bytes() end
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -740,27 +741,26 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   return protofield;
 end
 
-wirebait.ftypes = {
-    STRING    = "string",
-    STRINGZ   = "stringz",
-    UINT8     = "uint8",
-    UINT16    = "uint16",
-    UINT24    = "uint24",
-    UINT32    = "uint32",
-    UINT64    = "uint64",
-    INT8      = "int8",
-    INT16     = "in16",
-    INT24     = "int24",
-    INT32     = "int32",
-    INT64     = "int64",
-    FLOAT     = "float",
-    DOUBLE    = "double",
-    BOOLEAN   = "bool",
-    BYTES     = "bytes"
+wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wireshark/blob/695fbb9be0122e280755c11b9e0b89e9e256875b/epan/wslua/wslua_proto_field.c) ]]
+    BOOLEAN   = "FT_BOOLEAN",
+    UINT8     = "FT_UINT8",
+    UINT16    = "FT_UINT16",
+    UINT24    = "FT_UINT24",
+    UINT32    = "FT_UINT32",
+    UINT64    = "FT_UINT64",
+    INT8      = "FT_INT8",
+    INT16     = "FT_INT16",
+    INT24     = "FT_INT24",
+    INT32     = "FT_INT32",
+    INT64     = "FT_INT64",
+    FLOAT     = "FT_FLOAT",
+    DOUBLE    = "FT_DOUBLE",
+    STRING    = "FT_STRING",
+    STRINGZ   = "FT_STRINGZ",
+    BYTES     = "FT_BYTES"
   }
 
-function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRING, nil, display, nil, desc) end
-function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRINGZ, nil, display, nil, desc) end
+function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
 function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT8, value_string, fbase, ...) end
 function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT16, value_string, fbase, ...) end
 function wirebait.ProtoField.uint24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT24, value_string, fbase, ...) end
@@ -773,7 +773,8 @@ function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...)  return
 function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT64, value_string, fbase, ...) end
 function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.FLAOT, value_string, nil, nil, desc) end
 function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.DOUBLE, value_string, nil, nil, desc) end
-function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
+function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRING, nil, display, nil, desc) end
+function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRINGZ, nil, display, nil, desc) end
 function wirebait.ProtoField.bytes(abbr, name, fbase, desc)               return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BYTES, nil, fbase, nil, desc) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
