@@ -1209,7 +1209,7 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:__guid()
     assert(self:len() == 16, "Trying to fetch a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
     local s_ = self.m_data_as_hex_str;
-    return s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21);
+    return string.lower(s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21));
   end
 
   function buffer:swapped_bytes()

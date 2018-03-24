@@ -30,29 +30,31 @@ therefore forgetting the local keyword will not have a negative impact.
 local unit_tests = tester.newUnitTestsSet("wirebait Buffer Unit Tests");
 
 unit_tests:addTest("Testing wirebait buffer construction", function()
-    b = wirebait.buffer.new("A0102FB1");
-    assert(b.m_data_as_hex_str == "A0102FB1", "Wrong underlying data");
-    assert(b:len() == 4, "Wrong size after construction")
+    local b = wirebait.buffer.new("A0102FB1");
+    tester.assert(b.m_data_as_hex_str, "A0102FB1", "Wrong underlying data");
+    tester.assert(b:len(), 4, "Wrong size after construction")
   end);
 
 unit_tests:addTest("Testing wirebait buffer construction with empty string", function()
-    b = wirebait.buffer.new("");
-    assert(b.m_data_as_hex_str == "", "Wrong underlying data");
-    assert(b:len() == 0, "Wrong size after construction")
+    local b = wirebait.buffer.new("");
+    tester.assert(b.m_data_as_hex_str, "", "Wrong underlying data");
+    tester.assert(b:len(), 0, "Wrong size after construction")
   end);
 
+unit_tests:addTest("Testing wirebait buffer:len()", function() 
+    tester.assert(wirebait.buffer.new("4845"):len(), 2, "Wrong byte length");
+  end)
+
 unit_tests:addTest("Testing wirebait buffer:string()", function()
-    b = wirebait.buffer.new("48454C4C4F20574F524C44");
-    tester.assert(b:string(),"HELLO WORLD", "Wrong result.");
+    tester.assert(wirebait.buffer.new("48454C4C4F20574F524C44"):string(),"HELLO WORLD", "Wrong result.");
   end)
 
 unit_tests:addTest("Testing wirebait buffer:stringz()", function()
-    b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
-    tester.assert(b:stringz(),"HELLO WORLD", "Wrong result.");
+    tester.assert(wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b"):stringz(),"HELLO WORLD", "Wrong result.");
   end)
 
 unit_tests:addTest("Testing wirebait buffer(pos,len)", function()
-    b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+    local b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
     tester.assert(b(6,5):len(), 5, "Wrong size.");
     tester.assert(b(6,5):string(), "WORLD");
     tester.assert(b(0,5):len(), 5, "Wrong size.");
@@ -349,9 +351,16 @@ unit_tests:addTest("Testing wirebait buffer:bitfield(0,64) = -1", function()
     tester.assert(tostring(wirebait.buffer.new("FFFFFFFFFFFFFFFF"):bitfield(0,64)), "18446744073709551615");
   end)
 
-unit_tests:addTest("Testing wirebait buffer:len()", function() 
-    b = wirebait.buffer.new("4845");
-    tester.assert(b:len(), 2, "Wrong length");
+unit_tests:addTest("Testing wirebait buffer:__guid() = 48454c4c-4f20-574f-524c-440032b4b1b3", function()
+    tester.assert(wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b3"):__guid(), "48454c4c-4f20-574f-524c-440032b4b1b3");
+  end)
+
+unit_tests:addTest("Testing wirebait buffer(pos,len)", function()
+    local b = wirebait.buffer.new("48454C4C4F20574F524C440032b4b1b34b2b");
+    tester.assert(b(6,5):len(), 5, "Wrong size.");
+    tester.assert(b(6,5):string(), "WORLD");
+    tester.assert(b(0,5):len(), 5, "Wrong size.");
+    tester.assert(b(0,5):string(), "HELLO");
   end)
 
 if is_standalone_test then
