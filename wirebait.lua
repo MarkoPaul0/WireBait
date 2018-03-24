@@ -670,7 +670,10 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       FT_DOUBLE   = function (buf) return buf:float() end,
       FT_STRING   = function (buf) return buf:string() end,
       FT_STRINGZ  = function (buf) return buf:stringz() end,
-      FT_BYTES    = function (buf) return buf:bytes() end
+      FT_ETHER    = function (buf) return buf:eth() end,
+      FT_BYTES    = function (buf) return buf:bytes() end,
+      FT_IPv4     = function (buf) return buf:ipv4() end,
+      FT_GUID     = function (buf) return buf:__guid() end
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -757,7 +760,10 @@ wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wire
     DOUBLE    = "FT_DOUBLE",
     STRING    = "FT_STRING",
     STRINGZ   = "FT_STRINGZ",
-    BYTES     = "FT_BYTES"
+    ETHER     = "FT_ETHER",
+    BYTES     = "FT_BYTES",
+    IPv4      = "FT_IPv4",
+    GUID      = "FT_GUID"
   }
 
 function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
@@ -775,7 +781,10 @@ function wirebait.ProtoField.float(abbr, name, value_string, desc)        return
 function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.DOUBLE, value_string, nil, nil, desc) end
 function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRING, nil, display, nil, desc) end
 function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRINGZ, nil, display, nil, desc) end
+function wirebait.ProtoField.ether(abbr, name, desc)                      return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.ETHER, nil, nil, nil, desc) end
 function wirebait.ProtoField.bytes(abbr, name, fbase, desc)               return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BYTES, nil, fbase, nil, desc) end
+function wirebait.ProtoField.ipv4(abbr, name, desc)                       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.IPv4, nil, nil, nil, desc) end
+function wirebait.ProtoField.guid(abbr, name, desc)                       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.GUID, nil, nil, nil, desc) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
@@ -1177,6 +1186,12 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:bytes()
     return self.m_data_as_hex_str;
+  end
+  
+  function buffer:__guid()
+    assert(self:len() == 16, "Trying to fetch a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
+    local s_ = self.m_data_as_hex_str;
+    return s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21);
   end
 
   function buffer:swapped_bytes()
