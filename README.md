@@ -38,49 +38,50 @@ Getting started takes less than a minute:
   3. Edit the code snippet to have your dissector read the *hexadecimal data* **and/or** *pcap file* of your choice
   4. Execute your dissector script. Enjoy :smiley:
   
- ## Example 1 Dissecting Data From a Hexadecimal String
- If you run the example dissector script **[smp_dissector_ex1.lua](example/smp_dissector_ex2.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
-```
- ------------------------------------------------------------------------------------------------------------------------------[[
-Dissecting hexadecimal data (no pcap provided)
-	 00 00 00 00 00 00 0B 24   02 AA 00 01 57 69 72 65	|	Simple Protocol
-	 62 61 69 74 5C 30 00 00   00 00 00 00 00 00 00 00	|	└─ Header appendix :)
-	 00 00 00 00 72 63 68 65   72 20 43 39 20 76 31 00	|	   └─ Sequence Number: 2852
-	                                                	|	   └─ Type: 2
-	                                                	|	   └─ Size: 170
-	                                                	|	   └─ Urgent: 1
-	                                                	|	   └─ Username: Wirebait\0
-	                                                	|	└─ Protofield-less item
-	                                                	|	└─ Child 1 Protofield-less item
-	                                                	|	   └─ Child 2 Protofield-less item
-	                                                	|	      └─ Child 3 Protofield-less item
-	                                                	|	         └─ Child 4 Protofield-less item
-]]------------------------------------------------------------------------------------------------------------------------------
-```
- 
- ## Example 2 Dissecting Data From a *.pcap* File
- If you run the example dissector script **[smp_dissector_ex2.lua](example/smp_dissector_ex2.lua)**, which dissects the provided **[smp_sample.pcap](example/smp_sample.pcap)** file, you should get the following output:
-```
+ ## Example 1 Dissecting Data from a Hexadecimal String
+  If you run the example dissector script **[smp_demo_dissector.lua](example/demo_dissector.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
+  ```
 ------------------------------------------------------------------------------------------------------------------------------[[
-Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
-	 00 00 00 00 00 00 0B 24   02 AA 00 01 57 69 72 65	|	Simple Protocol
-	 62 61 69 74 5C 30 00 00   00 00 00 00 00 00 00 00	|	└─ Header appendix :)
-	 00 00 00 00 72 63 68 65   72 20 43 39 20 76 31 00	|	   └─ Sequence Number: 2852
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Type: 2
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Size: 170
-	 00 00 00 00 00 00 00 31   2E 30 32 2E 36 35 2E 00	|	   └─ Urgent: 1
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 01 00 00	|	   └─ Username: Wirebait\0
-	 00 01 00 00 00 02 00 00   00 02 00 00 00 00 00 00	|	└─ Protofield-less item
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	└─ Child 1 Protofield-less item
-	 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00	|	   └─ Child 2 Protofield-less item
-	 00 00 00 00 00 00 00 00   00 00 00 00 00       	|	      └─ Child 3 Protofield-less item
-	                                                	|	         └─ Child 4 Protofield-less item
-]]------------------------------------------------------------------------------------------------------------------------------
-```
+Dissecting hexadecimal data (no pcap provided)
 
-  In wireshark the same dissection would look like this:
-  
-  ![](example/smp_sample_in_wireshark.png)
+ 0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF  |  Demo Protocol
+ FF FF F2 F8 22 FD DD 04   FC E6 8A A6 80 00 00 00  |  └─ Unsigned integers:
+ 00 00 00 01 57 69 72 65   62 61 69 74 00 62 79 20  |     └─ 8-bit uint: 14
+ 4D 61 72 6B 6F 50 61 75   6C 30 00 00 AA BB CC 11  |     └─ 16-bit uint: 2014
+ 22 33 C0 A8 0E 1C AB CD   EF 12 34 56 78 90 AB CD  |     └─ 24-bit uint: 140028
+ EF 12 34 56 78 90 00 00   00 00 00 00 00 00 00 00  |     └─ 32-bit uint: 52000090
+ 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00  |     └─ 64-bit uint: 9223372036854775807
+ 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00  |  └─ Signed integers:
+ 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00  |     └─ 8-bit int: -14
+ 00 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00  |     └─ 16-bit int: -2014
+ 00 00 00 00 00 00 00 00   00 00 00 00 00           |     └─ 24-bit int: -140028
+                                                     |     └─ 32-bit int: -52000090
+                                                     |     └─ 64-bit int: -9223372036854775807
+                                                     |  └─ Strings:
+                                                     |     └─ String: Wirebait
+                                                     |     └─ Stringz: Wirebait
+                                                     |  └─ Other types:
+                                                     |     └─ bytes: aabbcc112233c0a80e1cabcdef1234567890abcdef1234567890...
+                                                     |     └─ ethernet: aa:bb:cc:11:22:33
+                                                     |     └─ IPv4: 192.168.14.28
+                                                     |     └─ GUID: abcdef12-3456-7890-abcd-ef1234567890
+]]------------------------------------------------------------------------------------------------------------------------------
+  ```
+In wireshark the same dissection would look like this:
+![](example/screenshots/demo_in_wireshark.png)
+
+**Something to note is that the hex string only contains the IP payload**, i.e. only the data to be dissected. No need to worry about adding ethernet, IP, TCP/UDP, headers.
+
+ ## Example 2 Dissecting Data from a *.pcap* File
+  If you run the example dissector script **[smp_demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[smp_demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
+ ```
+ ------------------------------------------------------------------------------------------------------------------------------[[
+Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
+
+ 0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF  |  Demo Protocol
+ FF FF F2 F8 22 FD DD 04   FC E6 8A A6 80 00 00 00  |  └─ Unsigned integers:
+ .......<trimmed output, same as example 1>
+ ```
 
 ## State of the project
 A few notes about the current state of the project:
