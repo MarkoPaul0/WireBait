@@ -39,7 +39,7 @@ Getting started takes less than a minute:
   4. Execute your dissector script. Enjoy :smiley:
   
  ## Example 1 Dissecting Data from a Hexadecimal String
-  If you run the example dissector script **[smp_demo_dissector.lua](example/demo_dissector.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
+  If you run the example dissector script **[demo_dissector.lua](example/demo_dissector.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
   ```
 ------------------------------------------------------------------------------------------------------------------------------[[
 Dissecting hexadecimal data (no pcap provided)
@@ -73,7 +73,7 @@ In wireshark the same dissection would look like this:
 **Something to note is that the hex string only contains the IP payload**, i.e. only the data to be dissected. No need to worry about adding ethernet, IP, TCP/UDP, headers.
 
  ## Example 2 Dissecting Data from a *.pcap* File
-  If you run the example dissector script **[smp_demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[smp_demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
+  If you run the example dissector script **[demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
  ```
  ------------------------------------------------------------------------------------------------------------------------------[[
 Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
