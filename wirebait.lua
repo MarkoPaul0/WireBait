@@ -659,16 +659,17 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       uint16  = function (buf) return buf:uint() & (mask or 0xFFFF) end,
       uint24  = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
       uint32  = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
-      uint64  = function (buf) assert(not mask, "mask not supported yet for uint64"); return buf:uint64() end,
-      int8   = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
-      int16  = function (buf) return buf:int(mask) end,
-      int24  = function (buf) return buf:int(mask) end,
-      int32  = function (buf) return buf:int(mask) end,
-      int64  = function (buf) return buf:int64(mask) end,
-      float  = function (buf) return buf:float() end,
+      uint64  = function (buf) return buf:uint64() & (mask or wirebait.UInt64.max()) end,
+      int8    = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
+      int16   = function (buf) return buf:int(mask) end,
+      int24   = function (buf) return buf:int(mask) end,
+      int32   = function (buf) return buf:int(mask) end,
+      int64   = function (buf) return buf:int64(mask) end,
+      float   = function (buf) return buf:float() end,
       double  = function (buf) return buf:float() end,
       stringz = function (buf) return buf:stringz() end,
-      bool    = function (buf) return buf:uint64() > 0 end
+      bool    = function (buf) return buf:uint64() > 0 end,
+      bytes   = function (buf) return buf:bytes() end
     };
 
     local func = extractValueFuncByType[self.m_type];
@@ -739,21 +740,41 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   return protofield;
 end
 
-function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, "string", nil, display, nil, desc) end
-function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, "stringz", nil, display, nil, desc) end
-function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "uint8", value_string, fbase, ...) end
-function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint16", value_string, fbase, ...) end
-function wirebait.ProtoField.uint24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint24", value_string, fbase, ...) end
-function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint32", value_string, fbase, ...) end
-function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, "uint64", value_string, fbase, ...) end
-function wirebait.ProtoField.int8(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "int8", value_string, fbase, ...) end
-function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int16", value_string, fbase, ...) end
-function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int24", value_string, fbase, ...) end
-function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int32", value_string, fbase, ...) end
-function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, "int64", value_string, fbase, ...) end
-function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, "float", value_string, nil, nil, desc) end
-function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, "double", value_string, nil, nil, desc) end
-function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, "bool", value_string, fbase, ...) end
+wirebait.ftypes = {
+    STRING    = "string",
+    STRINGZ   = "stringz",
+    UINT8     = "uint8",
+    UINT16    = "uint16",
+    UINT24    = "uint24",
+    UINT32    = "uint32",
+    UINT64    = "uint64",
+    INT8      = "int8",
+    INT16     = "in16",
+    INT24     = "int24",
+    INT32     = "int32",
+    INT64     = "int64",
+    FLOAT     = "float",
+    DOUBLE    = "double",
+    BOOLEAN   = "bool",
+    BYTES     = "bytes"
+  }
+
+function wirebait.ProtoField.string(abbr, name, display, desc)            return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRING, nil, display, nil, desc) end
+function wirebait.ProtoField.stringz(abbr, name, display, desc)           return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.STRINGZ, nil, display, nil, desc) end
+function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT8, value_string, fbase, ...) end
+function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT16, value_string, fbase, ...) end
+function wirebait.ProtoField.uint24(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT24, value_string, fbase, ...) end
+function wirebait.ProtoField.uint32(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT32, value_string, fbase, ...) end
+function wirebait.ProtoField.uint64(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT64, value_string, fbase, ...) end
+function wirebait.ProtoField.int8(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT8, value_string, fbase, ...) end
+function wirebait.ProtoField.int16(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT16, value_string, fbase, ...) end
+function wirebait.ProtoField.int24(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT24, value_string, fbase, ...) end
+function wirebait.ProtoField.int32(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT32, value_string, fbase, ...) end
+function wirebait.ProtoField.int64(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.INT64, value_string, fbase, ...) end
+function wirebait.ProtoField.float(abbr, name, value_string, desc)        return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.FLAOT, value_string, nil, nil, desc) end
+function wirebait.ProtoField.double(abbr, name, value_string, desc)       return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.DOUBLE, value_string, nil, nil, desc) end
+function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
+function wirebait.ProtoField.bytes(abbr, name, fbase, desc)               return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BYTES, nil, fbase, nil, desc) end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
 
@@ -1373,6 +1394,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   wirebait.state.dissector_table = newDissectorTable();
   UInt64 = wirebait.UInt64;
   Int64 = wirebait.Int64;
+  ftypes = wirebait.ftypes;
   base = wirebait.base;
   Proto = wirebait.Proto.new;
   ProtoField = wirebait.ProtoField;
