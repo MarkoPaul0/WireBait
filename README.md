@@ -76,8 +76,9 @@ Dissecting hexadecimal data (no pcap provided)
  ## Example 2 Dissecting Data from a *.pcap* File
   If you run the example dissector script **[demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
  ```
- ------------------------------------------------------------------------------------------------------------------------------[[
-Frame# 1: UDP packet from 192.168.0.1:59121 to 255.255.255.255:7437
+------------------------------------------------------------------------------------------------------------------------------[[
+No.         | Time                | Source            | Destination       | Protocol  | Length    | Info          
+1           | 02:02:47.146635     | 192.168.0.1       | 255.255.255.255   | Demo      | 173       | 59121 → 7437  Len=173 
 
  0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF  |  Demo Protocol
  FF FF F2 F8 22 FD DD 04   FC E6 8A A6 80 00 00 00  |  └─ Unsigned integers:
