@@ -1328,7 +1328,7 @@ function wirebait.packet.new (packet_buffer)
       other_data = nil -- exist if pkt is not ip
     }
   }
-  assert(buffer and typeof(buffer) == "buffer", "Packet cannot be constructed without a buffer!");
+  assert(packet_buffer and typeof(packet_buffer) == "buffer", "Packet cannot be constructed without a buffer!");
   --[[Ethernet layer parsing]]
   packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
   packet.ethernet.src_mac = packet_buffer(6,6):bytes();
