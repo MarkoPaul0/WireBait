@@ -14,18 +14,27 @@ The goal here is to provide a tool reducing development time when creating a new
 
 ## Content
 [What does it do?](#what_does_it_do)
+
 [Requirements](#requirements)
+
 [Quick start](#quick_start)
+
 [Examples](#examples)
-[State of the project](#state_of_the_project)
-[What's next and how to contribute](#whats_next_and_contribution)
+
+[State of the project](#status)
+
+[What's next and how to contribute?](#whats_next)
+
 [Licensing](#licensing)
 
+
 <a name="requirements"/>
+
 ## What does it do?
 It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and attempts to reproduce its behavior. As a result, your script becomes "self sufficient" and you can execute it directly and without Wireshark. If you provide it with some data, it will print a text version of the dissection tree along with the payload in hexadecimal format. **Now you can make changes to your dissector and see the effects immediately without leaving your Lua IDE!**
 
 <a name="what_does_it_do"/>
+
 ## Requirements
   * You have a Lua interpreter 5.3
   * You have a dissector and data to test it (hex string or pcap file)
@@ -34,6 +43,7 @@ It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_ht
 Note that WireBait does not interact at all with Wireshark.
 
 <a name="quick_start"/>
+
 ## Quick start
 Getting started takes less than a minute:
   1. Add **wirebait.lua** somewhere in your Lua path
@@ -51,6 +61,7 @@ Getting started takes less than a minute:
   4. Execute your dissector script. Enjoy :smiley:
   
  <a name="examples"/>
+ 
  ## Example 1 Dissecting data from a hexadecimal string
   If you run the example dissector script **[demo_dissector.lua](example/demo_dissector.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
   ```
@@ -98,7 +109,8 @@ No.         | Time                | Source            | Destination       | Prot
  .......<trimmed output, same as example 1>
  ```
 
-<a name="state_of_the_project"/>
+<a name="status"/>
+
 ## State of the project
 A few notes about the current state of the project:
   * Only compatible with Lua 5.3
@@ -108,13 +120,15 @@ A few notes about the current state of the project:
   
 For more information you can check what I'm up to in the [Project section](https://github.com/MarkoPaul0/WireBait/projects/1).
   
-<a name="whats_next_and_contribution"/>
+<a name="whats_next"/>
+
 ## What's next and how to contribute?
 Right now I would like to collect feedback from Wireshark users. People who already have Lua dissectors can really help by running their dissectors using Wirebait. I would really appreciate any form of feedback about this tool.
 
 I think - *without having collected feedback yet* - the next logical step is to **expand Wirebait to enable users to unit test their dissectors**. The clear cut specifications of protocol definitions are in my opinion a school book example of when unit test driven development makes sense. With unit tests, any protocol or dissector update can be tackled quicly while reducing the risk of introducing new bugs.
 
 <a name="licensing"/>
+
 ## Licensing 
 WireBait for Wireshark is a lua package to help create Wireshark Dissectors
 Copyright (C) 2015-2017 Markus Leballeux
