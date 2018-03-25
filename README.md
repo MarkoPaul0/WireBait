@@ -38,7 +38,7 @@ Getting started takes less than a minute:
   3. Edit the code snippet to have your dissector read the *hexadecimal data* **and/or** *pcap file* of your choice
   4. Execute your dissector script. Enjoy :smiley:
   
- ## Example 1 Dissecting Data from a Hexadecimal String
+ ## Example 1 Dissecting data from a hexadecimal string
   If you run the example dissector script **[demo_dissector.lua](example/demo_dissector.lua)**, which dissects the data provided as an hexadecimal string, you should get the following output:
   ```
 ------------------------------------------------------------------------------------------------------------------------------[[
@@ -73,7 +73,7 @@ Dissecting hexadecimal data (no pcap provided)
 
 **Something to note is that the hex string only contains the IP payload**, i.e. only the data to be dissected. No need to worry about adding ethernet, IP, TCP/UDP, headers.
 
- ## Example 2 Dissecting Data from a *.pcap* File
+ ## Example 2 Dissecting data from a *.pcap* file
   If you run the example dissector script **[demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
  ```
 ------------------------------------------------------------------------------------------------------------------------------[[
@@ -94,8 +94,13 @@ A few notes about the current state of the project:
   
 For more information you can check what I'm up to in the [Project section](https://github.com/MarkoPaul0/WireBait/projects/1).
   
+## What's next & how to contribute?
+Right now I would like to collect feedback from Wireshark users. People who already have Lua dissectors can really help by running their dissectors using Wirebait. I would really appreciate any form of feedback about this tool.
 
-# Licensing 
+For me - *without having collected feedback yet* - the next logical step is to **expand Wirebait to enable users to unit test their dissectors**. I think this is a big deal. The clear cut specifications of protocol definitions are in my opinion a school book example of when unit test driven development makes sense. With unit tests, any protocol or dissector update can be tackled quicly while reducing the risk of introducing new bugs.
+
+
+## Licensing 
 WireBait for Wireshark is a lua package to help create Wireshark Dissectors
 Copyright (C) 2015-2017 Markus Leballeux
 
