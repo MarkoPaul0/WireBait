@@ -13,19 +13,13 @@ Lua library to facilitate the development of [Wireshark](https://www.wireshark.o
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
 ## Content
-[What does it do?](#what_does_it_do)
-
-[Requirements](#requirements)
-
-[Quick start](#quick_start)
-
-[Examples](#examples)
-
-[State of the project](#status)
-
-[What's next and how to contribute?](#whats_next)
-
-[Licensing](#licensing)
+[What does it do?](#what_does_it_do)<br/>
+[Requirements](#requirements)<br/>
+[Quick start](#quick_start)<br/>
+[Examples](#examples)<br/>
+[State of the project](#status)<br/>
+[What's next and how to contribute?](#whats_next)<br/>
+[Licensing](#licensing)<br/>
 
 
 <a name="requirements"/>
