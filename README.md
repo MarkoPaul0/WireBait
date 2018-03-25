@@ -22,12 +22,12 @@ The goal here is to provide a tool reducing development time when creating a new
 [Licensing](#licensing)<br/>
 
 
-<a name="requirements"/>
+<a name="what_does_it_do"/>
 
 ## What does it do?
 It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html) ([or here](https://wiki.wireshark.org/LuaAPI)) and attempts to reproduce its behavior. As a result, your script becomes "self sufficient" and you can execute it directly and without Wireshark. If you provide it with some data, it will print a text version of the dissection tree along with the payload in hexadecimal format. **Now you can make changes to your dissector and see the effects immediately without leaving your Lua IDE!**
 
-<a name="what_does_it_do"/>
+<a name="requirements"/>
 
 ## Requirements
   * You have a Lua interpreter 5.3
