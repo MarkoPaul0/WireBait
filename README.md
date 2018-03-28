@@ -89,7 +89,7 @@ Dissecting hexadecimal data (no pcap provided)
 
 ![](example/screenshots/demo_in_wireshark.png)
 
-**Something to note is that the hex string only contains the UDP (or TCP) payload**, i.e. only the data to be dissected. No need to worry about adding ethernet, IP, TCP/UDP, headers.
+**Something to note is that the hex string only contains the UDP (or TCP) payload**, i.e. only the data to be dissected. No need to worry about making up ethernet, IP, or TCP/UDP headers.
 
  ## Example 2 Dissecting data from a *.pcap* file
   If you run the example dissector script **[demo_dissector2.lua](example/demo_dissector2.lua)**, which dissects the same data as in the first example but provided by the **[demo.pcap](example/captures/demo.pcap)** file, you should get the same dissection output. One difference is that you will also get packet information that is provided by ethernet, IP, and TCP/UDP headers:
