@@ -225,6 +225,7 @@ function wirebait.UInt64.new(num, high_num)
       low_word = num_or_uint.m_low_word;
       high_word = num_or_uint.m_high_word;
     else
+      assert(math.floor(num_or_uint) == num_or_uint, "UInt64 cannot deal with numbers without integer precision!");
       low_word = num_or_uint & WORD_MASK;
       high_word = (num_or_uint >> 32) & WORD_MASK;
     end
@@ -432,26 +433,27 @@ function wirebait.Int64.new(num, high_num)
     return tostring(wirebait.UInt64.new(int_64.m_low_word, int_64.m_high_word));
   end
   
-  local function getWords(num_or_uint) --PRIVATE METHOD
-    assert(num_or_uint and type(num_or_uint) == number or typeof(num_or_uint) == "Int64", "Argument #1 must be a number or Int64!");
+  local function getWords(num_or_int) --PRIVATE METHOD
+    assert(num_or_int and type(num_or_int) == number or typeof(num_or_int) == "Int64", "Argument #1 must be a number or Int64!");
     local low_word = 0;
     local high_word = 0;
     local is_negative_number = false;
-    if typeof(num_or_uint) == "Int64" then
-      low_word = num_or_uint.m_low_word;
-      high_word = num_or_uint.m_high_word;
+    if typeof(num_or_int) == "Int64" then
+      low_word = num_or_int.m_low_word;
+      high_word = num_or_int.m_high_word;
       is_negative_number = high_word & SIGN_MASK > 0;
     else
-      is_negative_number = num_or_uint < 0;
-      low_word = num_or_uint & WORD_MASK;
-      high_word = (num_or_uint >> 32) & WORD_MASK;
+      assert(math.floor(num_or_int) == num_or_int, "Int64 cannot deal with numbers without integer precision!");
+      is_negative_number = num_or_int < 0;
+      low_word = num_or_int & WORD_MASK;
+      high_word = (num_or_int >> 32) & WORD_MASK;
     end
     return low_word, high_word, is_negative_number;
   end
     
-  function int_64.__lt(uint_or_num1, uint_or_num2)
-    local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = getWords(uint_or_num2);
+  function int_64.__lt(int_or_num1, int_or_num2)
+    local low_word1, high_word1, neg1 = getWords(int_or_num1);
+    local low_word2, high_word2, neg2 = getWords(int_or_num2);
     if neg1 ~= neg2 then
       return neg1 and true or false;
     end
@@ -462,19 +464,19 @@ function wirebait.Int64.new(num, high_num)
     end
   end
   
-  function int_64.__eq(uint_or_num1, uint_or_num2)
-    local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = getWords(uint_or_num2);
+  function int_64.__eq(int_or_num1, int_or_num2)
+    local low_word1, high_word1, neg1 = getWords(int_or_num1);
+    local low_word2, high_word2, neg2 = getWords(int_or_num2);
     return neg1 == neg2 and low_word1 == low_word2 and high_word1 == high_word2;
   end
   
-  function int_64.__le(uint_or_num1, uint_or_num2)
-    return uint_or_num1 < uint_or_num2 or uint_or_num1 == uint_or_num2;
+  function int_64.__le(int_or_num1, int_or_num2)
+    return int_or_num1 < int_or_num2 or int_or_num1 == int_or_num2;
   end
   
-  function int_64.__add(uint_or_num1, uint_or_num2)
-    local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = getWords(uint_or_num2);
+  function int_64.__add(int_or_num1, int_or_num2)
+    local low_word1, high_word1, neg1 = getWords(int_or_num1);
+    local low_word2, high_word2, neg2 = getWords(int_or_num2);
     
     local function local_add(word1, word2, init_carry)
       word1 = word1 & WORD_MASK;
@@ -495,15 +497,15 @@ function wirebait.Int64.new(num, high_num)
     return wirebait.Int64.new(new_low_word, new_high_word);
   end
   
-  function int_64.__sub(uint_or_num1, uint_or_num2)
-    local low_word1, high_word1, neg1 = getWords(uint_or_num1);
-    local low_word2, high_word2, neg2 = twosComplement(getWords(uint_or_num2)); --taking advantage of the fact that A-B = A+(-B) and (-B) = twosComplement of B
+  function int_64.__sub(int_or_num1, int_or_num2)
+    local low_word1, high_word1, neg1 = getWords(int_or_num1);
+    local low_word2, high_word2, neg2 = twosComplement(getWords(int_or_num2)); --taking advantage of the fact that A-B = A+(-B) and (-B) = twosComplement of B
     return wirebait.Int64.new(low_word1, high_word1) + wirebait.Int64.new(low_word2, high_word2)
   end
 
-  function int_64.__band(uint_or_num1, uint_or_num2) --[[bitwise AND operator (&)]]
-    local low_word1, high_word1 = getWords(uint_or_num1);
-    local low_word2, high_word2 = getWords(uint_or_num2);
+  function int_64.__band(int_or_num1, int_or_num2) --[[bitwise AND operator (&)]]
+    local low_word1, high_word1 = getWords(int_or_num1);
+    local low_word2, high_word2 = getWords(int_or_num2);
     return wirebait.Int64.new(low_word1 & low_word2, high_word1 & high_word2)
   end
   
@@ -511,15 +513,15 @@ function wirebait.Int64.new(num, high_num)
     return wirebait.Int64.new(~self.m_low_word & WORD_MASK, ~self.m_high_word & WORD_MASK)
   end
   
-  function int_64.__bor(uint_or_num1, uint_or_num2) --[[bitwise OR operator (|)]]
-    local low_word1, high_word1 = getWords(uint_or_num1);
-    local low_word2, high_word2 = getWords(uint_or_num2);
+  function int_64.__bor(int_or_num1, int_or_num2) --[[bitwise OR operator (|)]]
+    local low_word1, high_word1 = getWords(int_or_num1);
+    local low_word2, high_word2 = getWords(int_or_num2);
     return wirebait.Int64.new(low_word1 | low_word2, high_word1 | high_word2)
   end
   
-  function int_64.__bxor(uint_or_num1, uint_or_num2) --[[bitwise XOR operator (binary ~)]]
-    local low_word1, high_word1 = getWords(uint_or_num1);
-    local low_word2, high_word2 = getWords(uint_or_num2);
+  function int_64.__bxor(int_or_num1, int_or_num2) --[[bitwise XOR operator (binary ~)]]
+    local low_word1, high_word1 = getWords(int_or_num1);
+    local low_word2, high_word2 = getWords(int_or_num2);
     return wirebait.Int64.new(low_word1 ~ low_word2, high_word1 ~ high_word2)
   end
   
