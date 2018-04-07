@@ -76,52 +76,38 @@ end
 local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
 local WORD_MASK = UINT32_MAX; 
 local function bwAnd(int1, int2) --TODO: enforce uint32 params!
-  if lua_version_int < 53 then
-    return bit32.band(int1, int2);
-  else
-    return int1.__band(int2);
-  end
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
+  assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
+  return bit32.band(int1, int2);
 end
 
 local function bwLshift(int1, int2)
-  if lua_version_int < 53 then
-    return int1 * math.pow(2,int2);
-    --return bit32.lshift(int1, int2);
-  else
-    return int1:__shl(int2);
-  end
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
+  assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
+  return int1 * math.pow(2,int2);
 end
 
 local function bwRshift(int1, int2)
-  if lua_version_int < 53 then
-    return bit32.rshift(int1, int2);
-  else
-    return int1.__shr(int2);
-  end
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
+  assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
+  return bit32.rshift(int1, int2);
 end
 
 local function bwOr(int1, int2)
-  if lua_version_int < 53 then
-    return bit32.bor(int1, int2);
-  else
-    return int1.__bor(int2);
-  end
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
+  assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
+  return bit32.bor(int1, int2);
 end
 
 local function bwXor(int1, int2)
-  if lua_version_int < 53 then
-    return bit32.bxor(int1, int2);
-  else
-    return int1.__bxor(int2);
-  end
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
+  assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
+  return bit32.bxor(int1, int2);
 end
 
-local function bwNot(int1, int2)
-  if lua_version_int < 53 then
-    return bit32.bnot(int1, int2);
-  else
-    return int1.__bnot(int2);
-  end
+local function bwNot(int1)
+  assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting unsigned");
+  return bit32.bnot(int1);
 end
 
 
