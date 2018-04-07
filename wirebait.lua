@@ -73,7 +73,9 @@ if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then
 end
 
 --[[Bitwise operations]]
-local function bwAnd(int1, int2)
+local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
+local WORD_MASK = UINT32_MAX; 
+local function bwAnd(int1, int2) --TODO: enforce uint32 params!
   if lua_version_int < 53 then
     return bit32.band(int1, int2);
   else
@@ -86,7 +88,7 @@ local function bwLshift(int1, int2)
     return int1 * math.pow(2,int2);
     --return bit32.lshift(int1, int2);
   else
-    return int1.__shl(int2);
+    return int1:__shl(int2);
   end
 end
 
@@ -168,8 +170,6 @@ local function typeof(obj)
 end
 
 --[[Two's complement of a 64 bit value represented by two 4-byte values]]
-local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
-local WORD_MASK = UINT32_MAX; 
 local function twosComplement(low_word, high_word)
   local new_low_word = bwAnd(bwNot(low_word), WORD_MASK) + 1;
   local new_high_word = bwAnd(bwNot(high_word), WORD_MASK);
@@ -373,7 +373,8 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64:__shr(shift) --[[bitwise right shift (>>)]]
     assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
-      local new_low_word = bwRshift(self.m_low_word, shift) + bwAnd(bwLshift(self.m_high_word, (32-shift)), WORD_MASK);
+      --local new_low_word = bwRshift(self.m_low_word, shift) + bwAnd(bwLshift(self.m_high_word, (32-shift)), WORD_MASK);
+      local new_low_word = bwRshift(self.m_low_word, shift) + bwLshift(bwAnd(self.m_high_word, tonumber("0" .. string.rep("1", shift), 2)), 32-shift); --TODO: super hacky, fix this!
       return wirebait.UInt64.new(new_low_word, bwRshift(self.m_high_word, shift));
     elseif shift < 64 then
       return wirebait.UInt64.new(bwAnd(bwLshift(self.m_high_word, (shift-32)), WORD_MASK), 0);
@@ -1253,7 +1254,9 @@ function wirebait.buffer.new(data_as_hex_string)
     if length <= 32 then
       local uint_val = self(byte_offset, byte_size):uint64();
       local bit_mask = tonumber(string.rep("1", length),2);
-      return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);
+      --return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);      
+      return (uint_val:rshift(right_bits_count)):band(bit_mask);
+
     else
       local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
       local bytes_as_uint64 = wirebait.UInt64.fromHex(self(byte_offset, byte_size):bytes());
