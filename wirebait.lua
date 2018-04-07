@@ -49,11 +49,13 @@ function wirebait:clear()
   self.state.proto = nil;
 end
 
-if _VERSION ~= "Lua 5.3" then
-  error("WireBait has only been developed with Lua 5.3. Try it with another version at your own risk OR feel free to create a ticket @ https://github.com/MarkoPaul0/WireBait")
+local lua_version_int = tonumber(string.match(_VERSION, "%d.%d+"))*10; --For lua 5.1, lua_version_int=51
+if lua_version_int < 52 then
+  error("Wirebait requires Lua version 5.2 or higher!");
 end
 
 --[[----------LOCAL HELPER METHODS (only used within the library)---------------------------------------------------------------------------------------------------------]]
+--Fetching lua version
 --[[For forward compatibility past lua 5.1. Indeed starting from lua 5.2, setfenv() is no longer available]]
 if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then 
   function setfenv(fn, env)
@@ -70,6 +72,56 @@ if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then
   end
 end
 
+--[[Bitwise operations]]
+local function bwAnd(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.band(int1, int2);
+  else
+    return int1.__band(int2);
+  end
+end
+
+local function bwLshift(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.lshift(int1, int2);
+  else
+    return int1.__shl(int2);
+  end
+end
+
+local function bwRshift(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.rshift(int1, int2);
+  else
+    return int1.__shr(int2);
+  end
+end
+
+local function bwOr(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.bor(int1, int2);
+  else
+    return int1.__bor(int2);
+  end
+end
+
+local function bwXor(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.bxor(int1, int2);
+  else
+    return int1.__bxor(int2);
+  end
+end
+
+local function bwNot(int1, int2)
+  if lua_version_int < 53 then
+    return bit32.bnot(int1, int2);
+  else
+    return int1.__bnot(int2);
+  end
+end
+
+
 --[[Reads byte_count bytes from file into a string in hexadecimal format ]]
 local function readFileAsHex(file, byte_count)
   local data = file:read(byte_count) --reads the binary data into a string. When printed this is gibberish
@@ -80,7 +132,7 @@ end
 
 --[[Prints an ip in octet format givent its little endian int32 representation]]
 local function printIP(le_int_ip)
-  local ip_str = ((le_int_ip & 0xFF000000) >> 24) .. "." .. ((le_int_ip & 0x00FF0000) >> 16) .. "." .. ((le_int_ip & 0x0000FF00) >> 8) .. "." .. (le_int_ip & 0x000000FF);
+  local ip_str = (bwAnd(le_int_ip, 0xFF000000) >> 24) .. "." .. (bwAnd(le_int_ip, 0x00FF0000) >> 16) .. "." .. (bwAnd(le_int_ip, 0x0000FF00) >> 8) .. "." .. bwAnd(le_int_ip, 0x000000FF);
   return ip_str;
 end
 
@@ -118,11 +170,11 @@ end
 local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
 local WORD_MASK = UINT32_MAX; 
 local function twosComplement(low_word, high_word)
-  local new_low_word = ((~low_word) & WORD_MASK) + 1;
-  local new_high_word = (~high_word) & WORD_MASK;
+  local new_low_word = bwAnd((~low_word), WORD_MASK) + 1;
+  local new_high_word = bwAnd((~high_word), WORD_MASK);
   if new_low_word > WORD_MASK then --there's a carry from low to high word
     new_low_word = 0;
-    new_high_word = (new_high_word + 1) & WORD_MASK;
+    new_high_word = bwAnd((new_high_word + 1), WORD_MASK);
   end
   return new_low_word, new_high_word;
 end
@@ -196,13 +248,13 @@ function wirebait.UInt64.new(num, high_num)
 
   local function decimalStrFromWords(low_word, high_word)  --PRIVATE METHOD
     if high_word < 0x200000 then --the uint64 value is less than 2^53
-      return tostring(math.floor((high_word << 32) + low_word));
+      return tostring(math.floor(bwLshift(high_word, 32) + low_word));
     else --above or equal to 2^53, values lose integer precision 
-      local high_word_low = high_word & 0x1FFFFF;
-      local value_str = tostring(math.floor((high_word_low << 32) + low_word)); --we get the value up until the 53rd bits in a "classic way"
+      local high_word_low = bwAnd(high_word, 0x1FFFFF);
+      local value_str = tostring(math.floor(bwLshift(high_word_low, 32) + low_word)); --we get the value up until the 53rd bits in a "classic way"
       for i=1,11 do --[[For the remaining 11 bits we have to use some trickery to not loose int precision]]
-        local bit = 1 << (32 - i);
-        if high_word & bit > 0 then
+        local bit = bwLshift(1, (32 - i));
+        if bwAnd(high_word, bit) > 0 then
           value_str = decimalStrAddition(value_str, POW_OF_2_STRS[64-i]);
         end
       end
@@ -226,8 +278,8 @@ function wirebait.UInt64.new(num, high_num)
       high_word = num_or_uint.m_high_word;
     else
       assert(math.floor(num_or_uint) == num_or_uint, "UInt64 cannot deal with numbers without integer precision!");
-      low_word = num_or_uint & WORD_MASK;
-      high_word = (num_or_uint >> 32) & WORD_MASK;
+      low_word = bwAnd(num_or_uint, WORD_MASK);
+      high_word = bwAnd((num_or_uint >> 32), WORD_MASK);
     end
     return low_word, high_word;
   end
@@ -259,14 +311,14 @@ function wirebait.UInt64.new(num, high_num)
     local low_word2, high_word2 = getWords(uint_or_num2);
     
     local function local_add(word1, word2, init_carry)
-      word1 = word1 & WORD_MASK;
-      word2 = word2 & WORD_MASK;
+      word1 = bwAnd(word1, WORD_MASK);
+      word2 = bwAnd(word2, WORD_MASK);
       local result = 0;
       local c = init_carry or 0;
       for i = 0,31 do
-        local bw1 = (word1 >> i) & 1;
-        local bw2 = (word2 >> i) & 1;
-        result = result | ((bw1 ~ bw2 ~ c) << i);
+        local bw1 = bwAnd((word1 >> i), 1);
+        local bw2 = bwAnd((word2 >> i), 1);
+        result = result | bwLshift((bw1 ~ bw2 ~ c), i);
         c = (bw1 + bw2 + c) > 1 and 1 or 0;
       end
       return result, c;
@@ -286,11 +338,11 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64.__band(num_or_uint1, num_or_uint2) --[[bitwise AND operator (&)]]
     local low_word1, high_word1 = getWords(num_or_uint1);
     local low_word2, high_word2 = getWords(num_or_uint2);
-    return wirebait.UInt64.new(low_word1 & low_word2, high_word1 & high_word2)
+    return wirebait.UInt64.new(bwAnd(low_word1, low_word2), bwAnd(high_word1, high_word2))
   end
   
   function uint_64:__bnot() --[[bitwise NOT operator (unary ~)]]
-    return wirebait.UInt64.new(~self.m_low_word & WORD_MASK, ~self.m_high_word & WORD_MASK)
+    return wirebait.UInt64.new(bwAnd(~self.m_low_word, WORD_MASK), bwAnd(~self.m_high_word, WORD_MASK))
   end
   
   function uint_64.__bor(uint_or_num1, uint_or_num2) --[[bitwise OR operator (|)]]
@@ -308,10 +360,10 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64:__shl(shift) --[[bitwise left shift (<<)]]
     assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
-      local new_high_word = (self.m_low_word >> (32-shift)) + ((self.m_high_word << shift) & WORD_MASK);
-      return wirebait.UInt64.new((self.m_low_word << shift) & WORD_MASK, new_high_word);
+      local new_high_word = (self.m_low_word >> (32-shift)) + bwAnd(bwLshift(self.m_high_word, shift), WORD_MASK);
+      return wirebait.UInt64.new(bwAnd(bwLshift(self.m_low_word, shift), WORD_MASK), new_high_word);
     elseif shift < 64 then
-      return wirebait.UInt64.new(0, (self.m_low_word << (shift-32)) & WORD_MASK);
+      return wirebait.UInt64.new(0, bwAnd(bwLshift(self.m_low_word, (shift-32)), WORD_MASK));
     else
       return wirebait.UInt64.new(0, 0);
     end
@@ -320,17 +372,17 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64:__shr(shift) --[[bitwise right shift (>>)]]
     assert(type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
-      local new_low_word = (self.m_low_word >> shift) + ((self.m_high_word << (32-shift)) & WORD_MASK);
+      local new_low_word = (self.m_low_word >> shift) + bwAnd(bwLshift(self.m_high_word, (32-shift)), WORD_MASK);
       return wirebait.UInt64.new(new_low_word, self.m_high_word >> shift);
     elseif shift < 64 then
-      return wirebait.UInt64.new((self.m_high_word << (shift-32)) & WORD_MASK, 0);
+      return wirebait.UInt64.new(bwAnd(bwLshift(self.m_high_word, (shift-32)), WORD_MASK), 0);
     else
       return wirebait.UInt64.new(0, 0);
     end
   end
 
   function uint_64:lshift(shift) --[[left shift operation]]
-    return self << shift;
+    return bwLshift(self, shift);
   end
   
   function uint_64:rshift(shift) --[[right shift operation]]
@@ -340,7 +392,7 @@ function wirebait.UInt64.new(num, high_num)
   function uint_64:band(...) --[[logical AND]]
     local result = self;
     for _,val in ipairs({...}) do
-        result = result & val;
+        result = bwAnd(result, val);
       end
     return result;
   end
@@ -427,7 +479,7 @@ function wirebait.Int64.new(num, high_num)
   local SIGN_MASK = 0x80000000;
   
   function int_64:__tostring()
-    if int_64.m_high_word & SIGN_MASK > 0 then
+    if bwAnd(int_64.m_high_word, SIGN_MASK) > 0 then
       return "-" .. tostring(wirebait.UInt64.new(twosComplement(int_64.m_low_word, int_64.m_high_word)))
     end
     return tostring(wirebait.UInt64.new(int_64.m_low_word, int_64.m_high_word));
@@ -441,12 +493,12 @@ function wirebait.Int64.new(num, high_num)
     if typeof(num_or_int) == "Int64" then
       low_word = num_or_int.m_low_word;
       high_word = num_or_int.m_high_word;
-      is_negative_number = high_word & SIGN_MASK > 0;
+      is_negative_number = bwAnd(high_word, SIGN_MASK) > 0;
     else
       assert(math.floor(num_or_int) == num_or_int, "Int64 cannot deal with numbers without integer precision!");
       is_negative_number = num_or_int < 0;
-      low_word = num_or_int & WORD_MASK;
-      high_word = (num_or_int >> 32) & WORD_MASK;
+      low_word = bwAnd(num_or_int, WORD_MASK);
+      high_word = bwAnd((num_or_int >> 32), WORD_MASK);
     end
     return low_word, high_word, is_negative_number;
   end
@@ -479,14 +531,14 @@ function wirebait.Int64.new(num, high_num)
     local low_word2, high_word2, neg2 = getWords(int_or_num2);
     
     local function local_add(word1, word2, init_carry)
-      word1 = word1 & WORD_MASK;
-      word2 = word2 & WORD_MASK;
+      word1 = bwAnd(word1, WORD_MASK);
+      word2 = bwAnd(word2, WORD_MASK);
       local result = 0;
       local c = init_carry or 0;
       for i = 0,31 do
-        local bw1 = (word1 >> i) & 1;
-        local bw2 = (word2 >> i) & 1;
-        result = result | ((bw1 ~ bw2 ~ c) << i);
+        local bw1 = bwAnd((word1 >> i), 1);
+        local bw2 = bwAnd((word2 >> i), 1);
+        result = result | bwLshift((bw1 ~ bw2 ~ c), i);
         c = (bw1 + bw2 + c) > 1 and 1 or 0;
       end
       return result, c;
@@ -506,11 +558,11 @@ function wirebait.Int64.new(num, high_num)
   function int_64.__band(int_or_num1, int_or_num2) --[[bitwise AND operator (&)]]
     local low_word1, high_word1 = getWords(int_or_num1);
     local low_word2, high_word2 = getWords(int_or_num2);
-    return wirebait.Int64.new(low_word1 & low_word2, high_word1 & high_word2)
+    return wirebait.Int64.new(bwAnd(low_word1, low_word2), bwAnd(high_word1, high_word2))
   end
   
   function int_64:__bnot() --[[bitwise NOT operator (unary ~)]]
-    return wirebait.Int64.new(~self.m_low_word & WORD_MASK, ~self.m_high_word & WORD_MASK)
+    return wirebait.Int64.new(bwAnd(~self.m_low_word, WORD_MASK), bwAnd(~self.m_high_word, WORD_MASK))
   end
   
   function int_64.__bor(int_or_num1, int_or_num2) --[[bitwise OR operator (|)]]
@@ -528,10 +580,10 @@ function wirebait.Int64.new(num, high_num)
   function int_64:__shl(shift) --[[bitwise left shift (<<)]]
     assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
-      local new_high_word = (self.m_low_word >> (32-shift)) + ((self.m_high_word << shift) & WORD_MASK);
-      return wirebait.UInt64.new((self.m_low_word << shift) & WORD_MASK, new_high_word);
+      local new_high_word = (self.m_low_word >> (32-shift)) + bwAnd(bwLshift(self.m_high_word, shift), WORD_MASK);
+      return wirebait.UInt64.new(bwAnd(bwLshift(self.m_low_word, shift), WORD_MASK), new_high_word);
     elseif shift < 64 then
-      return wirebait.UInt64.new(0, (self.m_low_word << (shift-32)) & WORD_MASK);
+      return wirebait.UInt64.new(0, bwAnd(bwLshift(self.m_low_word, (shift-32)), WORD_MASK));
     else
       return wirebait.UInt64.new(0, 0);
     end
@@ -540,17 +592,17 @@ function wirebait.Int64.new(num, high_num)
   function int_64:__shr(shift) --[[bitwise right shift (>>)]]
     assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
     if shift < 32 then
-      local new_low_word = (self.m_low_word >> shift) + ((self.m_high_word << (32-shift)) & WORD_MASK);
+      local new_low_word = (self.m_low_word >> shift) + bwAnd(bwLshift(self.m_high_word, (32-shift)), WORD_MASK);
       return wirebait.UInt64.new(new_low_word, self.m_high_word >> shift);
     elseif shift < 64 then
-      return wirebait.Int64.new((self.m_high_word << (shift-32)) & WORD_MASK, 0);
+      return wirebait.Int64.new(bwAnd(bwLshift(self.m_high_word, (shift-32)), WORD_MASK), 0);
     else
       return wirebait.Int64.new(0, 0);
     end
   end
 
   function int_64:lshift(shift) --[[left shift operation]]
-    return self << shift;
+    return bwLshift(self, shift);
   end
   
   function int_64:rshift(shift) --[[right shift operation]]
@@ -560,7 +612,7 @@ function wirebait.Int64.new(num, high_num)
   function int_64:band(...) --[[logical AND]]
     local result = self;
     for _,val in ipairs({...}) do
-        result = result & val;
+        result = bwAnd(result, val);
       end
     return result;
   end
@@ -676,11 +728,11 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
       FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
-      FT_UINT8    = function (buf) return buf:uint() & (mask or 0xFF) end,
-      FT_UINT16   = function (buf) return buf:uint() & (mask or 0xFFFF) end,
-      FT_UINT24   = function (buf) return buf:uint() & (mask or 0xFFFFFF) end,
-      FT_UINT32   = function (buf) return buf:uint() & (mask or 0xFFFFFFFF) end,
-      FT_UINT64   = function (buf) return buf:uint64() & (mask or wirebait.UInt64.max()) end,
+      FT_UINT8    = function (buf) return bwAnd(buf:uint(), (mask or 0xFF)) end,
+      FT_UINT16   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFF)) end,
+      FT_UINT24   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFFFF)) end,
+      FT_UINT32   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFFFFFF)) end,
+      FT_UINT64   = function (buf) return bwAnd(buf:uint64(), (mask or wirebait.UInt64.max())) end,
       FT_INT8     = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
       FT_INT16    = function (buf) return buf:int(mask) end,
       FT_INT24    = function (buf) return buf:int(mask) end,
@@ -712,16 +764,16 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     local current_bit = 1;
     local displayed_masked_value = "";
     while current_bit <= self.m_mask do
-      if self.m_mask & current_bit == 0 then
+      if bwAnd(self.m_mask, current_bit) == 0 then
         displayed_masked_value = displayed_masked_value .. ".";
       else 
-        if value & current_bit > 0 then
+        if bwAnd(value, current_bit) > 0 then
           displayed_masked_value = displayed_masked_value .. "1";
         else
           displayed_masked_value = displayed_masked_value .. "0";
         end
       end
-      current_bit = current_bit << 1;
+      current_bit = bwLshift(current_bit, 1);
     end
     displayed_masked_value = string.format("%".. buffer:len()*8 .."s", displayed_masked_value):gsub(" ",".");
     str_value = displayed_masked_value .. " = ";
@@ -1022,12 +1074,12 @@ function wirebait.buffer.new(data_as_hex_string)
     local uint = self:uint();
     if mask then
       assert(type(mask) == "number" and mask == math.floor(mask) and mask <= UINT32_MAX, "When provided, the mask should be a 32 bit unsigned integer!");
-      uint = uint & mask;
+      uint = bwAnd(uint, mask);
     end
     local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
-    if uint & sign_mask > 0 then --we're dealing with a negative number
+    if bwAnd(uint, sign_mask) > 0 then --we're dealing with a negative number
       local val_mask=tonumber("7F" .. string.rep("FF", size-1), 16);
-      local val = -((~uint & val_mask) + 1);
+      local val = -(bwAnd(~uint, val_mask) + 1);
       return val;
     else --we are dealing with a positive number
       return uint;
@@ -1042,7 +1094,7 @@ function wirebait.buffer.new(data_as_hex_string)
 
   function buffer:int64(mask)
     if mask then
-      return wirebait.Int64.fromHex(self:bytes()) & mask
+      return wirebait.Int64.fromHex(self:bytes()):band(mask)
     end
     return wirebait.Int64.fromHex(self:bytes());
   end
@@ -1068,16 +1120,16 @@ function wirebait.buffer.new(data_as_hex_string)
       end
       local bit_len = 23;
       local exponent_mask = 0x7F800000;
-      local exp = (uint & exponent_mask) >> bit_len;
+      local exp = bwAnd(uint, exponent_mask) >> bit_len;
       local fraction= 1;
       for i=1,bit_len do
-        local bit_mask = 1 << (bit_len-i); --looking at one bit at a time
-        if bit_mask & uint > 0 then
+        local bit_mask = bwLshift(1, (bit_len-i)); --looking at one bit at a time
+        if bwAnd(bit_mask, uint) > 0 then
           fraction = fraction + math.pow(2,-i)
         end
       end
       local absolute_value = fraction * math.pow(2, exp -127);
-      local sign = uint & 0x80000000 > 0 and -1 or 1;
+      local sign = bwAnd(uint, 0x80000000) > 0 and -1 or 1;
       return sign * absolute_value;
     else --64 bit float
       local word1 = self(0,4):uint(); --word1 will contain the bit sign, the exponent and part of the fraction
@@ -1094,23 +1146,23 @@ function wirebait.buffer.new(data_as_hex_string)
       end
       local exponent_mask = 0x7FF00000;
       local bit_len1 = 20;
-      local exp = (word1 & exponent_mask) >> bit_len1;
+      local exp = bwAnd(word1, exponent_mask) >> bit_len1;
       local fraction= 1;
       for i=1,bit_len1 do --[[starting to calculate fraction with word1]]
-        local bit_mask = 1 << (bit_len1-i); --looking at one bit at a time
-        if bit_mask & word1 > 0 then
+        local bit_mask = bwLshift(1, (bit_len1-i)); --looking at one bit at a time
+        if bwAnd(bit_mask, word1) > 0 then
           fraction = fraction + math.pow(2,-i)
         end
       end
       local bit_len2 = 32; --[[finishing to calculate fraction with word2]]
       for i=1,bit_len2 do
-        local bit_mask = 1 << (bit_len2-i); --looking at one bit at a time
-        if bit_mask & word2 > 0 then
+        local bit_mask = bwLshift(1, (bit_len2-i)); --looking at one bit at a time
+        if bwAnd(bit_mask, word2) > 0 then
           fraction = fraction + math.pow(2,-i-bit_len1)
         end
       end
       local absolute_value = fraction * math.pow(2, exp - 1023);
-      local sign = word1 & 0x80000000 > 0 and -1 or 1;
+      local sign = bwAnd(word1, 0x80000000) > 0 and -1 or 1;
       return sign * absolute_value;
     end
   end
@@ -1200,11 +1252,11 @@ function wirebait.buffer.new(data_as_hex_string)
     if length <= 32 then
       local uint_val = self(byte_offset, byte_size):uint64();
       local bit_mask = tonumber(string.rep("1", length),2);
-      return (uint_val >> right_bits_count) & bit_mask;
+      return bwAnd((uint_val >> right_bits_count), bit_mask);
     else
       local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
       local bytes_as_uint64 = wirebait.UInt64.fromHex(self(byte_offset, byte_size):bytes());
-      return wirebait.UInt64.new(bytes_as_uint64.m_low_word, bytes_as_uint64.m_high_word & high_bit_mask) >> right_bits_count;
+      return wirebait.UInt64.new(bytes_as_uint64.m_low_word, bwAnd(bytes_as_uint64.m_high_word, high_bit_mask)) >> right_bits_count;
     end
   end
 
@@ -1392,7 +1444,7 @@ function wirebait.packet.new (packet_buffer, pkt_timestamp)
       --[[TCP layer parsing]]
       packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
       packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
-      local tcp_hdr_len = 4 * ((packet_buffer(46,1):uint() & 0xF0) >> 4);
+      local tcp_hdr_len = 4 * (bwAnd(packet_buffer(46,1):uint(), 0xF0) >> 4);
       local tcp_payload_start_index = 34 + tcp_hdr_len;
       assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
       packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
