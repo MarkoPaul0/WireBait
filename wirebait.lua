@@ -83,7 +83,8 @@ end
 
 local function bwLshift(int1, int2)
   if lua_version_int < 53 then
-    return bit32.lshift(int1, int2);
+    return int1 * math.pow(2,int2);
+    --return bit32.lshift(int1, int2);
   else
     return int1.__shl(int2);
   end
@@ -248,10 +249,10 @@ function wirebait.UInt64.new(num, high_num)
 
   local function decimalStrFromWords(low_word, high_word)  --PRIVATE METHOD
     if high_word < 0x200000 then --the uint64 value is less than 2^53
-      return tostring(math.floor(bwLshift(high_word, 32) + low_word));
+      return tostring(("%.17g"):format(math.floor(bwLshift(high_word, 32) + low_word)));
     else --above or equal to 2^53, values lose integer precision 
       local high_word_low = bwAnd(high_word, 0x1FFFFF);
-      local value_str = tostring(math.floor(bwLshift(high_word_low, 32) + low_word)); --we get the value up until the 53rd bits in a "classic way"
+      local value_str = tostring(("%.17g"):format(math.floor(bwLshift(high_word_low, 32) + low_word))); --we get the value up until the 53rd bits in a "classic way"
       for i=1,11 do --[[For the remaining 11 bits we have to use some trickery to not loose int precision]]
         local bit = bwLshift(1, (32 - i));
         if bwAnd(high_word, bit) > 0 then
