@@ -36,7 +36,7 @@ local UINT32_MAX  = 0xFFFFFFFF;
 local SIGN_MASK   = 0X80000000;
 
 local function to2sComplement(num)
-  return num >= 0 and num or ~num + 1;
+  return num >= 0 and num or bit32.bnot(num) + 1;
 end
 
 unit_tests:addTest("Testing wirebait Int64.new(low_num)", function()
