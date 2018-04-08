@@ -30,9 +30,9 @@ It simply exposes the [Wireshark Lua API](https://www.wireshark.org/docs/wsdg_ht
 <a name="requirements"/>
 
 ## Requirements
-  * You have a Lua interpreter 5.3
-  * You have a dissector and data to test it (hex string or pcap file)
-  * You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/)) [only a requirement for step by step debugging]
+* You have a Lua interpreter 5.2 or above 
+* You have a dissector and data to test it (hex string or pcap file)
+* You have a Lua debugger (I like [ZeroBrane Studio](https://studio.zerobrane.com/)) [only a requirement for step by step debugging]
   
 Note that WireBait does not interact at all with Wireshark.
 
@@ -107,7 +107,6 @@ No.         | Time                | Source            | Destination       | Prot
 
 ## State of the project
 A few notes about the current state of the project:
-  * Only compatible with Lua 5.3
   * TCP reassembly is not supported
   * Only "*.pcap*" files are supported
   * Pcap files must be written in native byte order
