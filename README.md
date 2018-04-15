@@ -1,4 +1,4 @@
-# [WireBait](https://github.com/MarkoPaul0/WireBait)
+# WireBait
 
 ![Author](https://img.shields.io/badge/author-MarkoPaul0-red.svg?style=flat-square)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg?style=flat-square)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
