@@ -52,7 +52,7 @@ Getting started takes less than a minute:
     end
 ```
   3. Edit the code snippet to have your dissector read the *hexadecimal data* **and/or** *pcap file* of your choice
-  4. Execute your dissector script. Enjoy :smiley:
+  4. Execute your dissector script. Enjoy :smiley: **And please, feel free to give me feedback!**
   
  <a name="examples"/>
  
