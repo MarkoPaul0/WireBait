@@ -12,6 +12,22 @@
 Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from a hexadecimal string or a *.pcap* file.
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
+**The following is an example of output produced when running your dissector with WireBait as a "standalone" script.**
+  ```
+------------------------------------------------------------------------------------------------------------------------------[[
+No.         | Time                | Source            | Destination       | Protocol  | Length    | Info          
+1           | 02:02:47.146635     | 192.168.0.1       | 255.255.255.255   | Demo      | 173       | 59121 → 7437  Len=32 
+
+ 0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF  |  Demo Protocol
+ FF 00 00 00 00 00 00 00   00 00 00 00 00 00 00 00  |  └─ Unsigned integers:
+                                                    |     └─ 8-bit uint: 14
+                                                    |     └─ 16-bit uint: 2014
+                                                    |     └─ 24-bit uint: 140028
+                                                    |     └─ 32-bit uint: 52000090
+                                                    |     └─ 64-bit uint: 9223372036854775807
+]]------------------------------------------------------------------------------------------------------------------------------
+  ```
+
 ## Content
 [What does it do?](#what_does_it_do)<br/>
 [Requirements](#requirements)<br/>
