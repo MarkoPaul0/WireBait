@@ -1307,6 +1307,7 @@ local function newDissectorTable()
   end
 
   dissector_table.udp.port = newPortTable();
+  dissector_table.tcp.port = newPortTable();
 
   function dissector_table.get(path)
     local obj = dissector_table;
