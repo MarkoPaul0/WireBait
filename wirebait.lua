@@ -1323,8 +1323,9 @@ end
 
 local function newColumn(txt)
   local column = {
-      m_text = txt or "";
-      m_fence = false;
+    __type = "column";
+    m_text = txt or "";
+    m_fence = false;
   };
   
   function column:set(text)
@@ -1361,8 +1362,12 @@ local function newColumn(txt)
     return self.m_text;
   end
   
-  function column:__newindex()
-    print("HAHAH!");
+  function column.__concat(op1, op2)
+    if op1.__type == "column" then
+      return op1.m_text .. op2;
+    else
+      return op1 .. op2.m_text;
+    end
   end
   
   setmetatable(column, column);
@@ -1376,57 +1381,64 @@ end
 local function newPacketInfo(packet)
   local packet_info = {
     cols = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
-      number = nil,
-      abs_time = nil,
-      utc_time = nil,
-      cls_time = nil,
-      rel_time = nil,
-      date = nil,
-      utc_date = nil,
-      delta_time = nil,
-      delta_time_displayed = nil,
-      src = newColumn(),
-      src_res = nil,
-      src_unres = nil,
-      dl_src = nil,
-      dl_src_res = nil,
-      dl_src_unres = nil,
-      net_src = nil,
-      net_src_res = nil,
-      net_src_unres = nil,
-      dst = nil,
-      dst_res = nil,
-      dst_unres = nil,
-      dl_dst = nil,
-      dl_dst_res = nil,
-      dl_dst_unres = nil,
-      net_dst = nil,
-      net_dst_res = nil,
-      net_dst_unres = nil,
-      src_port = nil,
-      src_port_res = nil,
-      src_port_unres = nil,
-      dst_port = nil,
-      dst_port_res = nil,
-      dst_port_unres = nil,
-      protocol = newColumn(),
-      info = nil,
-      packet_len = nil,
-      cumulative_bytes = nil,
-      direction = nil,
-      vsan = nil,
-      tx_rate = nil,
-      rssi = nil,
-      dce_call = nil
+      __number = newColumn(),
+      __abs_time = newColumn(),
+      __utc_time = newColumn(),
+      __cls_time = newColumn(),
+      __rel_time = newColumn(),
+      __date = newColumn(),
+      __utc_date = newColumn(),
+      __delta_time = newColumn(),
+      __delta_time_displayed = newColumn(),
+      __src = newColumn(),
+      __src_res = newColumn(),
+      __src_unres = newColumn(),
+      __dl_src = newColumn(),
+      __dl_src_res = newColumn(),
+      __dl_src_unres = newColumn(),
+      __net_src = newColumn(),
+      __net_src_res = newColumn(),
+      __net_src_unres = newColumn(),
+      __dst = newColumn(),
+      __dst_res = newColumn(),
+      __dst_unres = newColumn(),
+      __dl_dst = newColumn(),
+      __dl_dst_res = newColumn(),
+      __dl_dst_unres = newColumn(),
+      __net_dst = newColumn(),
+      __net_dst_res = newColumn(),
+      __net_dst_unres = newColumn(),
+      __src_port = newColumn(),
+      __src_port_res = newColumn(),
+      __src_port_unres = newColumn(),
+      __dst_port = newColumn(),
+      __dst_port_res = newColumn(),
+      __dst_port_unres = newColumn(),
+      __protocol = newColumn(),
+      __info = newColumn(),
+      __packet_len = newColumn(),
+      __cumulative_bytes = newColumn(),
+      __direction = newColumn(),
+      __vsan = newColumn(),
+      __tx_rate = newColumn(),
+      __rssi = newColumn(),
+      __dce_call = newColumn()
     },
     treeitems_array = {}
   }
   
-  --packet_info.cols.__newindex = function(self, key, val) 
-  --  error("No columns " .. key .. "exists!");
-  --end
+  packet_info.cols.__index = function(self, key, val)
+    return rawget(self, "__"..key);
+  end
   
-  --setmetatable(packet_info.cols, packet_info.cols);
+  packet_info.cols.__newindex = function(self, key, val)
+    if not self["__"..key] then
+      error("Column '" .. key .. "' does not exist!");
+    end
+    self["__"..key]:set(tostring(val));
+  end
+  
+  setmetatable(packet_info.cols, packet_info.cols);
   
   
   if packet then
@@ -1434,7 +1446,7 @@ local function newPacketInfo(packet)
     packet_info.cols.dst = packet:getDstIP();
     packet_info.cols.src_port = packet:getSrcPort();
     packet_info.cols.dst_port = packet:getDstPort();
-    packet_info.cols.protocol = newColumn(packet:protocol());
+    packet_info.cols.protocol = packet:protocol();
     packet_info.cols.info = packet_info.cols.src_port .. " → " .. packet_info.cols.dst_port .. "  Len=" .. packet:len();
   end
   return packet_info;
