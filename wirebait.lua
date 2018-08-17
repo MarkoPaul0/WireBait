@@ -1319,6 +1319,59 @@ local function newDissectorTable()
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
 
+
+
+local function newColumn(txt)
+  local column = {
+      m_text = txt or "";
+      m_fence = false;
+  };
+  
+  function column:set(text)
+    if not self.m_fence then
+      self.m_text = text;
+    end
+  end
+  
+  function column:clear()
+    if not self.m_fence then
+     self.m_text = "";
+    end
+  end
+  
+  function column:append(text)
+    self.m_text = self.m_text .. text;
+  end
+  
+  function column:prepend(text)
+    if not self.m_fence then
+      self.m_text = text .. self.m_text;
+    end
+  end
+  
+  function column:fence()
+    self.m_fence = true;
+  end
+  
+  function column:clear_fence()
+    self.m_fence = false;
+  end
+  
+  function column:__tostring()
+    return self.m_text;
+  end
+  
+  function column:__newindex()
+    print("HAHAH!");
+  end
+  
+  setmetatable(column, column);
+    
+  return column;
+end
+
+
+
 --[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
 local function newPacketInfo(packet)
   local packet_info = {
@@ -1332,7 +1385,7 @@ local function newPacketInfo(packet)
       utc_date = nil,
       delta_time = nil,
       delta_time_displayed = nil,
-      src = nil,
+      src = newColumn(),
       src_res = nil,
       src_unres = nil,
       dl_src = nil,
@@ -1356,7 +1409,7 @@ local function newPacketInfo(packet)
       dst_port = nil,
       dst_port_res = nil,
       dst_port_unres = nil,
-      protocol = nil,
+      protocol = newColumn(),
       info = nil,
       packet_len = nil,
       cumulative_bytes = nil,
@@ -1368,12 +1421,20 @@ local function newPacketInfo(packet)
     },
     treeitems_array = {}
   }
+  
+  --packet_info.cols.__newindex = function(self, key, val) 
+  --  error("No columns " .. key .. "exists!");
+  --end
+  
+  --setmetatable(packet_info.cols, packet_info.cols);
+  
+  
   if packet then
     packet_info.cols.src = packet:getSrcIP();
     packet_info.cols.dst = packet:getDstIP();
     packet_info.cols.src_port = packet:getSrcPort();
     packet_info.cols.dst_port = packet:getDstPort();
-    packet_info.cols.protocol = packet:protocol();
+    packet_info.cols.protocol = newColumn(packet:protocol());
     packet_info.cols.info = packet_info.cols.src_port .. " → " .. packet_info.cols.dst_port .. "  Len=" .. packet:len();
   end
   return packet_info;
