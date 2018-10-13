@@ -28,6 +28,8 @@ local wirebait = {
   treeitem = {}, 
   buffer = {}, 
   packet = {}, 
+  FieldInfo = {},
+  Field = {},
   pcap_reader = {}, 
   plugin_tester = {},
 
@@ -41,8 +43,9 @@ local wirebait = {
     dissector_table = {
       udp = { port = nil },
       tcp = { port = nil }
-    }
-  }
+    },
+    --field_extractors = {} --used to keep track of field extractors (i.e. wirebait.Field.new())
+  }-------------------end of wirebait.state --------------
 }
 
 function wirebait:clear()
@@ -704,13 +707,15 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
   assert(not value_string or type(value_string) == "table", "The optional ProtoField valuestring must be a table!");
   local protofield = {
     _struct_type = "ProtoField";
-    m_name = name;
-    m_abbr = abbr;
+    m_name = name; --e.g. "Number of Messages"
+    m_abbr = abbr; --e.g. "proto.num_msg"
     m_type = ftype;
     m_value_string = value_string; --[[table of values and their corresponding string value ]]
     m_base = fbase; --[[determines what base is used to display an treeitem value]]
     m_mask = mask; --[[mask only works for types that are by definition <= 8 bytes]]
     m_description = desc; --[[The description is a text displayed in the Wireshark GUI when the field is selected. Irrelevant in wirebait]]
+    
+    m_last_buffer = nil; --TODO: this is not good enough as values will be persisted accross packets
   }
 
   function protofield:getValueFromBuffer(buffer)
@@ -735,7 +740,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
       FT_IPv4     = function (buf) return buf:ipv4() end,
       FT_GUID     = function (buf) return buf:__guid() end
     };
-
+    self.m_last_buffer = buffer;
     local func = extractValueFuncByType[self.m_type];
     assert(func, "Unknown protofield type '" .. self.m_type .. "'!")
     return func(buffer);
@@ -772,6 +777,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
     local value = self:getValueFromBuffer(buffer);
     local str_value = tostring(value);
     local value_string = nil;
+    self.m_last_buffer = buffer;
     if self.m_value_string and self.m_value_string[value] then
       value_string = self.m_value_string[value];
     end
@@ -1020,7 +1026,7 @@ end
 
 --[----------WIRESHARK BYTEARRAY/TVB/TVBRANGE-----------------------------------------------------------------------------------------------------------------------------]]
 --[[ Equivalent of [wireshark ByteArray](https://wiki.wireshark.org/LuaAPI/ByteArray), [wireshark Tvb](https://wiki.wireshark.org/LuaAPI/Tvb#Tvb), and [wireshark TvbRange](https://wiki.wireshark.org/LuaAPI/Tvb#TvbRange) ]]
-function wirebait.buffer.new(data_as_hex_string)
+function wirebait.buffer.new(data_as_hex_string, offset)
   assert(type(data_as_hex_string) == 'string', "Buffer should be based on an hexadecimal string!")
   data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
   assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
@@ -1029,10 +1035,22 @@ function wirebait.buffer.new(data_as_hex_string)
   local buffer = {
     _struct_type = "buffer",
     m_data_as_hex_str = data_as_hex_string:upper(),
+    m_offset = offset or 0;
   }
   local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
   function buffer:len()
+    return math.floor(string.len(self.m_data_as_hex_str)/2);
+  end
+  
+  function buffer:reported_length_remaining()
+    --TODO: work on this!    
+    --TODO: work on this!
+    --TODO: work on this!
+    --TODO: work on this!
+    --TODO: work on this!
+
+    --print("[WARNING] tvb:reported_length_remaining() is not supported yet and returns len()!");
     return math.floor(string.len(self.m_data_as_hex_str)/2);
   end
 
@@ -1263,13 +1281,22 @@ function wirebait.buffer.new(data_as_hex_string)
   function buffer:swapped_bytes()
     return swapBytes(self.m_data_as_hex_str);
   end
-
-  function buffer:__call(start, length) --allows buffer to be called as a function 
+  
+  function buffer:range(start, length)
     assert(start and start >= 0, "Start position should be positive positive!");
     length = length or self:len() - start; --add unit test for the case where no length was provided
     assert(length >= 0, "Length should be positive!");
     assert(start + length <= self:len(), "Index get out of bounds!")
-    return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)))            
+    local offset = start;
+    return wirebait.buffer.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)), offset)   
+  end
+  
+  function buffer:offset()
+    return self.m_offset;
+  end
+
+  function buffer:__call(start, length) --allows buffer to be called as a function 
+    return self:range(start, length);
   end
 
   function buffer:__tostring()
@@ -1284,6 +1311,73 @@ function wirebait.buffer.new(data_as_hex_string)
   return buffer;
 end
 --[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+
+
+
+
+--[----------WIRESHARK FIELD EXCTRACTION------------------------------------------------------------------------------------------------------------------------------------]]
+function wirebait.FieldInfo.new(protofield)
+  assert(protofield);
+  local field_info = {
+    m_protofield = protofield;
+  }
+  
+  function field_info:__len()
+    --print("[WARNING] FieldInfo:__len() is not supported yet! Contact MarkoPaul0, the Wirebait developer.");
+    return 0;
+  end
+  
+  function field_info:__unm()
+    error("FieldInfo:__unm() is not supported yet! Contact MarkoPaul0, the Wirebait developer.");
+  end
+  
+  function field_info:__call()
+    return self.m_protofield:getDisplayValueFromBuffer(self.m_protofield.m_last_buffer);
+    --error("TODO: FieldInfo:__call()");
+  end
+  
+  setmetatable(field_info, field_info)
+  return field_info;
+end
+
+function wirebait.Field.new(field_path) --Field Extractors
+  local field = {
+    m_info = nil;
+    name = nil;        
+    display = nil;
+  };
+  
+  for k, v in pairs(wirebait.state.proto.fields) do
+    if v.m_abbr == field_path then
+      field.m_info = wirebait.FieldInfo.new(v);
+      field.name = v.m_abbr;        
+      field.display = v.m_name;
+      field['type'] = v.m_type;
+    end
+  end
+  if not field.m_info then
+    error("The dissector has no defined field '" .. field_path .. "' the field extractor could find!");
+  end
+  
+  function field:__tostring()
+    return self.name;
+  end
+  
+  function field:__call()
+    return self.m_info;
+  end
+  
+  setmetatable(field, field)  
+  --table.insert(wirebait.state.field_extractors, field);
+  return field;  
+end
+--[-----------------------------------------------------------------------------------------------------------------------------------------------------------------------]]
+
+
+
+
 
 
 --[----------WIRESHARK DISSECTOR TABLE------------------------------------------------------------------------------------------------------------------------------------]]
@@ -1654,6 +1748,7 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   newgt.Proto = wirebait.Proto.new
   newgt.ProtoField = wirebait.ProtoField
   newgt.DissectorTable = wirebait.state.dissector_table
+  newgt.Field = wirebait.Field
   local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
   if not dofile_func then
     error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
