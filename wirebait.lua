@@ -1655,6 +1655,9 @@ function wirebait.plugin_tester.new(options_table) --[[options_table uses named 
   newgt.ProtoField = wirebait.ProtoField
   newgt.DissectorTable = wirebait.state.dissector_table
   local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
+  if not dofile_func then
+    error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
+  end
   setfenv(dofile_func, newgt);
   dofile_func();
 
