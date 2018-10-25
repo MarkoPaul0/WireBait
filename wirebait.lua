@@ -720,6 +720,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
+      FT_NONE     = function (buf) return "" end,
       FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
       FT_UINT8    = function (buf) return bwAnd(buf:uint(), (mask or 0xFF)) end,
       FT_UINT16   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFF)) end,
@@ -811,6 +812,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 end
 
 wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wireshark/blob/695fbb9be0122e280755c11b9e0b89e9e256875b/epan/wslua/wslua_proto_field.c) ]]
+    NONE      = "FT_NONE",
     BOOLEAN   = "FT_BOOLEAN",
     UINT8     = "FT_UINT8",
     UINT16    = "FT_UINT16",
@@ -832,6 +834,7 @@ wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wire
     GUID      = "FT_GUID"
   }
 
+function wirebait.ProtoField.none(abbr, name, desc)                      return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.NONE, nil, nil, nil, desc) end
 function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
 function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT8, value_string, fbase, ...) end
 function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT16, value_string, fbase, ...) end
@@ -1052,6 +1055,10 @@ function wirebait.buffer.new(data_as_hex_string, offset)
 
     --print("[WARNING] tvb:reported_length_remaining() is not supported yet and returns len()!");
     return math.floor(string.len(self.m_data_as_hex_str)/2);
+  end
+  function buffer:none()
+    local str = ""
+    return str
   end
 
   function buffer:uint()
