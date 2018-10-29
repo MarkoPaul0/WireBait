@@ -1056,6 +1056,7 @@ function wirebait.buffer.new(data_as_hex_string, offset)
     --print("[WARNING] tvb:reported_length_remaining() is not supported yet and returns len()!");
     return math.floor(string.len(self.m_data_as_hex_str)/2);
   end
+
   function buffer:none()
     local str = ""
     return str
@@ -1266,9 +1267,7 @@ function wirebait.buffer.new(data_as_hex_string, offset)
       local uint_val = self(byte_offset, byte_size):uint64();
       local bit_mask = tonumber(string.rep("1", length),2);
       --return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);  
-      local bit_val = (uint_val:rshift(right_bits_count)):band(bit_mask);
-      local ret_val = tonumber(bit_val["m_decimal_value_str"]);
-      return ret_val;
+      return (uint_val:rshift(right_bits_count)):band(bit_mask):tonumber();
 
     else
       local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
