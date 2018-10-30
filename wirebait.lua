@@ -720,6 +720,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 
   function protofield:getValueFromBuffer(buffer)
     local extractValueFuncByType = {
+      FT_NONE     = function (buf) return "" end,
       FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
       FT_UINT8    = function (buf) return bwAnd(buf:uint(), (mask or 0xFF)) end,
       FT_UINT16   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFF)) end,
@@ -811,6 +812,7 @@ function wirebait.ProtoField.new(name, abbr, ftype, value_string, fbase, mask, d
 end
 
 wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wireshark/blob/695fbb9be0122e280755c11b9e0b89e9e256875b/epan/wslua/wslua_proto_field.c) ]]
+    NONE      = "FT_NONE",
     BOOLEAN   = "FT_BOOLEAN",
     UINT8     = "FT_UINT8",
     UINT16    = "FT_UINT16",
@@ -832,6 +834,7 @@ wirebait.ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wire
     GUID      = "FT_GUID"
   }
 
+function wirebait.ProtoField.none(abbr, name, desc)                      return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.NONE, nil, nil, nil, desc) end
 function wirebait.ProtoField.bool(abbr, name, fbase, value_string, ...)   return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.BOOLEAN, value_string, fbase, ...) end
 function wirebait.ProtoField.uint8(abbr, name, fbase, value_string, ...)  return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT8, value_string, fbase, ...) end
 function wirebait.ProtoField.uint16(abbr, name, fbase, value_string, ...) return wirebait.ProtoField.new(name, abbr, wirebait.ftypes.UINT16, value_string, fbase, ...) end
@@ -1054,6 +1057,11 @@ function wirebait.buffer.new(data_as_hex_string, offset)
     return math.floor(string.len(self.m_data_as_hex_str)/2);
   end
 
+  function buffer:none()
+    local str = ""
+    return str
+  end
+
   function buffer:uint()
     assert(self:len() <= 4, "tvbrange:uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
     return hexStringToUint32(self:bytes());
@@ -1258,8 +1266,8 @@ function wirebait.buffer.new(data_as_hex_string, offset)
     if length <= 32 then
       local uint_val = self(byte_offset, byte_size):uint64();
       local bit_mask = tonumber(string.rep("1", length),2);
-      --return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);      
-      return (uint_val:rshift(right_bits_count)):band(bit_mask);
+      --return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);  
+      return (uint_val:rshift(right_bits_count)):band(bit_mask):tonumber();
 
     else
       local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
