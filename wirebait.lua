@@ -409,7 +409,7 @@ function wirebait.UInt64.new(num, high_num)
   end
   
   function uint_64:tonumber() --[[may lose integer precision if the number is greater than 2^53]]
-    return tonumber(self.m_decimal_str);
+    return tonumber(self.m_decimal_value_str);
   end
   
   function uint_64:tohex(num_chars)
@@ -1266,8 +1266,8 @@ function wirebait.buffer.new(data_as_hex_string, offset)
     if length <= 32 then
       local uint_val = self(byte_offset, byte_size):uint64();
       local bit_mask = tonumber(string.rep("1", length),2);
-      --return bwAnd(bwRshift(uint_val, right_bits_count), bit_mask);  
-      return (uint_val:rshift(right_bits_count)):band(bit_mask):tonumber();
+      local uint64_masked_val = (uint_val:rshift(right_bits_count)):band(bit_mask);
+      return uint64_masked_val:tonumber(); --since we're dealing with less than 32 bits, we can return a number
 
     else
       local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
