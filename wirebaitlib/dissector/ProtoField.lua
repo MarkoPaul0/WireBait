@@ -4,8 +4,11 @@
 --- DateTime: 2/15/19 11:26 PM
 ---
 
---this allows to use require on parent directory
-package.path = package.path .. ";../?.lua"
+local bw = require("wirebaitlib.primitives.Bitwise");
+
+local ProtoField = { base = {NONE=0, DEC=1, HEX=2, OCT=3, DEC_HEX=4, HEX_DEC=5}}
+
+--ProtoField.base --[[c.f. [Wireshark Repo](https://github.com/wireshark/wireshark/blob/537705a8b20ee89bf1f713bc0c9959cf21b26900/test/lua/globals_2.2.txt) ]]
 
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
@@ -31,10 +34,10 @@ function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
         local extractValueFuncByType = {
             FT_NONE     = function (buf) return "" end,
             FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
-            FT_UINT8    = function (buf) return bwAnd(buf:uint(), (mask or 0xFF)) end,
-            FT_UINT16   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFF)) end,
-            FT_UINT24   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFFFF)) end,
-            FT_UINT32   = function (buf) return bwAnd(buf:uint(), (mask or 0xFFFFFFFF)) end,
+            FT_UINT8    = function (buf) return bw.And(buf:uint(), (mask or 0xFF)) end,
+            FT_UINT16   = function (buf) return bw.And(buf:uint(), (mask or 0xFFFF)) end,
+            FT_UINT24   = function (buf) return bw.And(buf:uint(), (mask or 0xFFFFFF)) end,
+            FT_UINT32   = function (buf) return bw.And(buf:uint(), (mask or 0xFFFFFFFF)) end,
             FT_UINT64   = function (buf) return buf:uint64():band(mask or UInt64.max()) end,
             FT_INT8     = function (buf) return buf:int(mask) end, --[[mask is provided here because it needs to be applied on the raw value and not on the decoded int]]
             FT_INT16    = function (buf) return buf:int(mask) end,
@@ -67,16 +70,16 @@ function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
         local current_bit = 1;
         local displayed_masked_value = "";
         while current_bit <= self.m_mask do
-            if bwAnd(self.m_mask, current_bit) == 0 then
+            if bw.And(self.m_mask, current_bit) == 0 then
                 displayed_masked_value = displayed_masked_value .. ".";
             else
-                if bwAnd(value, current_bit) > 0 then
+                if bw.And(value, current_bit) > 0 then
                     displayed_masked_value = displayed_masked_value .. "1";
                 else
                     displayed_masked_value = displayed_masked_value .. "0";
                 end
             end
-            current_bit = bwLshift(current_bit, 1);
+            current_bit = bw.Lshift(current_bit, 1);
         end
         displayed_masked_value = string.format("%".. buffer:len()*8 .."s", displayed_masked_value):gsub(" ",".");
         str_value = displayed_masked_value .. " = ";
@@ -143,23 +146,26 @@ ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wir
     GUID      = "FT_GUID"
 }
 
-function ProtoField.none(abbr, name, desc)                      return ProtoField.new(name, abbr, ftypes.NONE, nil, nil, nil, desc) end
+function ProtoField.none(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.NONE,    nil, nil, nil, desc) end
 function ProtoField.bool(abbr, name, fbase, value_string, ...)   return ProtoField.new(name, abbr, ftypes.BOOLEAN, value_string, fbase, ...) end
-function ProtoField.uint8(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.UINT8, value_string, fbase, ...) end
-function ProtoField.uint16(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT16, value_string, fbase, ...) end
-function ProtoField.uint24(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT24, value_string, fbase, ...) end
-function ProtoField.uint32(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT32, value_string, fbase, ...) end
-function ProtoField.uint64(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT64, value_string, fbase, ...) end
-function ProtoField.int8(abbr, name, fbase, value_string, ...)   return ProtoField.new(name, abbr, ftypes.INT8, value_string, fbase, ...) end
-function ProtoField.int16(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT16, value_string, fbase, ...) end
-function ProtoField.int24(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT24, value_string, fbase, ...) end
-function ProtoField.int32(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT32, value_string, fbase, ...) end
-function ProtoField.int64(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT64, value_string, fbase, ...) end
-function ProtoField.float(abbr, name, value_string, desc)        return ProtoField.new(name, abbr, ftypes.FLOAT, value_string, nil, nil, desc) end
-function ProtoField.double(abbr, name, value_string, desc)       return ProtoField.new(name, abbr, ftypes.DOUBLE, value_string, nil, nil, desc) end
-function ProtoField.string(abbr, name, display, desc)            return ProtoField.new(name, abbr, ftypes.STRING, nil, display, nil, desc) end
+function ProtoField.uint8(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.UINT8,   value_string, fbase, ...) end
+function ProtoField.uint16(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT16,  value_string, fbase, ...) end
+function ProtoField.uint24(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT24,  value_string, fbase, ...) end
+function ProtoField.uint32(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT32,  value_string, fbase, ...) end
+function ProtoField.uint64(abbr, name, fbase, value_string, ...) return ProtoField.new(name, abbr, ftypes.UINT64,  value_string, fbase, ...) end
+function ProtoField.int8(abbr, name, fbase, value_string, ...)   return ProtoField.new(name, abbr, ftypes.INT8,    value_string, fbase, ...) end
+function ProtoField.int16(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT16,   value_string, fbase, ...) end
+function ProtoField.int24(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT24,   value_string, fbase, ...) end
+function ProtoField.int32(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT32,   value_string, fbase, ...) end
+function ProtoField.int64(abbr, name, fbase, value_string, ...)  return ProtoField.new(name, abbr, ftypes.INT64,   value_string, fbase, ...) end
+function ProtoField.float(abbr, name, value_string, desc)        return ProtoField.new(name, abbr, ftypes.FLOAT,   value_string, nil, nil, desc) end
+function ProtoField.double(abbr, name, value_string, desc)       return ProtoField.new(name, abbr, ftypes.DOUBLE,  value_string, nil, nil, desc) end
+function ProtoField.string(abbr, name, display, desc)            return ProtoField.new(name, abbr, ftypes.STRING,  nil, display, nil, desc) end
 function ProtoField.stringz(abbr, name, display, desc)           return ProtoField.new(name, abbr, ftypes.STRINGZ, nil, display, nil, desc) end
-function ProtoField.ether(abbr, name, desc)                      return ProtoField.new(name, abbr, ftypes.ETHER, nil, nil, nil, desc) end
-function ProtoField.bytes(abbr, name, fbase, desc)               return ProtoField.new(name, abbr, ftypes.BYTES, nil, fbase, nil, desc) end
-function ProtoField.ipv4(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.IPv4, nil, nil, nil, desc) end
-function ProtoField.guid(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.GUID, nil, nil, nil, desc) end
+function ProtoField.ether(abbr, name, desc)                      return ProtoField.new(name, abbr, ftypes.ETHER,   nil, nil, nil, desc) end
+function ProtoField.bytes(abbr, name, fbase, desc)               return ProtoField.new(name, abbr, ftypes.BYTES,   nil, fbase, nil, desc) end
+function ProtoField.ipv4(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.IPv4,    nil, nil, nil, desc) end
+function ProtoField.guid(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.GUID,    nil, nil, nil, desc) end
+
+
+return ProtoField;
