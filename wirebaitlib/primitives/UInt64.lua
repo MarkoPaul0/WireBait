@@ -10,9 +10,9 @@ local utils = require("wirebaitlib.primitives.Utils");
 local UInt64 = {};
 
 local UINT32_MAX = 0xFFFFFFFF;
-local WORD_MASK = UINT32_MAX;
 
 function UInt64.new(num, high_num)
+    local WORD_MASK = UINT32_MAX;
     assert(num and type(num) == "number" and num == math.floor(num) and num >= 0 and num <= UINT32_MAX, "UInt64.new(num), num must be a positive 32 bit integer!");
     assert(not high_num or (type(high_num) == "number" and high_num == math.floor(high_num) and high_num >= 0 and high_num <= UINT32_MAX), "UInt64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!");
     local uint_64 = {

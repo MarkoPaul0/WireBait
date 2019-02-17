@@ -4,7 +4,13 @@
 --- DateTime: 2/15/19 11:15 PM
 ---
 
+local UInt64 = require("wirebaitlib.primitives.UInt64");
+local bw     = require("wirebaitlib.primitives.Bitwise");
+local utils  = require("wirebaitlib.primitives.Utils");
+
 local Int64 = {};
+
+local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
 
 function Int64.new(num, high_num)
     assert(num and type(num) == "number" and num >= 0 and num <= UINT32_MAX and num == math.floor(num), "Int64.new(num), num must be a positive 32 bit integer!");
@@ -16,28 +22,29 @@ function Int64.new(num, high_num)
     }
 
     local SIGN_MASK = 0x80000000;
+    local WORD_MASK = UINT32_MAX;
 
     function int_64:__tostring()
-        if bwAnd(int_64.m_high_word, SIGN_MASK) > 0 then
-            return "-" .. tostring(UInt64.new(twosComplement(int_64.m_low_word, int_64.m_high_word)))
+        if bw.And(int_64.m_high_word, SIGN_MASK) > 0 then
+            return "-" .. tostring(UInt64.new(bw.twosComplement(int_64.m_low_word, int_64.m_high_word)))
         end
         return tostring(UInt64.new(int_64.m_low_word, int_64.m_high_word));
     end
 
     local function getWords(num_or_int) --PRIVATE METHOD
-        assert(num_or_int and type(num_or_int) == number or typeof(num_or_int) == "Int64", "Argument #1 must be a number or Int64!");
+        assert(num_or_int and type(num_or_int) == number or utils.typeof(num_or_int) == "Int64", "Argument #1 must be a number or Int64!");
         local low_word = 0;
         local high_word = 0;
         local is_negative_number = false;
-        if typeof(num_or_int) == "Int64" then
+        if utils.typeof(num_or_int) == "Int64" then
             low_word = num_or_int.m_low_word;
             high_word = num_or_int.m_high_word;
-            is_negative_number = bwAnd(high_word, SIGN_MASK) > 0;
+            is_negative_number = bw.And(high_word, SIGN_MASK) > 0;
         else
             assert(math.floor(num_or_int) == num_or_int, "Int64 cannot deal with numbers without integer precision!");
             is_negative_number = num_or_int < 0;
-            low_word = bwAnd(num_or_int, WORD_MASK);
-            high_word = bwAnd(bwRshift(num_or_int, 32), WORD_MASK);
+            low_word = bw.And(num_or_int, WORD_MASK);
+            high_word = bw.And(bw.Rshift(num_or_int, 32), WORD_MASK);
         end
         return low_word, high_word, is_negative_number;
     end
@@ -70,14 +77,14 @@ function Int64.new(num, high_num)
         local low_word2, high_word2, neg2 = getWords(int_or_num2);
 
         local function local_add(word1, word2, init_carry)
-            word1 = bwAnd(word1, WORD_MASK);
-            word2 = bwAnd(word2, WORD_MASK);
+            word1 = bw.And(word1, WORD_MASK);
+            word2 = bw.And(word2, WORD_MASK);
             local result = 0;
             local c = init_carry or 0;
             for i = 0,31 do
-                local bw1 = bwAnd(bwRshift(word1, i), 1);
-                local bw2 = bwAnd(bwRshift(word2, i), 1);
-                result = bwOr(result, bwLshift(bwXor(bwXor(bw1, bw2), c), i));
+                local bw1 = bw.And(bw.Rshift(word1, i), 1);
+                local bw2 = bw.And(bw.Rshift(word2, i), 1);
+                result = bw.Or(result, bw.Lshift(bw.Xor(bw.Xor(bw1, bw2), c), i));
                 c = (bw1 + bw2 + c) > 1 and 1 or 0;
             end
             return result, c;
@@ -90,39 +97,39 @@ function Int64.new(num, high_num)
 
     function int_64.__sub(int_or_num1, int_or_num2)
         local low_word1, high_word1, neg1 = getWords(int_or_num1);
-        local low_word2, high_word2, neg2 = twosComplement(getWords(int_or_num2)); --taking advantage of the fact that A-B = A+(-B) and (-B) = twosComplement of B
+        local low_word2, high_word2, neg2 = bw.twosComplement(getWords(int_or_num2)); --taking advantage of the fact that A-B = A+(-B) and (-B) = twosComplement of B
         return Int64.new(low_word1, high_word1) + Int64.new(low_word2, high_word2)
     end
 
     function int_64.__band(int_or_num1, int_or_num2) --[[bitwise AND operator (&)]]
         local low_word1, high_word1 = getWords(int_or_num1);
         local low_word2, high_word2 = getWords(int_or_num2);
-        return Int64.new(bwAnd(low_word1, low_word2), bwAnd(high_word1, high_word2))
+        return Int64.new(bw.And(low_word1, low_word2), bw.And(high_word1, high_word2))
     end
 
     function int_64:__bnot() --[[bitwise NOT operator (unary ~)]]
-        return Int64.new(bwAnd(bwNot(self.m_low_word), WORD_MASK), bwAnd(bwNot(self.m_high_word), WORD_MASK))
+        return Int64.new(bw.And(bw.Not(self.m_low_word), WORD_MASK), bw.And(bw.Not(self.m_high_word), WORD_MASK))
     end
 
     function int_64.__bor(int_or_num1, int_or_num2) --[[bitwise OR operator (|)]]
         local low_word1, high_word1 = getWords(int_or_num1);
         local low_word2, high_word2 = getWords(int_or_num2);
-        return Int64.new(bwOr(low_word1, low_word2), bwOr(high_word1, high_word2))
+        return Int64.new(bw.Or(low_word1, low_word2), bw.Or(high_word1, high_word2))
     end
 
     function int_64.__bxor(int_or_num1, int_or_num2) --[[bitwise XOR operator (binary ~)]]
         local low_word1, high_word1 = getWords(int_or_num1);
         local low_word2, high_word2 = getWords(int_or_num2);
-        return Int64.new(bwXor(low_word1, low_word2), bwXor(high_word1, high_word2))
+        return Int64.new(bw.Xor(low_word1, low_word2), bw.Xor(high_word1, high_word2))
     end
 
     function int_64:__shl(shift) --[[bitwise left shift (<<)]]
         assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
         if shift < 32 then
-            local new_high_word = bwRshift(self.m_low_word, (32-shift)) + bwAnd(bwLshift(self.m_high_word, shift), WORD_MASK);
-            return UInt64.new(bwAnd(bwLshift(self.m_low_word, shift), WORD_MASK), new_high_word);
+            local new_high_word = bw.Rshift(self.m_low_word, (32-shift)) + bw.And(bw.Lshift(self.m_high_word, shift), WORD_MASK);
+            return UInt64.new(bw.And(bw.Lshift(self.m_low_word, shift), WORD_MASK), new_high_word);
         elseif shift < 64 then
-            return UInt64.new(0, bwAnd(bwLshift(self.m_low_word, (shift-32)), WORD_MASK));
+            return UInt64.new(0, bw.And(bw.Lshift(self.m_low_word, (shift-32)), WORD_MASK));
         else
             return UInt64.new(0, 0);
         end
@@ -131,10 +138,10 @@ function Int64.new(num, high_num)
     function int_64:__shr(shift) --[[bitwise right shift (>>)]]
         assert(shift and type(shift) == "number" and shift == math.floor(shift), "The shift must be an integer!")
         if shift < 32 then
-            local new_low_word = bwRshift(self.m_low_word, shift) + bwAnd(bwLshift(self.m_high_word, (32-shift)), WORD_MASK);
-            return UInt64.new(new_low_word, bwRshift(self.m_high_word, shift));
+            local new_low_word = bw.Rshift(self.m_low_word, shift) + bw.And(bw.Lshift(self.m_high_word, (32-shift)), WORD_MASK);
+            return UInt64.new(new_low_word, bw.Rshift(self.m_high_word, shift));
         elseif shift < 64 then
-            return Int64.new(bwAnd(bwLshift(self.m_high_word, (shift-32)), WORD_MASK), 0);
+            return Int64.new(bw.And(bw.Lshift(self.m_high_word, (shift-32)), WORD_MASK), 0);
         else
             return Int64.new(0, 0);
         end
