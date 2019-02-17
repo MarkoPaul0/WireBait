@@ -9,9 +9,67 @@
 
 local ByteArray = {};
 
-function ByteArray.new()
-    assert(false, "ByteArray not available yet")
-    local byte_array = {};
+--TODO: add separator as argument, for now the hex string is assumed to have bytes separated by a single white spaces
+-- for instance "AB 0E 3C"
+function ByteArray.new(data_as_hex_string)
+    assert(type(data_as_hex_string) == 'string', "Tvb should be based on an hexadecimal string!")
+    data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
+    assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
+    assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
+
+    local byte_array = {
+        _struct_type = "ByteArray",
+        m_data_as_hex_str = data_as_hex_string:upper()
+    }
+
+    function byte_array.__concat(byte_array1, byte_array2)
+        return ByteArray.new(byte_array1.m_data_as_hex_str .. byte_array2.m_data_as_hex_str);
+    end
+
+    function byte_array.__eq(byte_array1, byte_array2)
+        return (byte_array1.m_data_as_hex_str == byte_array2.m_data_as_hex_str);
+    end
+
+    function byte_array:prepend(other_byte_array)
+        self.m_data_as_hex_str = other_byte_array.m_data_as_hex_str .. self.m_data_as_hex_str;
+    end
+
+    function byte_array:append(other_byte_array)
+        self.m_data_as_hex_str =  self.m_data_as_hex_str .. other_byte_array.m_data_as_hex_str;
+    end
+
+    function byte_array:set_size(new_num_bytes)
+        assert(new_num_bytes >= 0, "New size must be positive!");
+        if (new_num_bytes < self:len()) then --truncates the byte array
+            self.m_data_as_hex_str = self.m_data_as_hex_str:sub(0, 2*new_num_bytes)
+        else --right padding with zeros
+            self.m_data_as_hex_str = string.format("%-" .. 2*new_num_bytes .."s", self.m_data_as_hex_str):gsub(' ','0')
+        end
+    end
+
+    function byte_array:get_index(index)
+        return tonumber(self.m_data_as_hex_str:sub(2*index+1, 2*index + 2), 16);
+    end
+
+    function byte_array:set_index(index, value)
+        assert("false", "ByteArray:set_index() is not available yet!")
+    end
+
+    function byte_array:len()
+        return self.m_data_as_hex_str:len() / 2;
+    end
+
+    function byte_array:__tostring()
+        return self.m_data_as_hex_str;
+    end
+
+    function byte_array:tvb()
+        return Tvb.new(self); --TODO: modify tvb to be constructed from a byte array!
+    end
+
+    setmetatable(byte_array, byte_array);
+
+    return byte_array;
 end
 
 return ByteArray;
