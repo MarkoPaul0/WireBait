@@ -5,16 +5,14 @@
 ---
 
 function TvbRange.new(data_as_hex_string, offset)
-    assert(type(data_as_hex_string) == 'string', "TvbRange should be based on an hexadecimal string!")
-    data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
-    assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
-    assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
+    assert(type(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 
     local tvb_range = {
         _struct_type = "TvbRange",
-        m_data_as_hex_str = data_as_hex_string:upper(),
+        m_data, --ByteArray
         m_offset = offset or 0;
     }
+
     local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
     function tvb_range:len()
@@ -260,7 +258,7 @@ function TvbRange.new(data_as_hex_string, offset)
     end
 
     function tvb_range:__guid()
-        assert(self:len() == 16, "Trying to fetch a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
+        assert(self:len() == 16, "Trying to parse a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
         local s_ = self.m_data_as_hex_str;
         return string.lower(s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21));
     end

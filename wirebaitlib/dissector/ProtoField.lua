@@ -4,6 +4,9 @@
 --- DateTime: 2/15/19 11:26 PM
 ---
 
+--this allows to use require on parent directory
+package.path = package.path .. ";../?.lua"
+
 --[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
     assert(name and abbr and ftype, "ProtoField name, abbr, and type must not be nil!");

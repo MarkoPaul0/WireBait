@@ -27,7 +27,7 @@ print("\nRunning all unit tests")
 --# WIREBAIT TESTS
 tester.test(dofile("tests/unit_tests/wirebait_protofield_UT.lua"))
 tester.test(dofile("tests/unit_tests/wirebait_buffer_UT.lua"))
-tester.test(dofile("tests/unit_tests/wirebait_uint64_UT.lua"))
+tester.test(dofile("tests/unit_tests/Uint64_UT.lua"))
 tester.test(dofile("tests/unit_tests/wirebait_int64_UT.lua"))
 tester.test(dofile("tests/functional_tests/test_examples.lua"))
 

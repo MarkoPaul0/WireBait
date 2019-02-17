@@ -12,6 +12,8 @@ local function readFileAsHex(file, byte_count)
     return hex_data;
 end
 
+local PcapReader = {}
+
 function PcapReader.new(filepath)
     assert(filepath and type(filepath) == "string" and #filepath > 0, "A valid filepath must be provided!");
     local pcap_reader = {
@@ -48,3 +50,5 @@ function PcapReader.new(filepath)
 
     return pcap_reader;
 end
+
+return PcapReader;

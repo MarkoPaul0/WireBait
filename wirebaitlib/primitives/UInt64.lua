@@ -4,9 +4,13 @@
 --- DateTime: 2/15/19 11:12 PM
 ---
 
-local bw = require("Bitwise");
+local bw    = require("wirebaitlib.primitives.Bitwise");
+local utils = require("wirebaitlib.primitives.Utils");
 
 local UInt64 = {};
+
+local UINT32_MAX = 0xFFFFFFFF;
+local WORD_MASK = UINT32_MAX;
 
 function UInt64.new(num, high_num)
     assert(num and type(num) == "number" and num == math.floor(num) and num >= 0 and num <= UINT32_MAX, "UInt64.new(num), num must be a positive 32 bit integer!");
@@ -90,10 +94,10 @@ function UInt64.new(num, high_num)
 
     --[[Given a number of an UInt64, returns the two 4-byte words that make up that number]]
     local function getWords(num_or_uint) --PRIVATE METHOD
-        assert(num_or_uint and typeof(num_or_uint) == "UInt64" or typeof(num_or_uint) == "number", "Argument needs to be a number or a UInt64!");
+        assert(num_or_uint and utils.typeof(num_or_uint) == "UInt64" or utils.typeof(num_or_uint) == "number", "Argument needs to be a number or a UInt64!");
         local low_word = 0;
         local high_word = 0;
-        if typeof(num_or_uint) == "UInt64" then
+        if utils.typeof(num_or_uint) == "UInt64" then
             low_word = num_or_uint.m_low_word;
             high_word = num_or_uint.m_high_word;
         else
@@ -121,8 +125,8 @@ function UInt64.new(num, high_num)
     end
 
     function uint_64.__le(uint_or_num1, uint_or_num2)
-        assert(uint_or_num1 and typeof(uint_or_num1) == "number" or typeof(uint_or_num1) == "UInt64", "Argument #1 needs to be a number or a UInt64!");
-        assert(uint_or_num2 and typeof(uint_or_num2) == "number" or typeof(uint_or_num2) == "UInt64", "Argument #2 needs to be a number or a UInt64!");
+        assert(uint_or_num1 and utils.typeof(uint_or_num1) == "number" or utils.typeof(uint_or_num1) == "UInt64", "Argument #1 needs to be a number or a UInt64!");
+        assert(uint_or_num2 and utils.typeof(uint_or_num2) == "number" or utils.typeof(uint_or_num2) == "UInt64", "Argument #2 needs to be a number or a UInt64!");
         return uint_or_num1 < uint_or_num2 or uint_or_num1 == uint_or_num2;
     end
 
@@ -151,7 +155,7 @@ function UInt64.new(num, high_num)
 
     function uint_64.__sub(uint_or_num1, uint_or_num2)
         local low_word1, high_word1 = getWords(uint_or_num1);
-        local low_word2, high_word2 = twosComplement(getWords(uint_or_num2)); -- taking advantage of the fact that (A-B)=(A+twosComplement(B))
+        local low_word2, high_word2 = bw.twosComplement(getWords(uint_or_num2)); -- taking advantage of the fact that (A-B)=(A+bw.twosComplement(B))
         return UInt64.new(low_word1, high_word1) + UInt64.new(low_word2, high_word2);
     end
 

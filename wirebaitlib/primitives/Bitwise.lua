@@ -47,4 +47,15 @@ function Bitwise.Not(int1)
     return bit32.bnot(int1);
 end
 
+--[[Two's complement of a 64 bit value represented by two 4-byte values]]
+function Bitwise.twosComplement(low_word, high_word)
+    local new_low_word = Bitwise.And(Bitwise.Not(low_word), WORD_MASK) + 1;
+    local new_high_word = Bitwise.And(Bitwise.Not(high_word), WORD_MASK);
+    if new_low_word > WORD_MASK then --there's a carry from low to high word
+        new_low_word = 0;
+        new_high_word = Bitwise.And((new_high_word + 1), WORD_MASK);
+    end
+    return new_low_word, new_high_word;
+end
+
 return Bitwise;

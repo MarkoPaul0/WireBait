@@ -7,6 +7,9 @@
 
 --TODO: create a byte array class to encapsulate basic HEX strings and use it in PcapReader and in Tvb
 
+package.path = package.path .. ";../src/packet_info/?.lua"
+teest = require("Column");
+
 local ByteArray = {};
 
 --TODO: add separator as argument, for now the hex string is assumed to have bytes separated by a single white spaces
@@ -61,6 +64,14 @@ function ByteArray.new(data_as_hex_string)
 
     function byte_array:__tostring()
         return self.m_data_as_hex_str;
+    end
+
+    function byte_array:subset(start, length)
+        assert(start and start >= 0,         "Start position should be positive positive!");
+        assert(length and length >= 0,       "Length should be positive!");
+        assert(start + length <= self:len(), "Index get out of bounds!")
+        local sub_data_as_hex_str = self.m_data_as_hex_str:sub(2*start+1, 2*(start + length));
+        return ByteArray.new(sub_data_as_hex_str);
     end
 
     function byte_array:tvb()

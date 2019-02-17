@@ -4,15 +4,12 @@
 --- DateTime: 2/15/19 11:30 PM
 ---
 
-function Tvb.new(data_as_hex_string, offset)
-    assert(type(data_as_hex_string) == 'string', "Tvb should be based on an hexadecimal string!")
-    data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
-    assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
-    assert(string.len(data_as_hex_string) % 2 == 0, "String has its last byte cut in half!")
+function Tvb.new(byte_array, offset)
+    assert(type(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
 
     local tvb = {
-        _struct_type = "tvb",
-        m_data_as_hex_str = data_as_hex_string:upper(), --TODO: replace this with byte array
+        _struct_type = "Tvb",
+        m_data = byte_array,
         m_offset = offset or 0;
     }
 
@@ -23,7 +20,7 @@ function Tvb.new(data_as_hex_string, offset)
     end
 
     function tvb:len()
-        return math.floor(string.len(self.m_data_as_hex_str)/2);
+        return m_data:len();
     end
 
     function tvb:reported_length_remaining()
@@ -37,14 +34,8 @@ function Tvb.new(data_as_hex_string, offset)
         return tvb:len();
     end
 
-    function tvb:none()
-        local str = ""
-        return str
-    end
-
     function tvb:bytes()
-        --TODO: replace this with ByteArray
-        return self.m_data_as_hex_str;
+        return self.m_data;
     end
 
     function tvb:offset()
@@ -56,8 +47,7 @@ function Tvb.new(data_as_hex_string, offset)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        local offset = start;
-        return Tvb.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)), offset)
+        return Tvb.new(self.m_data:subset(start, length), offset)
     end
 
     --equivalent to tvb:range() but allows tvb to be called as a function
@@ -65,25 +55,11 @@ function Tvb.new(data_as_hex_string, offset)
         return self:range(start, length);
     end
 
-    function tvb:raw()
-        return self.m_data_as_hex_str;
-    end
-
-    function tvb:__guid()
-        assert(self:len() == 16, "Trying to fetch a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
-        local s_ = self.m_data_as_hex_str;
-        return string.lower(s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21));
-    end
-
-    --function tvb:swapped_bytes()
-    --    return swapBytes(self.m_data_as_hex_str);
-    --end
-
     function tvb:__tostring()
         if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
-            return string.format("%48s", string.lower(self.m_data_as_hex_str)) .. "...";
+            return string.format("%48s", tostring(self.m_data) .. "...");
         end
-        return  string.lower(self.m_data_as_hex_str);
+        return  string.lower(tostring(self.m_data));
     end
 
     setmetatable(tvb, tvb)

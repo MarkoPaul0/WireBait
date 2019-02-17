@@ -43,15 +43,4 @@ function utils.typeof(obj)
     return obj_type;
 end
 
---[[Two's complement of a 64 bit value represented by two 4-byte values]]
-function utils.twosComplement(low_word, high_word)
-    local new_low_word = bwAnd(bwNot(low_word), WORD_MASK) + 1;
-    local new_high_word = bwAnd(bwNot(high_word), WORD_MASK);
-    if new_low_word > WORD_MASK then --there's a carry from low to high word
-        new_low_word = 0;
-        new_high_word = bwAnd((new_high_word + 1), WORD_MASK);
-    end
-    return new_low_word, new_high_word;
-end
-
 return utils;
