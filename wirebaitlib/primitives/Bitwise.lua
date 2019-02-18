@@ -6,6 +6,8 @@
 
 -- Unlike other libraries, function are capitalized to avoid lua syntax errors
 
+--TODO: I should probaly get rid of this library as it provides very little value
+
 local Bitwise = {};
 
 --[[Bitwise operations]]

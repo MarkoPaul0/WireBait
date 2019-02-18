@@ -6,15 +6,18 @@
 
 local utils = {};
 
+--TODO: rename intIPToStr()
 --[[Prints an ip in octet format givent its little endian int32 representation]]
 function utils.printIP(le_int_ip)
-    local ip_str = bwRshift(bwAnd(le_int_ip, 0xFF000000), 24) .. "." .. bwRshift(bwAnd(le_int_ip, 0x00FF0000), 16) .. "." .. bwRshift(bwAnd(le_int_ip, 0x0000FF00), 8) .. "." .. bwAnd(le_int_ip, 0x000000FF);
+    local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
+                   "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);
     return ip_str;
 end
 
 --[[Switches byte order of the given hex_str. For instance the input "12ABCDEF" will be turned into "EFCDAB12" ]]
 -- TODO: rename to swapByteOrder
 function utils.swapBytes(hex_str)
+    assert(#hex_str <= 16, "It does not make sense to swap byte order on more than 8 bytes at a time")
     local new_hex_str = "";
     for i=1,#hex_str/2 do
         new_hex_str = hex_str:sub(2*i-1,2*i) .. new_hex_str;
@@ -36,8 +39,8 @@ If obj is a table, returns the content of _struct_type otherwise returns the typ
 function utils.typeof(obj)
     assert(obj, "A nil value has no type!");
     local obj_type = type(obj);
-    if obj_type == "table" then
-        assert(obj._struct_type and type(obj._struct_type) == "string" and #obj._struct_type > 0, "All data structures in Wirebait should have a _struct_type field as a non empty string!");
+    if (obj_type == "table" and obj._struct_type) then
+        assert(type(obj._struct_type) == "string" and #obj._struct_type > 0, "Wirebait data structure should have a _struct_type field as a non empty string!");
         return obj._struct_type;
     end
     return obj_type;
