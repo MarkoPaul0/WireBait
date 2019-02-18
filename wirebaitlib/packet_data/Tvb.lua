@@ -4,8 +4,12 @@
 --- DateTime: 2/15/19 11:30 PM
 ---
 
+local utils = require("wirebaitlib.primitives.Utils");
+
+local Tvb = {};
+
 function Tvb.new(byte_array, offset)
-    assert(type(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
+    assert(utils.typeof(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
 
     local tvb = {
         _struct_type = "Tvb",
@@ -66,3 +70,5 @@ function Tvb.new(byte_array, offset)
 
     return tvb;
 end
+
+return Tvb;

@@ -4,11 +4,7 @@
 --- DateTime: 2/16/19 12:18 PM
 ---
 
-
---TODO: create a byte array class to encapsulate basic HEX strings and use it in PcapReader and in Tvb
-
-package.path = package.path .. ";../src/packet_info/?.lua"
-teest = require("Column");
+local Tvb = require("wirebaitlib.packet_data.Tvb");
 
 local ByteArray = {};
 
