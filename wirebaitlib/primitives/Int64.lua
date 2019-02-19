@@ -4,9 +4,10 @@
 --- DateTime: 2/15/19 11:15 PM
 ---
 
-local UInt64 = require("wirebaitlib.primitives.UInt64");
-local bw     = require("wirebaitlib.primitives.Bitwise");
-local utils  = require("wirebaitlib.primitives.Utils");
+local UInt64    = require("wirebaitlib.primitives.UInt64");
+local bw        = require("wirebaitlib.primitives.Bitwise");
+local ByteArray = require("wirebaitlib.primitives.ByteArray");
+local utils     = require("wirebaitlib.primitives.Utils");
 
 local Int64 = {};
 
@@ -211,6 +212,28 @@ function Int64.new(num, high_num)
     return int_64;
 end
 
+--TODO: enfore byte_array size to 8 bytes?
+
+--TODO: add endianness to function name
+
+--TODO: add unit tests
+function Int64.fromByteArray(byte_array)
+    assert(byte_array and utils.typeof(byte_array) == "ByteArray", "Argurment #1 should be a ByteArray!");
+    assert(byte_array:len() > 0, "ByteArray cannot be empty!");
+    assert(byte_array:len() <= 8, "ByteArray cannot contain more than 8 bytes!");
+
+    if (byte_array:len() < 8) then
+        local b = ByteArray.new("");
+        b:set_size(8 - byte_array:len());
+        byte_array:prepend(b)
+    end
+
+    local high_num = tonumber(byte_array:subset(0,4):toHex(),16);
+    local num = tonumber(byte_array:subset(4,4):toHex(),16);
+    return Int64.new(num, high_num);
+end
+
+--[[
 function Int64.fromHex(hex_str)
     assert(hex_str and type(hex_str) == "string", "Argurment #1 should be a string!");
     assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
@@ -221,6 +244,7 @@ function Int64.fromHex(hex_str)
     local num = tonumber(string.sub(hex_str, 9,16),16);
     return Int64.new(num, high_num);
 end
+]]
 
 function Int64.max()
     return Int64.new(UINT32_MAX, 0x7FFFFFFF);

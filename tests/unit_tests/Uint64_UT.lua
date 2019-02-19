@@ -22,6 +22,7 @@ local is_standalone_test = not tester; --if only this file is being tested (not 
 local tester = tester or require("tests.tester")
 
 local UInt64 = require("wirebaitlib.primitives.UInt64")
+local ByteArray = require("wirebaitlib.primitives.ByteArray")
 
 --[[IMPORTANT NOTE: a simple and easy way to come up with test cases when testing uint64 addition is to use wolfram alpha
 for instance [0xFFFFFFCDEDF1 + 0x1234FF24FF01](https://www.wolframalpha.com/input/?i=0xFFFFFFCDEDF1+%2B+0x1234FF24FF01) ]]
@@ -98,50 +99,50 @@ unit_tests:addTest("Testing wirebait UInt64.new(low_num, TOO LARGE high_num)", f
     tester.assert(error_msg, "UInt64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!", "Wrong error message!", "Wrong error message!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(00) = 0", function()
-    local uint_64 = UInt64.fromHex("00");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(00) = 0", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("00"));
     tester.assert(uint_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "0", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(0000000000) = 0", function()
-    local uint_64 = UInt64.fromHex("0000000000");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(0000000000) = 0", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("0000000000"));
     tester.assert(uint_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "0", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(FFFFFFFFFFFFFFFF) = uint64_max", function()
-    local uint_64 = UInt64.fromHex("FFFFFFFFFFFFFFFF");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(FFFFFFFFFFFFFFFF) = uint64_max", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("FFFFFFFFFFFFFFFF"));
     tester.assert(uint_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "18446744073709551615", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(FFFFFFFF) = uint32_max", function()
-    local uint_64 = UInt64.fromHex("FFFFFFFF");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(FFFFFFFF) = uint32_max", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("FFFFFFFF"));
     tester.assert(uint_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "4294967295", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(00000000FFFFFFFF) = uint32_max", function()
-    local uint_64 = UInt64.fromHex("00000000FFFFFFFF");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(00000000FFFFFFFF) = uint32_max", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("00000000FFFFFFFF"));
     tester.assert(uint_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "4294967295", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(FFFFFFFF00000000) = 18446744069414584320", function()
-    local uint_64 = UInt64.fromHex("FFFFFFFF00000000");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(FFFFFFFF00000000) = 18446744069414584320", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("FFFFFFFF00000000"));
     tester.assert(uint_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "18446744069414584320", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait UInt64.fromHex(F1FAB2DC0143005F) = 17436445565302014047", function()
-    local uint_64 = UInt64.fromHex("F1FAB2DC0143005F");
+unit_tests:addTest("Testing wirebait UInt64.fromByteArray(F1FAB2DC0143005F) = 17436445565302014047", function()
+    local uint_64 = UInt64.fromByteArray(ByteArray.new("F1FAB2DC0143005F"));
     tester.assert(uint_64.m_low_word, 0x0143005F, "Wrong low_word value!");
     tester.assert(uint_64.m_high_word, 0xF1FAB2DC, "Wrong high_word value!");
     tester.assert(tostring(uint_64), "17436445565302014047", "Wrong decimal string value!");

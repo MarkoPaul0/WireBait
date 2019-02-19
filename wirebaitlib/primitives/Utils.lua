@@ -26,13 +26,13 @@ function utils.swapBytes(hex_str)
 end
 
 --[[Decode a uint32 from a hexadecimal string]]
-function utils.hexStringToUint32(hex_str)
+--[[function utils.hexStringToUint32(hex_str)
     --TODO: check if valid hexadecimal string [NO WHITE SPACE!]
     assert(#hex_str > 0, "hexStringToUint32() requires strict positive number of bytes!");
     assert(#hex_str <= 32, "hexStringToUint32() cannot convert more thant 4 bytes to a uint value!");
     hex_str = string.format("%016s",hex_str):gsub(" ","0") --left pad with zeros
     return tonumber(hex_str, 16);
-end
+end]]
 
 --[[All data structures in this project will have a field "_struc_type".
 If obj is a table, returns the content of _struct_type otherwise returns the type(obj)]]

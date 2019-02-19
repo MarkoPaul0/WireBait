@@ -56,6 +56,7 @@ unit_tests:addTest("Testing Utils.swapBytes() (8 bytes)", function()
     tester.assert(utils.swapBytes("0102030405060708"), "0807060504030201", "swapBytes() failed");
 end);
 
+--[[
 unit_tests:addTest("Testing Utils.hexStringToUint32() = 0", function()
     tester.assert(utils.hexStringToUint32("00000000"), 0, "hexStringToUint32() failed");
 end);
@@ -67,6 +68,7 @@ end);
 unit_tests:addTest("Testing Utils.hexStringToUint32() = 4294967295", function()
     tester.assert(utils.hexStringToUint32("FFFFFFFF"), 4294967295, "hexStringToUint32() failed");
 end);
+]]
 
 unit_tests:addTest("Testing Utils.typeof() = number", function()
     tester.assert(utils.typeof(2), "number", "typeof() failed");

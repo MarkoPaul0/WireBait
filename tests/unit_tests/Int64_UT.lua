@@ -20,7 +20,9 @@
 ]]
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("tests.tester")
-local Int64 = require("wirebaitlib.primitives.Int64")
+
+local Int64     = require("wirebaitlib.primitives.Int64")
+local ByteArray = require("wirebaitlib.primitives.ByteArray")
 
 --[[IMPORTANT NOTE: a simple and easy way to come up with test cases when testing Int64 addition is to use wolfram alpha
 for instance [0xFFFFFFCDEDF1 + 0x1234FF24FF01](https://www.wolframalpha.com/input/?i=0xFFFFFFCDEDF1+%2B+0x1234FF24FF01) ]]
@@ -98,50 +100,50 @@ unit_tests:addTest("Testing wirebait Int64.new(low_num, TOO LARGE high_num)", fu
     tester.assert(error_msg, "Int64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!", "Wrong error message!", "Wrong error message!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(00) = 0", function()
-    local int_64 = Int64.fromHex("00");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(00) = 0", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("00"));
     tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(0000000000) = 0", function()
-    local int_64 = Int64.fromHex("0000000000");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(0000000000) = 0", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("0000000000"));
     tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFFFFFFFFFF) = -1", function()
-    local int_64 = Int64.fromHex("FFFFFFFFFFFFFFFF");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(FFFFFFFFFFFFFFFF) = -1", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("FFFFFFFFFFFFFFFF"));
     tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
     tester.assert(tostring(int_64), "-1", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF) = 4294967295", function()
-    local int_64 = Int64.fromHex("FFFFFFFF");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(FFFFFFFF) = 4294967295", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("FFFFFFFF"));
     tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(00000000FFFFFFFF) = 4294967295", function()
-    local int_64 = Int64.fromHex("00000000FFFFFFFF");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(00000000FFFFFFFF) = 4294967295", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("00000000FFFFFFFF"));
     tester.assert(int_64.m_low_word, UINT32_MAX, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(int_64), "4294967295", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(FFFFFFFF00000000) = -4294967296", function()
-    local int_64 = Int64.fromHex("FFFFFFFF00000000");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(FFFFFFFF00000000) = -4294967296", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("FFFFFFFF00000000"));
     tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, UINT32_MAX, "Wrong high_word value!");
     tester.assert(tostring(int_64), "-4294967296", "Wrong decimal string value!");
   end);
 
-unit_tests:addTest("Testing wirebait Int64.fromHex(F1FAB2DC0143005F) = -1010298508407537569", function()
-    local int_64 = Int64.fromHex("F1FAB2DC0143005F");
+unit_tests:addTest("Testing wirebait Int64.fromByteArray(F1FAB2DC0143005F) = -1010298508407537569", function()
+    local int_64 = Int64.fromByteArray(ByteArray.new("F1FAB2DC0143005F"));
     tester.assert(int_64.m_low_word, 0x0143005F, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0xF1FAB2DC, "Wrong high_word value!");
     tester.assert(tostring(int_64), "-1010298508407537569", "Wrong decimal string value!");

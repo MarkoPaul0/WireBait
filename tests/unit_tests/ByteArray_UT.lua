@@ -119,6 +119,11 @@ unit_tests:addTest("Testing ByteArray:__tostring()", function()
     tester.assert(tostring(b), "A0102FB1", "__tostring() produced unexpected data");
 end);
 
+unit_tests:addTest("Testing ByteArray:toHex()", function()
+    local b = ByteArray.new("A0102FB1");
+    tester.assert(b:toHex(), "A0102FB1", "__tostring() produced unexpected data");
+end);
+
 unit_tests:addTest("Testing ByteArray:subset()", function()
     local b = ByteArray.new("A0102FB1");
     local b2 = b:subset(1,2);

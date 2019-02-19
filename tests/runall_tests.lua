@@ -25,10 +25,11 @@ tester = require("tests.tester")
 print("\nRunning all unit tests")
 
 --# WIREBAIT TESTS
-tester.test(dofile("tests/unit_tests/wirebait_protofield_UT.lua"))
-tester.test(dofile("tests/unit_tests/wirebait_buffer_UT.lua"))
-tester.test(dofile("tests/unit_tests/Uint64_UT.lua"))
-tester.test(dofile("tests/unit_tests/wirebait_int64_UT.lua"))
-tester.test(dofile("tests/functional_tests/test_examples.lua"))
+tester.test(dofile("tests/unit_tests/ByteArray_UT.lua"))
+tester.test(dofile("tests/unit_tests/Int64_UT.lua"))
+tester.test(dofile("tests/unit_tests/ProtoField_UT.lua"))
+tester.test(dofile("tests/unit_tests/TvbRange_UT.lua"))
+tester.test(dofile("tests/unit_tests/UInt64_UT.lua"))
+tester.test(dofile("tests/unit_tests/Utils_UT.lua"))
 
 tester.printReport();

@@ -5,6 +5,7 @@
 ---
 
 local Tvb = require("wirebaitlib.packet_data.Tvb");
+local utils = require("wirebaitlib.primitives.Utils");
 
 local ByteArray = {};
 
@@ -58,6 +59,11 @@ function ByteArray.new(data_as_hex_string)
         return self.m_data_as_hex_str:len() / 2;
     end
 
+    --TODO: in wireshark, this method expects 2 arguments
+    function byte_array:toHex()
+        return self.m_data_as_hex_str;
+    end
+
     function byte_array:__tostring()
         return self.m_data_as_hex_str;
     end
@@ -72,6 +78,22 @@ function ByteArray.new(data_as_hex_string)
 
     function byte_array:tvb()
         return Tvb.new(self); --TODO: modify tvb to be constructed from a byte array!
+    end
+
+    --TODO: add unit test for this method
+    --This function does not exist in wireshark, used by other primitive types such as UInt64
+    function byte_array:toUInt32()
+        assert(self:len() <= 4, "cannot call ByteArray:toUInt32() when ByteArray:len() > 4");
+        --left pad with zeros to make 4 bytes
+        local hex_str = string.format("%016s",self.m_data_as_hex_str):gsub(" ","0");
+        return tonumber(hex_str, 16);
+    end
+
+    --TODO: add unit test for this method
+    --this method is not part of the wireshark API
+    function byte_array:swapByteOrder()
+        assert(self:len() <= 8, "It does not make sense to swap byte order on an array of size greater than 8 bytes!")
+        return ByteArray.new(utils.swapBytes(self.m_data_as_hex_str));
     end
 
     setmetatable(byte_array, byte_array);

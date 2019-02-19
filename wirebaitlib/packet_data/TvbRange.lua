@@ -4,59 +4,50 @@
 --- DateTime: 2/16/19 12:04 PM
 ---
 
-function TvbRange.new(data_as_hex_string, offset)
-    assert(type(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
+local utils  = require("wirebaitlib.primitives.Utils");
+local bw     = require("wirebaitlib.primitives.Bitwise");
+local UInt64 = require("wirebaitlib.primitives.UInt64");
+local Int64  = require("wirebaitlib.primitives.Int64");
+
+local TvbRange = {};
+
+function TvbRange.new(byte_array)
+    assert(utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 
     local tvb_range = {
         _struct_type = "TvbRange",
-        m_data, --ByteArray
-        m_offset = offset or 0;
+        m_data = byte_array --ByteArray
     }
 
     local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
     function tvb_range:len()
-        return math.floor(string.len(self.m_data_as_hex_str)/2);
-    end
-
-    function tvb_range:reported_length_remaining()
-        --TODO: work on this!    
-        --TODO: work on this!
-        --TODO: work on this!
-        --TODO: work on this!
-        --TODO: work on this!
-
-        --print("[WARNING] tvb:reported_length_remaining() is not supported yet and returns len()!");
-        return math.floor(string.len(self.m_data_as_hex_str)/2);
+        return self.m_data:len();
     end
 
     function tvb_range:tvb()
         --TODO: create a tvb out of the TvbRange
-    end
-
-    function tvb_range:none()
-        local str = ""
-        return str
+        assert(false, "Not available yet");
     end
 
     function tvb_range:uint()
-        assert(self:len() <= 4, "tvbrange:uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
-        return hexStringToUint32(self:bytes());
+        assert(self:len() <= 4, "tvbrange:uint() can only decode bytes! (len = " .. self:len() .. ")");
+        return self.m_data:toUInt32();
     end
 
     function tvb_range:uint64()
         assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-        return UInt64.fromHex(self:bytes());
+        return UInt64.fromByteArray(self.m_data);
     end;
 
     function tvb_range:le_uint()
-        assert(self:len() <= 4, "tvbrange:le_uint() cannot decode more than 4 bytes! (len = " .. self:len() .. ")");
-        return hexStringToUint32(utils.swapBytes(self:bytes()));
+        assert(self:len() <= 4, "tvbrange:le_uint() can only decode 4 bytes! (len = " .. self:len() .. ")");
+        return self.m_data:swapByteOrder():toUInt32();
     end
 
     function tvb_range:le_uint64()
         assert(self:len() <= 8, "tvbrange:le_uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-        return UInt64.fromHex(utils.swapBytes(self:bytes()));
+        return UInt64.fromByteArray(self.m_data:swapByteOrder());
     end;
 
     function tvb_range:int(mask)
@@ -65,12 +56,12 @@ function TvbRange.new(data_as_hex_string, offset)
         local uint = self:uint();
         if mask then
             assert(type(mask) == "number" and mask == math.floor(mask) and mask <= UINT32_MAX, "When provided, the mask should be a 32 bit unsigned integer!");
-            uint = bwAnd(uint, mask);
+            uint = bw.And(uint, mask);
         end
         local sign_mask=tonumber("80" .. string.rep("00", size-1), 16);
-        if bwAnd(uint, sign_mask) > 0 then --we're dealing with a negative number
+        if bw.And(uint, sign_mask) > 0 then --we're dealing with a negative number
             local val_mask=tonumber("7F" .. string.rep("FF", size-1), 16);
-            local val = -(bwAnd(bwNot(uint), val_mask) + 1);
+            local val = -(bw.And(bw.Not(uint), val_mask) + 1);
             return val;
         else --we are dealing with a positive number
             return uint;
@@ -80,20 +71,20 @@ function TvbRange.new(data_as_hex_string, offset)
     function tvb_range:le_int(mask)
         local size = self:len();
         assert(size == 1 or size == 2 or size == 4, "TvbRange must be 1, 2, or 4 bytes long for TvbRange:le_int() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(utils.swapBytes(self:bytes())):int(mask);
+        return TvbRange.new(self.m_data:swapByteOrder()):int(mask);
     end
 
     function tvb_range:int64(mask)
         if mask then
-            return Int64.fromHex(self:bytes()):band(mask)
+            return Int64.fromByteArray(self.m_data):band(mask)
         end
-        return Int64.fromHex(self:bytes());
+        return Int64.fromByteArray(self.m_data);
     end
 
     function tvb_range:le_int64(mask)
         local size = self:len();
         assert(size == 1 or size == 2 or size == 4 or size == 8, "TvbRange must be 1, 2, 4, or 8 bytes long for TvbRange:le_int() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(utils.swapBytes(self:bytes())):int64(mask);
+        return TvbRange.new(self.m_data:swapByteOrder()):int64(mask);
     end
 
     function tvb_range:float()
@@ -111,16 +102,16 @@ function TvbRange.new(data_as_hex_string, offset)
             end
             local bit_len = 23;
             local exponent_mask = 0x7F800000;
-            local exp = bwRshift(bwAnd(uint, exponent_mask), bit_len);
+            local exp = bw.Rshift(bw.And(uint, exponent_mask), bit_len);
             local fraction= 1;
             for i=1,bit_len do
-                local bit_mask = bwLshift(1, (bit_len-i)); --looking at one bit at a time
-                if bwAnd(bit_mask, uint) > 0 then
+                local bit_mask = bw.Lshift(1, (bit_len-i)); --looking at one bit at a time
+                if bw.And(bit_mask, uint) > 0 then
                     fraction = fraction + math.pow(2,-i)
                 end
             end
             local absolute_value = fraction * math.pow(2, exp -127);
-            local sign = bwAnd(uint, 0x80000000) > 0 and -1 or 1;
+            local sign = bw.And(uint, 0x80000000) > 0 and -1 or 1;
             return sign * absolute_value;
         else --64 bit float
             local word1 = self(0,4):uint(); --word1 will contain the bit sign, the exponent and part of the fraction
@@ -137,23 +128,23 @@ function TvbRange.new(data_as_hex_string, offset)
             end
             local exponent_mask = 0x7FF00000;
             local bit_len1 = 20;
-            local exp = bwRshift(bwAnd(word1, exponent_mask), bit_len1);
+            local exp = bw.Rshift(bw.And(word1, exponent_mask), bit_len1);
             local fraction= 1;
             for i=1,bit_len1 do --[[starting to calculate fraction with word1]]
-                local bit_mask = bwLshift(1, (bit_len1-i)); --looking at one bit at a time
-                if bwAnd(bit_mask, word1) > 0 then
+                local bit_mask = bw.Lshift(1, (bit_len1-i)); --looking at one bit at a time
+                if bw.And(bit_mask, word1) > 0 then
                     fraction = fraction + math.pow(2,-i)
                 end
             end
             local bit_len2 = 32; --[[finishing to calculate fraction with word2]]
             for i=1,bit_len2 do
-                local bit_mask = bwLshift(1, (bit_len2-i)); --looking at one bit at a time
-                if bwAnd(bit_mask, word2) > 0 then
+                local bit_mask = bw.Lshift(1, (bit_len2-i)); --looking at one bit at a time
+                if bw.And(bit_mask, word2) > 0 then
                     fraction = fraction + math.pow(2,-i-bit_len1)
                 end
             end
             local absolute_value = fraction * math.pow(2, exp - 1023);
-            local sign = bwAnd(word1, 0x80000000) > 0 and -1 or 1;
+            local sign = bw.And(word1, 0x80000000) > 0 and -1 or 1;
             return sign * absolute_value;
         end
     end
@@ -161,7 +152,7 @@ function TvbRange.new(data_as_hex_string, offset)
     function tvb_range:le_float()
         local size = self:len();
         assert(size == 4 or size == 8, "TvbRange must be 4 or 8 bytes long for TvbRange:le_float() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(utils.swapBytes(self:bytes())):float();
+        return TvbRange.new(utils.swapBytes(self:bytes():toHex())):float();
     end
 
     function tvb_range:ipv4()
@@ -221,12 +212,12 @@ function TvbRange.new(data_as_hex_string, offset)
     end
 
     function tvb_range:le_ustring()
-        local be_hex_str = swapBytes(self:bytes());
+        local be_hex_str = swapBytes(self:bytes():toHex());
         return TvbRange.new(be_hex_str):ustring();
     end
 
     function tvb_range:le_ustringz()
-        local be_hex_str = swapBytes(self:bytes());
+        local be_hex_str = swapBytes(self:bytes():toHex());
         return TvbRange.new(be_hex_str):ustringz();
     end
 
@@ -249,12 +240,12 @@ function TvbRange.new(data_as_hex_string, offset)
         else
             local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
             local bytes_as_uint64 = UInt64.fromHex(self(byte_offset, byte_size):bytes());
-            return UInt64.new(bytes_as_uint64.m_low_word, bwAnd(bytes_as_uint64.m_high_word, high_bit_mask)):rshift(right_bits_count);
+            return UInt64.new(bytes_as_uint64.m_low_word, bw.And(bytes_as_uint64.m_high_word, high_bit_mask)):rshift(right_bits_count);
         end
     end
 
     function tvb_range:bytes()
-        return self.m_data_as_hex_str;
+        return self.m_data;
     end
 
     function tvb_range:__guid()
@@ -291,3 +282,5 @@ function TvbRange.new(data_as_hex_string, offset)
 
     return tvb_range;
 end
+
+return TvbRange;
