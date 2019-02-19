@@ -152,7 +152,7 @@ function TvbRange.new(byte_array)
     function tvb_range:le_float()
         local size = self:len();
         assert(size == 4 or size == 8, "TvbRange must be 4 or 8 bytes long for TvbRange:le_float() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(utils.swapBytes(self:bytes():toHex())):float();
+        return TvbRange.new(self.m_data:swapByteOrder()):float();
     end
 
     function tvb_range:ipv4()
@@ -239,7 +239,7 @@ function TvbRange.new(byte_array)
 
         else
             local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
-            local bytes_as_uint64 = UInt64.fromHex(self(byte_offset, byte_size):bytes());
+            local bytes_as_uint64 = UInt64.fromByteArray(self.m_data:subset(byte_offset, byte_size));
             return UInt64.new(bytes_as_uint64.m_low_word, bw.And(bytes_as_uint64.m_high_word, high_bit_mask)):rshift(right_bits_count);
         end
     end
@@ -259,8 +259,7 @@ function TvbRange.new(byte_array)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        local offset = start;
-        return TvbRange.new(string.sub(self.m_data_as_hex_str,2*start+1, 2*(start+length)), offset)
+        return TvbRange.new(self.m_data:subset(start,length));
     end
 
     function tvb_range:offset()

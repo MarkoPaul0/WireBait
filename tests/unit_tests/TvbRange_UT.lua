@@ -49,108 +49,282 @@ unit_tests:addTest("Testing TvbRange:len()", function()
     tester.assert(TvbRange.new(ByteArray.new("4845")):len(), 2, "Wrong byte length");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:uint() (Big-Endian)", function()
+unit_tests:addTest("Testing TvbRange:uint() (Big-Endian)", function()
     tester.assert(TvbRange.new(ByteArray.new("48454C4C")):uint(), 1212501068);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian)", function()
+unit_tests:addTest("Testing TvbRange:uint64() (Big-Endian)", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("6D45D89F55C23601")):uint64()), "7873937702377371137");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:uint64() (Big-Endian) Largest uint64", function()
+unit_tests:addTest("Testing TvbRange:uint64() (Big-Endian) Largest uint64", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):uint64()), "18446744073709551615");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_uint64() (Little-Endian) Largest uint64", function()
+unit_tests:addTest("Testing TvbRange:le_uint64() (Little-Endian) Largest uint64", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):le_uint64()), "18446744073709551615");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_uint() (Little-Endian)", function()
+unit_tests:addTest("Testing TvbRange:le_uint() (Little-Endian)", function()
     tester.assert(TvbRange.new(ByteArray.new("48454C4C")):le_uint(), 1280066888);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_uint64() (Little-Endian)", function()
+unit_tests:addTest("Testing TvbRange:le_uint64() (Little-Endian)", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("48454C4C28520000")):le_uint64()), "90333032236360");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Negative Number", function()
+unit_tests:addTest("Testing TvbRange:int() (Big-Endian) Negative Number", function()
     tester.assert(TvbRange.new(ByteArray.new("FFFF2852")):int(), -55214);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Zero", function()
+unit_tests:addTest("Testing TvbRange:int() (Big-Endian) Zero", function()
     tester.assert(TvbRange.new(ByteArray.new("00000000")):int(), 0);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) -1", function()
+unit_tests:addTest("Testing TvbRange:int() (Big-Endian) -1", function()
     tester.assert(TvbRange.new(ByteArray.new("FFFFFFFF")):int(), -1);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Largest Negative Number", function()
+unit_tests:addTest("Testing TvbRange:int() (Big-Endian) Largest Negative Number", function()
     tester.assert(TvbRange.new(ByteArray.new("80000000")):int(), -2147483648);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int() (Big-Endian) Largest Positive Number", function()
+unit_tests:addTest("Testing TvbRange:int() (Big-Endian) Largest Positive Number", function()
     tester.assert(TvbRange.new(ByteArray.new("7FFFFFFF")):int(), 2147483647);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Zero", function()
+unit_tests:addTest("Testing TvbRange:int64() (Big-Endian) Zero", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("0000000000000000")):int64()), "0");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) -1", function()
+unit_tests:addTest("Testing TvbRange:int64() (Big-Endian) -1", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):int64()), "-1");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Large Negative Number", function()
+unit_tests:addTest("Testing TvbRange:int64() (Big-Endian) Large Negative Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("EFFFFFFFFFFFFFFF")):int64()), "-1152921504606846977");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Largest Negative Number", function()
+unit_tests:addTest("Testing TvbRange:int64() (Big-Endian) Largest Negative Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("8000000000000000")):int64()), "-9223372036854775808");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:int64() (Big-Endian) Large Positive Number", function()
+unit_tests:addTest("Testing TvbRange:int64() (Big-Endian) Large Positive Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("7FFFFFFFFFFFFFFF")):int64()), "9223372036854775807");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Negative Number", function()
+unit_tests:addTest("Testing TvbRange:le_int() (Little-Endian) Negative Number", function()
     tester.assert(TvbRange.new(ByteArray.new("5228FFFF")):le_int(), -55214);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Zero", function()
+unit_tests:addTest("Testing TvbRange:le_int() (Little-Endian) Zero", function()
     tester.assert(TvbRange.new(ByteArray.new("00000000")):le_int(), 0);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) -1", function()
+unit_tests:addTest("Testing TvbRange:le_int() (Little-Endian) -1", function()
     tester.assert(TvbRange.new(ByteArray.new("FFFFFFFF")):le_int(), -1);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Largest Negative Number", function()
+unit_tests:addTest("Testing TvbRange:le_int() (Little-Endian) Largest Negative Number", function()
     tester.assert(TvbRange.new(ByteArray.new("00000080")):le_int(), -2147483648);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int() (Little-Endian) Largest Positive Number", function()
+unit_tests:addTest("Testing TvbRange:le_int() (Little-Endian) Largest Positive Number", function()
     tester.assert(TvbRange.new(ByteArray.new("FFFFFF7F")):le_int(), 2147483647);
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Zero", function()
+unit_tests:addTest("Testing TvbRange:le_int64() (Little-Endian) Zero", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("0000000000000000")):le_int64()), "0");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) -1", function()
+unit_tests:addTest("Testing TvbRange:le_int64() (Little-Endian) -1", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):le_int64()), "-1");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Large Negative Number", function()
+unit_tests:addTest("Testing TvbRange:le_int64() (Little-Endian) Large Negative Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFEF")):le_int64()), "-1152921504606846977");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Largest Negative Number", function()
+unit_tests:addTest("Testing TvbRange:le_int64() (Little-Endian) Largest Negative Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("0000000000000080")):le_int64()), "-9223372036854775808");
 end)
 
-unit_tests:addTest("Testing wirebait buffer:le_int64() (Little-Endian) Large Positive Number", function()
+unit_tests:addTest("Testing TvbRange:le_int64() (Little-Endian) Large Positive Number", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFF7F")):le_int64()), "9223372036854775807");
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) 1", function()
+    tester.assert(TvbRange.new(ByteArray.new("3F800000")):float(), 1);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) 1", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000803F")):le_float(), 1);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) -2", function()
+    tester.assert(TvbRange.new(ByteArray.new("C0000000")):float(), -2);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) 0", function()
+    tester.assert(TvbRange.new(ByteArray.new("00000000")):float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) -0", function()
+    tester.assert(TvbRange.new(ByteArray.new("80000000")):float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("7F800000")):float(), math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) -Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("FF800000")):float(), -math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) -0.15625", function()
+    tester.assert(TvbRange.new(ByteArray.new("BE200000")):float(), -0.15625);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Single Precision) 0.15625", function()
+    tester.assert(TvbRange.new(ByteArray.new("3E200000")):float(), 0.15625);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) 1", function()
+    tester.assert(TvbRange.new(ByteArray.new("3FF0000000000000")):float(), 1);
+end)
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) 1", function()
+    tester.assert(TvbRange.new(ByteArray.new("000000000000F03F")):le_float(), 1);
+end)
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) -2", function()
+    tester.assert(TvbRange.new(ByteArray.new("C000000000000000")):float(), -2);
+end)
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) 0", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000000000000000")):float(), 0);
+end)
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) -0", function()
+    tester.assert(TvbRange.new(ByteArray.new("8000000000000000")):float(), 0);
+end)
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("7FF0000000000000")):float(), math.huge);
+end)
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) -Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("FFF0000000000000")):float(), -math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) -Pi", function()
+    tester.assert(TvbRange.new(ByteArray.new("C00921FB54442D18")):float(), -math.pi);
+end)
+
+unit_tests:addTest("Testing TvbRange:float() (Big-Endian Double Precision) Pi", function()
+    tester.assert(TvbRange.new(ByteArray.new("400921FB54442D18")):float(), math.pi);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) -2", function()
+    tester.assert(TvbRange.new(ByteArray.new("000000C0")):le_float(), -2);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) 0", function()
+    tester.assert(TvbRange.new(ByteArray.new("00000000")):le_float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) -0", function()
+    tester.assert(TvbRange.new(ByteArray.new("00000080")):le_float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000807F")):le_float(), math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) -Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("000080FF")):le_float(), -math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) -0.15625", function()
+    tester.assert(TvbRange.new(ByteArray.new("000020BE")):le_float(), -0.15625);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Single Precision) 0.15625", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000203E")):le_float(), 0.15625);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) -2", function()
+    tester.assert(TvbRange.new(ByteArray.new("00000000000000C0")):le_float(), -2);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) 0", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000000000000000")):le_float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) -0", function()
+    tester.assert(TvbRange.new(ByteArray.new("0000000000000080")):le_float(), 0);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("000000000000F07F")):le_float(), math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) -Infinity", function()
+    tester.assert(TvbRange.new(ByteArray.new("000000000000F0FF")):le_float(), -math.huge);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) -Pi", function()
+    tester.assert(TvbRange.new(ByteArray.new("182D4454FB2109C0")):le_float(), -math.pi);
+end)
+
+unit_tests:addTest("Testing TvbRange:le_float() (Little-Endian Double Precision) Pi", function()
+    tester.assert(TvbRange.new(ByteArray.new("182D4454FB210940")):le_float(), math.pi);
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(11,3) = 4", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("AB123FC350DDB12D")):bitfield(11,3)), "4");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(11,5) = 18", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("AB123FC350DDB12D")):bitfield(11,5)), "18");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,8) = 171", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("AB123FC350DDB12D")):bitfield(0,8)), "171");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,33) = 5740199814", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("AB123FC350DDB12D")):bitfield(0,33)), "5740199814");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,8) = 255", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,8)), "255");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,16) = 65535", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,16)), "65535");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,32) = 4294967295", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,32)), "4294967295");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,33) = 8589934591", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,33)), "8589934591");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,56) = 72057594037927935", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,56)), "72057594037927935");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,57) = 144115188075855871", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,57)), "144115188075855871");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,58) = 288230376151711743", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,58)), "288230376151711743");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,63) = 9223372036854775807", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,63)), "9223372036854775807");
+end)
+
+unit_tests:addTest("Testing TvbRange:bitfield(0,64) = -1", function()
+    tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,64)), "18446744073709551615");
 end)
 
 if is_standalone_test then
