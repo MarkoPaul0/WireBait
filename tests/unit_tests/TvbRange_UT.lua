@@ -335,12 +335,12 @@ unit_tests:addTest("Testing TvbRange:stringz()", function()
     tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C440032b4b1b34b2b")):stringz(),"HELLO WORLD", "Wrong result.");
 end)
 
-unit_tests:addTest("Testing TvbRange:ipv4() (Big-Endian) 192.168.0.1", function()
-    tester.assert(TvbRange.new(ByteArray.new("C0A80001")):ipv4(), "192.168.0.1");
+unit_tests:addTest("Testing TvbRange:ipv4() (Big-Endian) 192.168.0.255", function()
+    tester.assert(TvbRange.new(ByteArray.new("C0A800FF")):ipv4(), "192.168.0.255");
 end)
 
-unit_tests:addTest("Testing TvbRange:le_ipv4() (Little-Endian) 192.168.0.1", function()
-    tester.assert(TvbRange.new(ByteArray.new("0100A8C0")):le_ipv4(), "192.168.0.1");
+unit_tests:addTest("Testing TvbRange:le_ipv4() (Little-Endian) 192.168.0.FF", function()
+    tester.assert(TvbRange.new(ByteArray.new("FF00A8C0")):le_ipv4(), "192.168.0.255");
 end)
 
 unit_tests:addTest("Testing TvbRange:eth() (Big-Endian) ec:08:6b:70:36:82", function()

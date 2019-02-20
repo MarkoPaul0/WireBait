@@ -36,13 +36,7 @@ therefore forgetting the local keyword will not have a negative impact.
 --Creating unit tests
 local unit_tests = tester.newUnitTestsSet("Utils Unit Tests");
 
-unit_tests:addTest("Testing Utils.printIP() = 192.168.0.1", function()
-    tester.assert(utils.printIP(3232235521), "192.168.0.1", "Wrong IP");
-end);
 
-unit_tests:addTest("Testing Utils.printIP() = 224.0.255.255", function()
-    tester.assert(utils.printIP(3758161919), "224.0.255.255", "Wrong IP");
-end);
 
 --[[
 unit_tests:addTest("Testing Utils.swapBytes() (2 bytes)", function()

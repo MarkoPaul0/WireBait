@@ -21,7 +21,7 @@
 
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("tests.tester")
-local wirebait = require("wirebait");
+local wirebait = require("wirebaitlib");
 ----[[ All variables here need to be kept local, however the unit test framework will run
 --each individual test function added with UnitTestsSet:addTest() in its own environment,
 --therefore forgetting the local keyword will not have a negative impact.
