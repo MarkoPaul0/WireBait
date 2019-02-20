@@ -4,7 +4,8 @@
 --- DateTime: 2/15/19 11:30 PM
 ---
 
-local utils = require("wirebaitlib.primitives.Utils");
+local utils    = require("wirebaitlib.primitives.Utils");
+local TvbRange = require("wirebaitlib.packet_data.TvbRange");
 
 local Tvb = {};
 
@@ -14,17 +15,16 @@ function Tvb.new(byte_array, offset)
     local tvb = {
         _struct_type = "Tvb",
         m_data = byte_array,
-        m_offset = offset or 0;
+        m_offset = offset or 0; --TODO: offset is not used for anything here
     }
 
-    local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
-
+    --TODO: work on this method
     function tvb:reported_len()
         assert(false, "tvb:reported_len() is not available yet");
     end
 
     function tvb:len()
-        return m_data:len();
+        return self.m_data:len();
     end
 
     function tvb:reported_length_remaining()
@@ -51,7 +51,7 @@ function Tvb.new(byte_array, offset)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        return Tvb.new(self.m_data:subset(start, length), offset)
+        return TvbRange.new(self.m_data:subset(start, length), offset)
     end
 
     --equivalent to tvb:range() but allows tvb to be called as a function
@@ -61,7 +61,7 @@ function Tvb.new(byte_array, offset)
 
     function tvb:__tostring()
         if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
-            return string.format("%48s", tostring(self.m_data) .. "...");
+            return tostring(self.m_data):sub(0,48) .. "...";
         end
         return  string.lower(tostring(self.m_data));
     end

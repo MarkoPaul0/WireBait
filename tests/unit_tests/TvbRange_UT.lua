@@ -327,6 +327,30 @@ unit_tests:addTest("Testing TvbRange:bitfield(0,64) = -1", function()
     tester.assert(tostring(TvbRange.new(ByteArray.new("FFFFFFFFFFFFFFFF")):bitfield(0,64)), "18446744073709551615");
 end)
 
+unit_tests:addTest("Testing TvbRange:string()", function()
+    tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C44")):string(),"HELLO WORLD", "Wrong result.");
+end)
+
+unit_tests:addTest("Testing TvbRange:stringz()", function()
+    tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C440032b4b1b34b2b")):stringz(),"HELLO WORLD", "Wrong result.");
+end)
+
+unit_tests:addTest("Testing TvbRange:ipv4() (Big-Endian) 192.168.0.1", function()
+    tester.assert(TvbRange.new(ByteArray.new("C0A80001")):ipv4(), "192.168.0.1");
+end)
+
+unit_tests:addTest("Testing TvbRange:le_ipv4() (Little-Endian) 192.168.0.1", function()
+    tester.assert(TvbRange.new(ByteArray.new("0100A8C0")):le_ipv4(), "192.168.0.1");
+end)
+
+unit_tests:addTest("Testing TvbRange:eth() (Big-Endian) ec:08:6b:70:36:82", function()
+    tester.assert(TvbRange.new(ByteArray.new("EC086B703682")):eth(), "ec:08:6b:70:36:82");
+end)
+
+unit_tests:addTest("Testing TvbRange:__guid() = 48454c4c-4f20-574f-524c-440032b4b1b3", function()
+    tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C440032b4b1b3")):__guid(), "48454c4c-4f20-574f-524c-440032b4b1b3");
+end)
+
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();

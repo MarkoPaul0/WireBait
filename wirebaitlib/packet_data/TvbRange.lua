@@ -157,12 +157,12 @@ function TvbRange.new(byte_array)
 
     function tvb_range:ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return printIP(self:int());
+        return utils.printIP(self:int());
     end
 
     function tvb_range:le_ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:le_ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return printIP(self:le_int());
+        return utils.printIP(self:le_int());
     end
 
     function tvb_range:eth()
@@ -170,19 +170,19 @@ function TvbRange.new(byte_array)
         local eth_addr = "";
         for i=1,self:len() do
             local sep = i == 1 and "" or ":";
-            eth_addr = eth_addr .. sep .. self(i-1,1):bytes();
+            eth_addr = eth_addr .. sep .. tostring(self(i-1,1):bytes());
         end
         return string.lower(eth_addr);
     end
 
     function tvb_range:string()
         local str = ""
-        for i=1,self:len() do
-            local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i) --[[even a Protofield.string() stops printing after null character]]
-            if byte_ == '00' then --null char termination
+        for i=0,(self:len() - 1) do
+            local cur_byte = self.m_data:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
+            if cur_byte == '00' then --null char termination
                 return str
             end
-            str = str .. string.char(tonumber(byte_, 16))
+            str = str .. string.char(tonumber(cur_byte, 16))
         end
         str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
         return str
@@ -190,12 +190,12 @@ function TvbRange.new(byte_array)
 
     function tvb_range:stringz()
         local str = ""
-        for i=1,self:len()-1 do
-            local byte_ = self.m_data_as_hex_str:sub(2*i-1,2*i)
-            if byte_ == '00' then --null char termination
+        for i=0,(self:len() - 1) do
+            local cur_byte = self.m_data:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
+            if cur_byte == '00' then --null char termination
                 return str
             end
-            str = str .. string.char(tonumber(byte_, 16))
+            str = str .. string.char(tonumber(cur_byte, 16))
         end
         str = string.gsub(str, ".", escape_replacements) --replacing escaped characters that characters that would cause io.write() or print() to mess up is they were interpreted
         return str
@@ -250,8 +250,9 @@ function TvbRange.new(byte_array)
 
     function tvb_range:__guid()
         assert(self:len() == 16, "Trying to parse a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
-        local s_ = self.m_data_as_hex_str;
-        return string.lower(s_:sub(0,8) .. "-" .. s_:sub(9,12) .. "-" .. s_:sub(13,16) .. "-" .. s_:sub(17,20) .. "-" .. s_:sub(21));
+        local d = self.m_data;
+        return string.lower(tostring(d:subset(0,4)) .. "-" .. tostring(d:subset(4,2)) .. "-" .. 
+                            tostring(d:subset(6,2)) .. "-" .. tostring(d:subset(8,2)) .. "-" .. tostring(d:subset(10,6)));
     end
 
     function tvb_range:range(start, length)
