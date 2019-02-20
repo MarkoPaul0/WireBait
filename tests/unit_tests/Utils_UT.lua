@@ -44,6 +44,7 @@ unit_tests:addTest("Testing Utils.printIP() = 224.0.255.255", function()
     tester.assert(utils.printIP(3758161919), "224.0.255.255", "Wrong IP");
 end);
 
+--[[
 unit_tests:addTest("Testing Utils.swapBytes() (2 bytes)", function()
     tester.assert(utils.swapBytes("0102"), "0201", "swapBytes() failed");
 end);
@@ -55,6 +56,7 @@ end);
 unit_tests:addTest("Testing Utils.swapBytes() (8 bytes)", function()
     tester.assert(utils.swapBytes("0102030405060708"), "0807060504030201", "swapBytes() failed");
 end);
+]]
 
 --[[
 unit_tests:addTest("Testing Utils.hexStringToUint32() = 0", function()

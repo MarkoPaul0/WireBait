@@ -4,9 +4,6 @@
 --- DateTime: 2/16/19 12:18 PM
 ---
 
-
-local utils = require("wirebaitlib.primitives.Utils");
-
 local ByteArray = {};
 
 --TODO: add separator as argument, for now the hex string is assumed to have bytes separated by a single white spaces
@@ -93,8 +90,12 @@ function ByteArray.new(data_as_hex_string)
     --TODO: add unit test for this method
     --this method is not part of the wireshark API
     function byte_array:swapByteOrder()
-        assert(self:len() <= 8, "It does not make sense to swap byte order on an array of size greater than 8 bytes!")
-        return ByteArray.new(utils.swapBytes(self.m_data_as_hex_str));
+        assert(self:len() <= 8, "It does not make sense to swap byte order on more than 8 bytes at a time")
+        local new_hex_str = "";
+        for i=1,#self.m_data_as_hex_str/2 do
+            new_hex_str = self.m_data_as_hex_str:sub(2*i-1,2*i) .. new_hex_str;
+        end
+        return ByteArray.new(new_hex_str);
     end
 
     setmetatable(byte_array, byte_array);

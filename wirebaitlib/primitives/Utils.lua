@@ -14,7 +14,9 @@ function utils.printIP(le_int_ip)
     return ip_str;
 end
 
+
 --[[Switches byte order of the given hex_str. For instance the input "12ABCDEF" will be turned into "EFCDAB12" ]]
+--[[
 -- TODO: rename to swapByteOrder
 function utils.swapBytes(hex_str)
     assert(#hex_str <= 16, "It does not make sense to swap byte order on more than 8 bytes at a time")
@@ -24,6 +26,7 @@ function utils.swapBytes(hex_str)
     end
     return new_hex_str;
 end
+]]
 
 --[[Decode a uint32 from a hexadecimal string]]
 --[[function utils.hexStringToUint32(hex_str)

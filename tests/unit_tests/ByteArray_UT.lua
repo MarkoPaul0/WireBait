@@ -141,6 +141,24 @@ unit_tests:addTest("Testing ByteArray:tvb()", function()
     tester.assert(tvb.m_data.m_data_as_hex_str, "A0102FB1", "Produced tvb should have byte array as underlying data");
 end);
 
+unit_tests:addTest("Testing ByteArray:swapByteOrder() (2 bytes)", function()
+    local b  = ByteArray.new("0102")
+    local sb = ByteArray.new("0201");
+    tester.assert(b:swapByteOrder(), sb, "ByteArray:swapByteOrder() failed");
+end);
+
+unit_tests:addTest("Testing ByteArray:swapByteOrder() (4 bytes)", function()
+    local b  = ByteArray.new("01020304")
+    local sb = ByteArray.new("04030201");
+    tester.assert(b:swapByteOrder(), sb, "ByteArray:swapByteOrder() failed");
+end);
+
+unit_tests:addTest("Testing ByteArray:swapByteOrder() (8 bytes)", function()
+    local b  = ByteArray.new("0102030405060708")
+    local sb = ByteArray.new("0807060504030201");
+    tester.assert(b:swapByteOrder(), sb, "ByteArray:swapByteOrder() failed");
+end);
+
 if is_standalone_test then
     tester.test(unit_tests);
     tester.printReport();
