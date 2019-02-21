@@ -19,13 +19,17 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+
+
+local utils = require("wirebaitlib.primitives.utils");
+
 local TreeItem = {};
 
 function TreeItem.new(protofield, buffer, parent)
     local treeitem = {
         m_protofield = protofield,
         m_depth = parent and parent.m_depth + 1 or 0,
-        m_buffer = buffer,
+        m_buffer = buffer, --TODO: assert type is tvb
         m_text = nil
     }
 
@@ -40,10 +44,10 @@ function TreeItem.new(protofield, buffer, parent)
         if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
             --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
             value = buffer_or_value;
-        elseif typeof(buffer_or_value) == "buffer" then
+        elseif utils.typeof(buffer_or_value) == "TvbRange" then
             --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
             buffer = buffer_or_value
-            assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+            --assert(buffer._struct_type == "Tvb", "Buffer expected but got another userdata type!")
             if #texts > 0 then
                 value = texts[1] --might be nil
                 table.remove(texts,1); --removing value from the texts array
@@ -52,11 +56,11 @@ function TreeItem.new(protofield, buffer, parent)
                 texts = nil
             end
         else
-            error("buffer_or_value cannot be of type " .. type(buffer_or_value));
+            error("buffer_or_value cannot be of type " .. utils.typeof(buffer_or_value));
         end
         assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
-        local child_tree = treeitem.new(protofield, buffer, tree);
+        local child_tree = TreeItem.new(protofield, buffer, tree);
         if texts then --texts override the value displayed in the tree including the header defined in the protofield
             child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
         else
@@ -65,17 +69,17 @@ function TreeItem.new(protofield, buffer, parent)
         return child_tree;
     end
 
-    --[[ Private function adding a protofield to the provided treeitem ]]
+    --[[ Private function adding a protofield to the provided TreeItem ]]
     local function addProtoField(tree, protofield, buffer_or_value, texts)
         assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
         local value = nil;
         if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
-            --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
+            --[[if no buffer provided, value will be appended to the TreeItem, and no bytes will be highlighted]]
             value = buffer_or_value;
         else
             --[[if buffer is provided, value maybe provided, in which case it will override the value parsed from the buffer]]
             buffer = buffer_or_value
-            assert(buffer._struct_type == "buffer", "Buffer expected but got another userdata type!")
+            assert(buffer._struct_type == "TvbRange", "Buffer expected but got another userdata type!")
             if texts then
                 if type(texts) == "table" then
                     if #texts > 0 then
@@ -93,7 +97,7 @@ function TreeItem.new(protofield, buffer, parent)
         end
         assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
-        local child_tree = treeitem.new(protofield, buffer, tree);
+        local child_tree = TreeItem.new(protofield, buffer, tree);
         if texts then --texts override the value displayed in the tree including the header defined in the protofield
             child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
         else
@@ -103,7 +107,7 @@ function TreeItem.new(protofield, buffer, parent)
         return child_tree;
     end
 
-    --[[ Private function adding a treeitem to the provided treeitem, without an associated protofield ]]
+    --[[ Private function adding a TreeItem to the provided TreeItem, without an associated protofield ]]
     --[[ Very (like VERY) lazy, and hacky, and poor logic but it works ]]
     -- TODO: clean this up!
     local function addTreeItem(tree, buffer, value, texts)
@@ -126,15 +130,15 @@ function TreeItem.new(protofield, buffer, parent)
     --[[TODO: add uni tests]]
     function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
         assert(proto_or_protofield_or_buffer and buffer, "treeitem:add() requires at least 2 arguments!");
-        if proto_or_protofield_or_buffer._struct_type == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
+        if utils.typeof(proto_or_protofield_or_buffer) == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
             io.write("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
         end
         local new_treeitem = nil;
-        if proto_or_protofield_or_buffer._struct_type == "Proto" then
+        if utils.typeof(proto_or_protofield_or_buffer) == "Proto" then
             new_treeitem = addProto(self, proto_or_protofield_or_buffer, buffer, {value, ...});
-        elseif proto_or_protofield_or_buffer._struct_type == "ProtoField" then
+        elseif utils.typeof(proto_or_protofield_or_buffer) == "ProtoField" then
             new_treeitem = addProtoField(self, proto_or_protofield_or_buffer, buffer, {value, ...});
-        elseif proto_or_protofield_or_buffer._struct_type == "buffer" then --adding a tree item without protofield
+        elseif utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" then --adding a tree item without protofield
             new_treeitem = addTreeItem(self, proto_or_protofield_or_buffer, buffer, {value, ...});
         else
             error("First argument in treeitem:add() should be a Proto or Profofield");
@@ -145,8 +149,8 @@ function TreeItem.new(protofield, buffer, parent)
 
     --[[TODO: add unit tests]]
     function treeitem:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
-        assert(typeof(proto_or_protofield_or_buffer) == "buffer" or typeof(buffer) == "buffer", "Expecting a tvbrange somewhere in the arguments list!")
-        if typeof(proto_or_protofield_or_buffer) == "buffer" then
+        assert(utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" or utils.typeof(buffer) == "TvbRange", "Expecting a tvbrange somewhere in the arguments list!")
+        if utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" then
             proto_or_protofield_or_buffer = buffer.new(proto_or_protofield_or_buffer:swapped_bytes());
         else
             buffer = buffer.new(buffer:swapped_bytes());

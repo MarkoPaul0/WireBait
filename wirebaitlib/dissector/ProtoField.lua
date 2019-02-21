@@ -19,7 +19,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local bw = require("wirebaitlib.primitives.Bitwise");
+local bw     = require("wirebaitlib.primitives.Bitwise");
+local UInt64 = require("wirebaitlib.primitives.UInt64");
+--local Int64  = require("wirebaitlib.primitives.Int64");
 
 local ProtoField = { base = {NONE=0, DEC=1, HEX=2, OCT=3, DEC_HEX=4, HEX_DEC=5}}
 
@@ -109,19 +111,19 @@ function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
         if self.m_value_string and self.m_value_string[value] then
             value_string = self.m_value_string[value];
         end
-        if self.m_base == base.HEX then
+        if self.m_base == ProtoField.base.HEX then
             if value_string then
                 str_value = value_string .. " (0x" .. buffer:bytes() .. ")";
             else
                 str_value = "0x" .. buffer:bytes();
             end
-        elseif self.m_base == base.HEX_DEC then
+        elseif self.m_base == ProtoField.base.HEX_DEC then
             if value_string then
                 str_value =  value_string .. " (0x" .. buffer:bytes() .. ")";
             else
                 str_value = "0x" .. buffer:bytes() .. " (" .. str_value .. ")";
             end
-        elseif self.m_base == base.DEC_HEX then
+        elseif self.m_base == ProtoField.base.DEC_HEX then
             if value_string then
                 str_value =  value_string .. " (" .. value .. ")";
             else
@@ -138,7 +140,7 @@ function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
     return protofield;
 end
 
-ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wireshark/blob/695fbb9be0122e280755c11b9e0b89e9e256875b/epan/wslua/wslua_proto_field.c) ]]
+local ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wireshark/blob/695fbb9be0122e280755c11b9e0b89e9e256875b/epan/wslua/wslua_proto_field.c) ]]
     NONE      = "FT_NONE",
     BOOLEAN   = "FT_BOOLEAN",
     UINT8     = "FT_UINT8",
@@ -160,6 +162,8 @@ ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wireshark/wir
     IPv4      = "FT_IPv4",
     GUID      = "FT_GUID"
 }
+
+ProtoField.ftypes = fttypes;
 
 function ProtoField.none(abbr, name, desc)                       return ProtoField.new(name, abbr, ftypes.NONE,    nil, nil, nil, desc) end
 function ProtoField.bool(abbr, name, fbase, value_string, ...)   return ProtoField.new(name, abbr, ftypes.BOOLEAN, value_string, fbase, ...) end

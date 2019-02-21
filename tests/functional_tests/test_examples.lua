@@ -35,7 +35,8 @@ functional_tests:addTest("Ensuring demo_dissector.lua runs smoothly", function()
     io.write = function() end --silencing the ouptut before running the dissector
   end
   local test = dofile("example/demo_dissector.lua");
-  wirebait:clear();
+  --TODO: reset state
+  --wirebait:clear();
 end);
 
 functional_tests:addTest("Ensuring demo_dissector2.lua runs smoothly", function()
@@ -43,7 +44,7 @@ functional_tests:addTest("Ensuring demo_dissector2.lua runs smoothly", function(
     io.write = function() end --silencing the ouptut before running the dissector
   end
   local test = dofile("example/demo_dissector2.lua");
-  wirebait:clear();
+  --wirebait:clear();
 end);
 
 if is_standalone_test then

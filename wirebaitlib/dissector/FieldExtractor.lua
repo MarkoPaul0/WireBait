@@ -19,9 +19,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local FieldInfo = {};
+local FieldExtractor = { FieldInfo = {}, Field = {} };
 
-function FieldInfo.new(protofield)
+function FieldExtractor.FieldInfo.new(protofield)
     assert(protofield);
     local field_info = {
         m_protofield = protofield;
@@ -45,7 +45,7 @@ function FieldInfo.new(protofield)
     return field_info;
 end
 
-function Field.new(field_path) --Field Extractors
+function FieldExtractor.Field.new(field_path) --Field Extractors
     local field = {
         m_info = nil;
         name = nil;
@@ -54,7 +54,7 @@ function Field.new(field_path) --Field Extractors
 
     for k, v in pairs(state.proto.fields) do
         if v.m_abbr == field_path then
-            field.m_info = FieldInfo.new(v);
+            field.m_info = FieldExtractor.FieldInfo.new(v);
             field.name = v.m_abbr;
             field.display = v.m_name;
             field['type'] = v.m_type;
@@ -77,4 +77,4 @@ function Field.new(field_path) --Field Extractors
     return field;
 end
 
-return FieldInfo;
+return FieldExtractor;

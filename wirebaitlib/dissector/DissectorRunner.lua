@@ -19,6 +19,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+local DissectorTable = require("wirebaitlib.dissector.DissectorTable");
+local treeitem       = require("wirebaitlib.dissector.TreeItem");
+local Tvb            = require("wirebaitlib.packet_data.Tvb");
+local ByteArray      = require("wirebaitlib.primitives.ByteArray");
+
 local DissectorRunner = {};
 
 function DissectorRunner.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
@@ -28,19 +33,35 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
     };
 
+    --TODO: only keep this in newgt
+    state = { --[[ state to keep track of the dissector wirebait is testing ]]
+        dissector_filepath = nil,
+        proto = nil,
+        packet_info = { --TODO should be reset after each packet
+            cols={},
+            treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
+        },
+        dissector_table = {
+            udp = { port = nil },
+            tcp = { port = nil }
+        },
+        --field_extractors = {} --used to keep track of field extractors (i.e. wirebait.Field.new())
+    }-------------------end of wirebait.state --------------
+
     --Setting up the environment before invoking dofile() on the dissector script
     local newgt = {}        -- create new environment
     setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
-    state.dissector_table = newDissectorTable();
+    state.dissector_table = DissectorTable.new();
     newgt._WIREBAIT_ON_ = true;
-    newgt.UInt64 = UInt64
-    newgt.Int64 = Int64
-    newgt.ftypes = ftypes
-    newgt.base = base
-    newgt.Proto = Proto.new
-    newgt.ProtoField = ProtoField
-    newgt.DissectorTable = state.dissector_table
-    newgt.Field = Field
+    newgt.UInt64 = require("wirebaitlib.primitives.UInt64");
+    newgt.Int64 = require("wirebaitlib.primitives.Int64");
+    newgt.ProtoField = require("wirebaitlib.dissector.ProtoField");
+    newgt.ftypes = newgt.ProtoField.ftypes;
+    newgt.base = newgt.ProtoField.base;
+    newgt.Proto = require("wirebaitlib.dissector.Proto").new;
+    newgt.DissectorTable = state.dissector_table;
+    newgt.Field = require("wirebaitlib.dissector.FieldExtractor").Field;
+    newgt.state = state; --TODO: review this
     local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
     if not dofile_func then
         error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
@@ -57,7 +78,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         local array_of_lines = {};
         local str = "";
         for i=1,buffer:len() do
-            str = str .. " " .. buffer(i-1,1):bytes();
+            str = str .. " " .. tostring(buffer(i-1,1));
             if i % bytes_per_col == 0 then
                 if i % (cols_count * bytes_per_col) == 0 then
                     table.insert(array_of_lines, str)
@@ -134,7 +155,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     function plugin_tester:dissectHexData(hex_data)
         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
         io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
-        local buffer = buffer.new(hex_data);
+        local buffer = Tvb.new(ByteArray.new(hex_data));
         runDissector(buffer, state.proto, 0);
         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
     end

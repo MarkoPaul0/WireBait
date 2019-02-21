@@ -295,9 +295,9 @@ function TvbRange.new(byte_array)
 
     function tvb_range:__tostring()
         if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
-            return string.format("%48s", string.lower(self.m_data_as_hex_str)) .. "...";
+            return string.format("%48s", string.lower(self.m_data.m_data_as_hex_str)) .. "...";
         end
-        return  string.lower(self.m_data_as_hex_str);
+        return  string.lower(self.m_data.m_data_as_hex_str);
     end
 
     setmetatable(tvb_range, tvb_range)
