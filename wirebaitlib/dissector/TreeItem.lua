@@ -26,11 +26,15 @@ local utils = require("wirebaitlib.primitives.utils");
 local TreeItem = {};
 
 function TreeItem.new(protofield, buffer, parent)
-    local treeitem = {
+    --assert(utils.typeof(protofield) == "ProtoField", "Expected ProtoField but got " .. utils.typeof(protofield));
+    --assert(utils.typeof(buffer) == "Tvb", "Expected Tvb");
+    --assert(not parent or utils.typeof(parent) == "TreeItem", "Expected TreeItem");
+    local tree_item = {
+        _struct_type = "TreeItem",
         m_protofield = protofield,
-        m_depth = parent and parent.m_depth + 1 or 0,
-        m_buffer = buffer, --TODO: assert type is tvb
-        m_text = nil
+        m_depth      = parent and parent.m_depth + 1 or 0,
+        m_tvb        = buffer, --TODO: assert type is tvb, --TODO: this is not used
+        m_text       = nil
     }
 
     local function prefix(depth)
@@ -128,7 +132,32 @@ function TreeItem.new(protofield, buffer, parent)
     end
 
     --[[TODO: add uni tests]]
-    function treeitem:add(proto_or_protofield_or_buffer, buffer, value, ...)
+    function tree_item:add(arg1, arg2, arg3, ...)
+        assert(arg1 and arg2, "treeitem:add() requires at least 2 arguments!");
+
+        local new_treeitem = nil;
+        if utils.typeof(proto_or_protofield_or_buffer) == "Proto" then
+            if not checkProtofieldRegistered(arg1) then
+                io.write("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
+            end
+            new_treeitem = addProto(self, arg1, arg2, {arg3, ...});
+        elseif utils.typeof(proto_or_protofield_or_buffer) == "ProtoField" then
+            new_treeitem = addProtoField(self, arg1, arg2, {arg3, ...});
+        elseif utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" then --adding a tree item without protofield
+            local texts = {arg3, ...};
+            table.insert(texts, 1, arg2); --insert value in first position
+            table.insert(texts, 1, "");
+            new_treeitem = addProtoField(self, nil, arg1, texts);
+        else
+            error("First argument in treeitem:add() should be a Proto or Profofield");
+        end
+
+        table.insert(state.packet_info.treeitems_array, new_treeitem);
+        return new_treeitem;
+    end
+
+
+    function tree_item:add(proto_or_protofield_or_buffer, buffer, value, ...)
         assert(proto_or_protofield_or_buffer and buffer, "treeitem:add() requires at least 2 arguments!");
         if utils.typeof(proto_or_protofield_or_buffer) == "ProtoField" and not checkProtofieldRegistered(proto_or_protofield_or_buffer) then
             io.write("ERROR: Protofield '" .. proto_or_protofield_or_buffer.m_name .. "' was not registered!")
@@ -148,7 +177,7 @@ function TreeItem.new(protofield, buffer, parent)
     end
 
     --[[TODO: add unit tests]]
-    function treeitem:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
+    function tree_item:add_le(proto_or_protofield_or_buffer, buffer, value, ...)
         assert(utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" or utils.typeof(buffer) == "TvbRange", "Expecting a tvbrange somewhere in the arguments list!")
         if utils.typeof(proto_or_protofield_or_buffer) == "TvbRange" then
             proto_or_protofield_or_buffer = buffer.new(proto_or_protofield_or_buffer:swapped_bytes());
@@ -158,37 +187,37 @@ function TreeItem.new(protofield, buffer, parent)
         return self:add(proto_or_protofield_or_buffer, buffer, value, ...)
     end
 
-    function treeitem:set_text(text)
+    function tree_item:set_text(text)
         text:gsub("\n", " ");
         self.m_text = text
     end
 
-    function treeitem:append_text(text)
+    function tree_item:append_text(text)
         text:gsub("\n", " ");
         self.m_text = self.m_text .. text
     end
 
-    function treeitem:set_len(length)
-        io.write("WIREBAIT WARNING: treeitem:set_length() is not supported by wirebait yet.");
+    function tree_item:set_len(length)
+        io.write("WIREBAIT WARNING: TreeItem:set_length() is not supported by wirebait yet.");
     end
 
-    function treeitem:set_generated()
-        io.write("WIREBAIT WARNING: treeitem:set_generated() is not supported by wirebait yet.");
+    function tree_item:set_generated()
+        io.write("WIREBAIT WARNING: TreeItem:set_generated() is not supported by wirebait yet.");
     end
 
-    function treeitem:set_hidden()
-        io.write("WIREBAIT WARNING: treeitem:set_hidden() is not supported by wirebait yet.");
+    function tree_item:set_hidden()
+        io.write("WIREBAIT WARNING: TreeItem:set_hidden() is not supported by wirebait yet.");
     end
 
-    function treeitem:set_expert_flags()
-        io.write("WIREBAIT WARNING: treeitem:set_expert_flags() is not supported by wirebait yet.");
+    function tree_item:set_expert_flags()
+        io.write("WIREBAIT WARNING: TreeItem:set_expert_flags() is not supported by wirebait yet.");
     end
 
-    function treeitem:set_expert_info()
-        io.write("WIREBAIT WARNING: treeitem:set_expert_info() is not supported by wirebait yet.");
+    function tree_item:set_expert_info()
+        io.write("WIREBAIT WARNING: TreeItem:set_expert_info() is not supported by wirebait yet.");
     end
 
-    return treeitem;
+    return tree_item;
 end
 
 return TreeItem;
