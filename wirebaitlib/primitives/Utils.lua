@@ -19,18 +19,26 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local utils = {};
+local UtilsLib = {};
 
---[[All data structures in this project will have a field "_struc_type".
-If obj is a table, returns the content of _struct_type otherwise returns the type(obj)]]
-function utils.typeof(obj)
+--[[
+    Returns the type of obj in the form of a string.
+    In the context of Wirebait, there are 3 types of data structure:
+        1)  primitive types other than tables. In that case utils.typeof() simply
+            returns type()
+        2)  tables without a "_struct_type" field. These are regular tables and again
+            utils.typeof() simply returns type()
+        3)  Wirebait objects, which are tables containing a "_struct_type" field. In this
+            case _struct_type is returned
+]]
+function UtilsLib.typeof(obj)
     assert(obj, "A nil value has no type!");
     local obj_type = type(obj);
     if (obj_type == "table" and obj._struct_type) then
-        assert(type(obj._struct_type) == "string" and #obj._struct_type > 0, "Wirebait data structure should have a _struct_type field as a non empty string!");
+        assert(type(obj._struct_type) == "string" and #obj._struct_type > 0, "Wirebait objects should have a _struct_type field as a non empty string!");
         return obj._struct_type;
     end
     return obj_type;
 end
 
-return utils;
+return UtilsLib;
