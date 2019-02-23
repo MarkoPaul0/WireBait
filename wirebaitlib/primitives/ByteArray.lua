@@ -101,8 +101,8 @@ function ByteArrayClass.new(data_as_hex_string)
     end
 
     function byte_array:tvb()
-        local Tvb = require("wirebaitlib.packet_data.Tvb");
-        return Tvb.new(self); --TODO: modify tvb to be constructed from a byte array!
+        local TvbClass = require("wirebaitlib.packet_data.Tvb");
+        return TvbClass.new(self); --TODO: modify tvb to be constructed from a byte array!
     end
 
     --------------------------------- public methods (not part of Wireshark Lua API) -----------------------------------

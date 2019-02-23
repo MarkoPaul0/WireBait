@@ -41,7 +41,7 @@ local unit_tests = tester.newUnitTestsSet("Tvb Unit Tests");
 unit_tests:addTest("Testing Tvb construction", function()
     local b = ByteArray.new("A0102FB1");
     local tvb_range = Tvb.new(b);
-    tester.assert(tvb_range.m_data, b, "Wrong underlying data");
+    tester.assert(tvb_range.m_byte_array, b, "Wrong underlying data");
     tester.assert(tvb_range:len(), 4, "Wrong size after construction")
 end);
 
@@ -62,19 +62,19 @@ end)
 unit_tests:addTest("Testing Tvb:range()", function()
     local tvb = Tvb.new(ByteArray.new("0102030405060708"));
     tester.assert(tvb:range(0,1)._struct_type, "TvbRange", "Tvb:range() should return a TvbRange!");
-    tester.assert(tvb:range(0,1).m_data, ByteArray.new("01"), "Tvb:range() failed!");
-    tester.assert(tvb:range(0,3).m_data, ByteArray.new("010203"), "Tvb:range() failed!");
-    tester.assert(tvb:range(2,2).m_data, ByteArray.new("0304"), "Tvb:range() failed!");
-    tester.assert(tvb:range(4).m_data, ByteArray.new("05060708"), "Tvb:range() failed!");
+    tester.assert(tvb:range(0,1).m_byte_array, ByteArray.new("01"), "Tvb:range() failed!");
+    tester.assert(tvb:range(0,3).m_byte_array, ByteArray.new("010203"), "Tvb:range() failed!");
+    tester.assert(tvb:range(2,2).m_byte_array, ByteArray.new("0304"), "Tvb:range() failed!");
+    tester.assert(tvb:range(4).m_byte_array, ByteArray.new("05060708"), "Tvb:range() failed!");
 end)
 
 unit_tests:addTest("Testing Tvb()", function()
     local tvb = Tvb.new(ByteArray.new("0102030405060708"));
     tester.assert(tvb:range(0,1)._struct_type, "TvbRange", "Tvb:range() should return a TvbRange!");
-    tester.assert(tvb(0,1).m_data, ByteArray.new("01"), "Tvb:range() failed!");
-    tester.assert(tvb(0,3).m_data, ByteArray.new("010203"), "Tvb:range() failed!");
-    tester.assert(tvb(2,2).m_data, ByteArray.new("0304"), "Tvb:range() failed!");
-    tester.assert(tvb(4).m_data, ByteArray.new("05060708"), "Tvb:range() failed!");
+    tester.assert(tvb(0,1).m_byte_array, ByteArray.new("01"), "Tvb:range() failed!");
+    tester.assert(tvb(0,3).m_byte_array, ByteArray.new("010203"), "Tvb:range() failed!");
+    tester.assert(tvb(2,2).m_byte_array, ByteArray.new("0304"), "Tvb:range() failed!");
+    tester.assert(tvb(4).m_byte_array, ByteArray.new("05060708"), "Tvb:range() failed!");
 end)
 
 unit_tests:addTest("Testing Tvb:__tostring()", function()

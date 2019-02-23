@@ -41,7 +41,7 @@ local unit_tests = tester.newUnitTestsSet("TvbRange Unit Tests");
 unit_tests:addTest("Testing TvbRange construction", function()
     local b = ByteArray.new("A0102FB1");
     local tvb_range = TvbRange.new(b);
-    tester.assert(tvb_range.m_data, b, "Wrong underlying data");
+    tester.assert(tvb_range.m_byte_array, b, "Wrong underlying data");
     tester.assert(tvb_range:len(), 4, "Wrong size after construction")
 end);
 
@@ -347,8 +347,8 @@ unit_tests:addTest("Testing TvbRange:eth() (Big-Endian) ec:08:6b:70:36:82", func
     tester.assert(TvbRange.new(ByteArray.new("EC086B703682")):eth(), "ec:08:6b:70:36:82");
 end)
 
-unit_tests:addTest("Testing TvbRange:__guid() = 48454c4c-4f20-574f-524c-440032b4b1b3", function()
-    tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C440032b4b1b3")):__guid(), "48454c4c-4f20-574f-524c-440032b4b1b3");
+unit_tests:addTest("Testing TvbRange:guid() = 48454c4c-4f20-574f-524c-440032b4b1b3", function()
+    tester.assert(TvbRange.new(ByteArray.new("48454C4C4F20574F524C440032b4b1b3")):guid(), "48454c4c-4f20-574f-524c-440032b4b1b3");
 end)
 
 if is_standalone_test then

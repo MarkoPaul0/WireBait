@@ -19,42 +19,51 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local utils    = require("wirebaitlib.primitives.Utils");
-local TvbRange = require("wirebaitlib.packet_data.TvbRange");
+local Utils         = require("wirebaitlib.primitives.Utils");
+local TvbRangeClass = require("wirebaitlib.packet_data.TvbRange");
 
-local Tvb = {};
+local TvbClass = {};
 
-function Tvb.new(byte_array, offset)
-    assert(utils.typeof(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
-
+function TvbClass.new(byte_array, offset)
+    assert(Utils.typeof(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
     local tvb = {
         _struct_type = "Tvb",
-        m_data = byte_array,
+        m_byte_array = byte_array,
         m_offset = offset or 0; --TODO: offset is not used for anything here
     }
 
-    --TODO: work on this method
-    function tvb:reported_len()
-        assert(false, "tvb:reported_len() is not available yet");
+    ------------------------------------------------ metamethods -------------------------------------------------------
+
+    -- Metamethod allowing for a call like `range = tvb(1,2);` to be equivalent to `range = tvb:range(1,2);`
+    function tvb:__call(start, length)
+        return self:range(start, length);
     end
+
+    function tvb:__tostring()
+        if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
+            return tostring(self.m_byte_array):sub(0,48) .. "...";
+        end
+        return  string.lower(tostring(self.m_byte_array));
+    end
+
+    ----------------------------------------------- public methods -----------------------------------------------------
 
     function tvb:len()
-        return self.m_data:len();
+        return self.m_byte_array:len();
     end
 
-    function tvb:reported_length_remaining()
-        --TODO: work on this!    
-        --TODO: work on this!
-        --TODO: work on this!
-        --TODO: work on this!
-        --TODO: work on this!
+    --TODO: work on this method
+    function tvb:reported_len()
+        assert(false, "Tvb:reported_len() is not available yet");
+    end
 
-        io.write("[WARNING] tvb:reported_length_remaining() is not supported yet and returns len()!");
-        return tvb:len();
+    --TODO: work on this!
+    function tvb:reported_length_remaining()
+        assert(false, "Tvb:reported_length_remaining() is not available yet");
     end
 
     function tvb:bytes()
-        return self.m_data;
+        return self.m_byte_array;
     end
 
     function tvb:offset()
@@ -66,24 +75,11 @@ function Tvb.new(byte_array, offset)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        return TvbRange.new(self.m_data:subset(start, length), offset)
-    end
-
-    --equivalent to tvb:range() but allows tvb to be called as a function
-    function tvb:__call(start, length)
-        return self:range(start, length);
-    end
-
-    function tvb:__tostring()
-        if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
-            return tostring(self.m_data):sub(0,48) .. "...";
-        end
-        return  string.lower(tostring(self.m_data));
+        return TvbRangeClass.new(self.m_byte_array:subset(start, length), offset)
     end
 
     setmetatable(tvb, tvb)
-
     return tvb;
 end
 
-return Tvb;
+return TvbClass;

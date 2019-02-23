@@ -68,7 +68,7 @@ function ProtoField.new(name, abbr, ftype, value_string, fbase, mask, desc)
             FT_ETHER    = function (buf) return buf:eth() end,
             FT_BYTES    = function (buf) return buf:__tostring(); end,
             FT_IPv4     = function (buf) return buf:ipv4() end,
-            FT_GUID     = function (buf) return buf:__guid() end
+            FT_GUID     = function (buf) return buf:guid() end
         };
         self.m_last_buffer = buffer;
         local func = extractValueFuncByType[self.m_type];

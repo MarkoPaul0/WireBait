@@ -24,49 +24,84 @@ local bw     = require("wirebaitlib.primitives.Bitwise");
 local UInt64 = require("wirebaitlib.primitives.UInt64");
 local Int64  = require("wirebaitlib.primitives.Int64");
 
-local TvbRange = {};
+local TvbRangeClass = {};
 
-function TvbRange.new(byte_array)
+function TvbRangeClass.new(byte_array)
     assert(utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 
     local tvb_range = {
         _struct_type = "TvbRange",
-        m_data = byte_array --ByteArray
+        m_byte_array = byte_array
     }
 
     local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
+    ------------------------------------------------ metamethods -------------------------------------------------------
+
+    function tvb_range:__call(start, length) --allows TvbRange to be called as a function
+        return self:range(start, length);
+    end
+
+    function tvb_range:__tostring()
+        if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
+            return string.format("%48s", string.lower(self.m_byte_array.m_data_as_hex_str)) .. "...";
+        end
+        return  string.lower(self.m_byte_array.m_data_as_hex_str);
+    end
+
+    ----------------------------------------------- public methods -----------------------------------------------------
+
     function tvb_range:len()
-        return self.m_data:len();
+        return self.m_byte_array:len();
+    end
+
+    function tvb_range:bytes()
+        return self.m_byte_array;
+    end
+
+    function tvb_range:offset()
+        return self.m_offset;
     end
 
     function tvb_range:tvb()
         --TODO: add unit tests
-        --TODO: create a tvb out of the TvbRange
-        local Tvb = require("wirebaitlib.packet_data.Tvb");
-        return Tvb.new(self.m_data);
-        --assert(false, "Not available yet");
+        local TvbClass = require("wirebaitlib.packet_data.Tvb");
+        return TvbClass.new(self.m_byte_array);
     end
+
+    function tvb_range:range(start, length)
+        assert(start and start >= 0, "Start position should be positive positive!");
+        length = length or self:len() - start; --add unit test for the case where no length was provided
+        assert(length >= 0, "Length should be positive!");
+        assert(start + length <= self:len(), "Index get out of bounds!")
+        return TvbRangeClass.new(self.m_byte_array:subset(start,length));
+    end
+
+    ----------------------------------------- big endian uint conversion -----------------------------------------------
 
     function tvb_range:uint()
         assert(self:len() <= 4, "tvbrange:uint() can only decode bytes! (len = " .. self:len() .. ")");
-        return self.m_data:toUInt32();
+        return self.m_byte_array:toUInt32();
     end
 
     function tvb_range:uint64()
         assert(self:len() <= 8, "tvbrange:uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-        return UInt64.fromByteArray(self.m_data);
+        return UInt64.fromByteArray(self.m_byte_array);
     end;
+
+    ---------------------------------------- little endian uint conversion ---------------------------------------------
 
     function tvb_range:le_uint()
         assert(self:len() <= 4, "tvbrange:le_uint() can only decode 4 bytes! (len = " .. self:len() .. ")");
-        return self.m_data:swapByteOrder():toUInt32();
+        return self.m_byte_array:swapByteOrder():toUInt32();
     end
 
     function tvb_range:le_uint64()
         assert(self:len() <= 8, "tvbrange:le_uint64() cannot decode more than 8 bytes! (len = " .. self:len() .. ")");
-        return UInt64.fromByteArray(self.m_data:swapByteOrder());
+        return UInt64.fromByteArray(self.m_byte_array:swapByteOrder());
     end;
+
+    ------------------------------------------ big endian int conversion -----------------------------------------------
 
     function tvb_range:int(mask)
         local size = self:len();
@@ -86,24 +121,28 @@ function TvbRange.new(byte_array)
         end
     end
 
+    function tvb_range:int64(mask)
+        if mask then
+            return Int64.fromByteArray(self.m_byte_array):band(mask)
+        end
+        return Int64.fromByteArray(self.m_byte_array);
+    end
+
+    ---------------------------------------- little endian int conversion ----------------------------------------------
+
     function tvb_range:le_int(mask)
         local size = self:len();
         assert(size == 1 or size == 2 or size == 4, "TvbRange must be 1, 2, or 4 bytes long for TvbRange:le_int() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(self.m_data:swapByteOrder()):int(mask);
-    end
-
-    function tvb_range:int64(mask)
-        if mask then
-            return Int64.fromByteArray(self.m_data):band(mask)
-        end
-        return Int64.fromByteArray(self.m_data);
+        return TvbRangeClass.new(self.m_byte_array:swapByteOrder()):int(mask);
     end
 
     function tvb_range:le_int64(mask)
         local size = self:len();
         assert(size == 1 or size == 2 or size == 4 or size == 8, "TvbRange must be 1, 2, 4, or 8 bytes long for TvbRange:le_int() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(self.m_data:swapByteOrder()):int64(mask);
+        return TvbRangeClass.new(self.m_byte_array:swapByteOrder()):int64(mask);
     end
+
+    ------------------------------------------ big endian float conversion ---------------------------------------------
 
     function tvb_range:float()
         local size = self:len();
@@ -167,28 +206,29 @@ function TvbRange.new(byte_array)
         end
     end
 
+    ----------------------------------------- little endian float conversion -------------------------------------------
+
     function tvb_range:le_float()
         local size = self:len();
         assert(size == 4 or size == 8, "TvbRange must be 4 or 8 bytes long for TvbRange:le_float() to work. (TvbRange size: " .. self:len() ..")");
-        return TvbRange.new(self.m_data:swapByteOrder()):float();
+        return TvbRangeClass.new(self.m_byte_array:swapByteOrder()):float();
     end
 
-    --[[Prints an ip in octet format givent its little endian int32 representation]]
-    local function int32IPToString(le_int_ip)
-        local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
-                "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);
-        return ip_str;
-    end
+    ------------------------------------------- big endian ipv4 conversion ---------------------------------------------
 
     function tvb_range:ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return int32IPToString(self:int());
+        return utils.int32IPToString(self:int());
     end
+
+    ------------------------------------------ litte endian ipv4 conversion --------------------------------------------
 
     function tvb_range:le_ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:le_ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return int32IPToString(self:le_int());
+        return utils.int32IPToString(self:le_int());
     end
+
+    -------------------------------------- big endian ethernet address conversion --------------------------------------
 
     function tvb_range:eth()
         assert(self:len() == 6, "TvbRange must by 6 bytes long for TvbRange:eth() to work. (TvbRange size: " .. self:len() ..")");
@@ -200,10 +240,12 @@ function TvbRange.new(byte_array)
         return string.lower(eth_addr);
     end
 
+    ------------------------------------------ big endian string conversion --------------------------------------------
+
     function tvb_range:string()
         local str = ""
         for i=0,(self:len() - 1) do
-            local cur_byte = self.m_data:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
+            local cur_byte = self.m_byte_array:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
             if cur_byte == '00' then --null char termination
                 return str
             end
@@ -216,7 +258,7 @@ function TvbRange.new(byte_array)
     function tvb_range:stringz()
         local str = ""
         for i=0,(self:len() - 1) do
-            local cur_byte = self.m_data:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
+            local cur_byte = self.m_byte_array:subset(i,1):toHex(); --[[even a Protofield.string() stops printing after null character]]
             if cur_byte == '00' then --null char termination
                 return str
             end
@@ -236,15 +278,28 @@ function TvbRange.new(byte_array)
         return self:stringz();
     end
 
+    ---------------------------------------- little endian string conversion -------------------------------------------
+
     function tvb_range:le_ustring()
         local be_hex_str = swapBytes(self:bytes():toHex());
-        return TvbRange.new(be_hex_str):ustring();
+        return TvbRangeClass.new(be_hex_str):ustring();
     end
 
     function tvb_range:le_ustringz()
         local be_hex_str = swapBytes(self:bytes():toHex());
-        return TvbRange.new(be_hex_str):ustringz();
+        return TvbRangeClass.new(be_hex_str):ustringz();
     end
+
+    ------------------------------------------- big endian GUID conversion ---------------------------------------------
+
+    function tvb_range:guid()
+        assert(self:len() == 16, "Trying to parse a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
+        local d = self.m_byte_array;
+        return string.lower(tostring(d:subset(0,4)) .. "-" .. tostring(d:subset(4,2)) .. "-" ..
+                tostring(d:subset(6,2)) .. "-" .. tostring(d:subset(8,2)) .. "-" .. tostring(d:subset(10,6)));
+    end
+
+    ------------------------------------------------ bitfield conversion -----------------------------------------------
 
     function tvb_range:bitfield(offset, length)
         offset = offset or 0;
@@ -264,48 +319,13 @@ function TvbRange.new(byte_array)
 
         else
             local high_bit_mask = tonumber(string.rep("1", 32 - left_bits_count),2);-- << left_bits_count;
-            local bytes_as_uint64 = UInt64.fromByteArray(self.m_data:subset(byte_offset, byte_size));
+            local bytes_as_uint64 = UInt64.fromByteArray(self.m_byte_array:subset(byte_offset, byte_size));
             return UInt64.new(bytes_as_uint64.m_low_word, bw.And(bytes_as_uint64.m_high_word, high_bit_mask)):rshift(right_bits_count);
         end
     end
 
-    function tvb_range:bytes()
-        return self.m_data;
-    end
-
-    function tvb_range:__guid()
-        assert(self:len() == 16, "Trying to parse a GUID with length " .. self:len() .. "(Expecting 16 bytes)");
-        local d = self.m_data;
-        return string.lower(tostring(d:subset(0,4)) .. "-" .. tostring(d:subset(4,2)) .. "-" .. 
-                            tostring(d:subset(6,2)) .. "-" .. tostring(d:subset(8,2)) .. "-" .. tostring(d:subset(10,6)));
-    end
-
-    function tvb_range:range(start, length)
-        assert(start and start >= 0, "Start position should be positive positive!");
-        length = length or self:len() - start; --add unit test for the case where no length was provided
-        assert(length >= 0, "Length should be positive!");
-        assert(start + length <= self:len(), "Index get out of bounds!")
-        return TvbRange.new(self.m_data:subset(start,length));
-    end
-
-    function tvb_range:offset()
-        return self.m_offset;
-    end
-
-    function tvb_range:__call(start, length) --allows TvbRange to be called as a function
-        return self:range(start, length);
-    end
-
-    function tvb_range:__tostring()
-        if self:len() > 24 then --[[ellipsis after 24 bytes c.f. [tvbrange:__tostring()](https://wiki.wireshark.org/LuaAPI/Tvb#tvbrange:__tostring.28.29) ]]
-            return string.format("%48s", string.lower(self.m_data.m_data_as_hex_str)) .. "...";
-        end
-        return  string.lower(self.m_data.m_data_as_hex_str);
-    end
-
     setmetatable(tvb_range, tvb_range)
-
     return tvb_range;
 end
 
-return TvbRange;
+return TvbRangeClass;

@@ -20,9 +20,9 @@
 ]]
 
 
-local utils = require("wirebaitlib.primitives.Utils");
+local Utils = require("wirebaitlib.primitives.Utils");
 
-local Packet = {};
+local PacketClass = {};
 
 local PROTOCOL_TYPES = {
     IPV4 = 0x800,
@@ -30,10 +30,12 @@ local PROTOCOL_TYPES = {
     TCP  =  0x06
 };
 
---[[ Data structure holding a packet in the form of an ethernet frame, which is used by wirebait to hold packets read from pcap files.
-     At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
-     is that you can visualize what the struct would look like once populated]]
-function Packet.new (packet_buffer, pkt_timestamp)
+--[[
+    Class holding a packet in the form of an ethernet frame, which is used by Wirebait to hold packets read from pcap
+    files. At initialization, all the member of the struct are set to nil, which leaves the structure actually empty.
+    The point here is that you can visualize what the struct would look like once populated.
+]]
+function PacketClass.new (packet_buffer, pkt_timestamp)
     local packet = {
         _struct_type = "Packet",
         timestamp = {
@@ -46,26 +48,28 @@ function Packet.new (packet_buffer, pkt_timestamp)
             type = nil, --type as unsigned int, e.g. 0x0800 for IPV4
             ipv4 = {
                 protocol = nil, --dissector as unsigned int, e.g. 0x06 for TCP
-                dst_ip = nil, -- uint32 little endian
-                src_ip = nil, -- uint32 little endian
+                dst_ip   = nil, -- uint32 little endian
+                src_ip   = nil, -- uint32 little endian
                 udp = {
                     src_port = nil,
                     dst_port = nil,
-                    data = nil,
+                    data     = nil,
                 },
                 tcp = {
                     src_port = nil,
                     dst_port = nil,
-                    data = nil,
+                    data     = nil,
                 },
                 other_data = nil, -- exist if pkt is not tcp nor udp
             },
             other_data = nil -- exist if pkt is not ip
         },
-        data_ref = nil
+        data_ref = nil --reference to the data (either ipv4.udp.data or ipv4.tcp.data etc..)
     }
 
-    assert(packet_buffer and utils.typeof(packet_buffer) == "Tvb", "Packet cannot be constructed without a buffer!");
+    ----------------------------------------------- initialization -----------------------------------------------------
+
+    assert(packet_buffer and Utils.typeof(packet_buffer) == "Tvb", "Packet cannot be constructed without a buffer!");
     --[[Ethernet layer parsing]]
     packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
     packet.ethernet.src_mac = packet_buffer(6,6):bytes();
@@ -102,6 +106,8 @@ function Packet.new (packet_buffer, pkt_timestamp)
         end
     end
 
+    ----------------------------------------------- public methods -----------------------------------------------------
+
     function packet:getData()
         return self.data_ref;
     end
@@ -110,20 +116,12 @@ function Packet.new (packet_buffer, pkt_timestamp)
         return self.ethernet.ipv4.protocol;
     end
 
-    --TODO: duplicated with TvbRange
-    --[[Prints an ip in octet format givent its little endian int32 representation]]
-    local function int32IPToString(le_int_ip)
-        local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
-                "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);
-        return ip_str;
-    end
-
     function packet:getSrcIP()
-        return int32IPToString(self.ethernet.ipv4.src_ip);
+        return Utils.int32IPToString(self.ethernet.ipv4.src_ip);
     end
 
     function packet:getDstIP()
-        return int32IPToString(self.ethernet.ipv4.dst_ip);
+        return Utils.int32IPToString(self.ethernet.ipv4.dst_ip);
     end
 
     function packet:getSrcPort()
@@ -133,7 +131,7 @@ function Packet.new (packet_buffer, pkt_timestamp)
         elseif ip_proto == PROTOCOL_TYPES.TCP then
             return self.ethernet.ipv4.tcp.src_port
         else
-            error("Packet currently only support getSrcPort() for IP/UDP and IP/TCP protocols!")
+            error("Packet:getSrcPort() only supports getSrcPort() for IP/UDP and IP/TCP protocols!")
         end
     end
 
@@ -144,7 +142,7 @@ function Packet.new (packet_buffer, pkt_timestamp)
         elseif ip_proto == PROTOCOL_TYPES.TCP then
             return self.ethernet.ipv4.tcp.dst_port
         else
-            error("Packet currently only support getDstPort() for IP/UDP and IP/TCP protocols!")
+            error("Packet:getDstPort() only supports getDstPort() for IP/UDP and IP/TCP protocols!")
         end
     end
 
@@ -155,33 +153,23 @@ function Packet.new (packet_buffer, pkt_timestamp)
         elseif ip_proto == PROTOCOL_TYPES.TCP then
             return "TCP";
         else
-            error("packet_info:dissector() only supports IP/UDP and IP/TCP protocols!")
+            error("Packet:protocol() only supports IP/UDP and IP/TCP protocols!")
         end
     end
 
     function packet:len()
-        local ip_proto = self:getIPProtocol();
-        if ip_proto == PROTOCOL_TYPES.UDP then
-            return self.ethernet.ipv4.udp.data:len();
-        elseif ip_proto == PROTOCOL_TYPES.TCP then
-            return self.ethernet.ipv4.tcp.data:len();
-        else
-            error("Packet:len() only supports IP/UDP and IP/TCP protocols!")
-        end
+        return self.data_ref:len();
     end
 
     function packet:printInfo(frame_number, cols)
+        assert(self.ethernet.type == PROTOCOL_TYPES.IPV4, "Only IPv4 packets are supported!");
         local function ellipsis(value, char_count)
             local val_str = tostring(value);
-            if #val_str > char_count then
-                return val_str:sub(0,char_count-3) .. "..";
-            end
-            return val_str;
+            return #val_str and (val_str:sub(0,char_count-3) .. "..") or val_str;
         end
-        assert(self.ethernet.type == PROTOCOL_TYPES.IPV4, "Only IPv4 packets are supported!");
-        local src = self:getSrcIP();
-        local dst = self:getDstIP();
-        local length = (self.ethernet.ipv4.udp.data or self.ethernet.ipv4.tcp.data):len();
+        local src    = self:getSrcIP();
+        local dst    = self:getDstIP();
+        local length = self:len();
         --[[Creating a UTC timestamp string.
         For instance: if the date is sept 1st 2017 2:02 am  the timestamp will be "2017-09-01 02:02:47.23864" ]]
         --local timestamp_str = os.date("!%Y-%m-%d", self.timestamp.sec) .. " " .. os.date("!%H:%M:%S.".. self.timestamp.u_sec , self.timestamp.sec)
@@ -195,4 +183,4 @@ function Packet.new (packet_buffer, pkt_timestamp)
     return packet;
 end
 
-return Packet;
+return PacketClass;

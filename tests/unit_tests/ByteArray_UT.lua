@@ -131,8 +131,8 @@ end);
 unit_tests:addTest("Testing ByteArray:tvb()", function()
     local b = ByteArray.new("A0102FB1");
     local tvb = b:tvb();
-    tester.assert(tvb.m_data, b, "Produced tvb should have byte array as underlying data");
-    tester.assert(tvb.m_data.m_data_as_hex_str, "A0102FB1", "Produced tvb should have byte array as underlying data");
+    tester.assert(tvb.m_byte_array, b, "Produced tvb should have byte array as underlying data");
+    tester.assert(tvb.m_byte_array.m_data_as_hex_str, "A0102FB1", "Produced tvb should have byte array as underlying data");
 end);
 
 unit_tests:addTest("Testing ByteArray:swapByteOrder() (2 bytes)", function()

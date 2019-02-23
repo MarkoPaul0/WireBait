@@ -41,4 +41,11 @@ function UtilsLib.typeof(obj)
     return obj_type;
 end
 
+--[[Prints an ip in octet format givent its little endian int32 representation]]
+function UtilsLib.int32IPToString(le_int_ip)
+    local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
+            "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);
+    return ip_str;
+end
+
 return UtilsLib;
