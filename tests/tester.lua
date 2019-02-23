@@ -22,7 +22,7 @@
 local tester = { test_count = 0, fail_count = 0, success_count = 0};
 
 --[[For forward compatibility past lua 5.1. Indeed starting from lua 5.2, setfenv() is no longer available]]
-if tonumber(string.match(_VERSION, "%d.%d+"))*10 > 51 then 
+if not setfenv then
   function setfenv(fn, env)
     local i = 1
     repeat

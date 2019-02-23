@@ -36,7 +36,11 @@ local PROTOCOL_TYPES = {
     TCP  =  0x06
 };
 
-function RunnerState.new()
+--[[
+    This method creates an Object used by the DissectorRunner to keep track of its state. The state can be updated by
+    different components of Wirebait.
+]]
+local function createRunnerState()
     local runner_state = {
         dissector_filepath = nil,
         proto              = nil,
@@ -77,20 +81,20 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     --Setting up the environment before invoking dofile() on the dissector script
     local newgt = {};
     setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
-    newgt._WIREBAIT_ON_  = true;
-    newgt.UInt64         = require("wirebaitlib.primitives.UInt64");
-    newgt.Int64          = require("wirebaitlib.primitives.Int64");
-    newgt.ProtoField     = require("wirebaitlib.dissector.ProtoField");
-    newgt.Proto          = require("wirebaitlib.dissector.Proto").new;
-    newgt.Field          = require("wirebaitlib.dissector.FieldExtractor").Field;
-    newgt.ftypes         = newgt.ProtoField.ftypes;
-    newgt.base           = newgt.ProtoField.base;
-    newgt.state          = RunnerState.new();
-    newgt.DissectorTable = newgt.state.dissector_table;
+    newgt._WIREBAIT_ON_    = true;
+    newgt.UInt64           = require("wirebaitlib.primitives.UInt64");
+    newgt.Int64            = require("wirebaitlib.primitives.Int64");
+    newgt.ProtoField       = require("wirebaitlib.dissector.ProtoField");
+    newgt.Proto            = require("wirebaitlib.dissector.Proto").new;
+    newgt.Field            = require("wirebaitlib.dissector.FieldExtractor").Field;
+    newgt.ftypes           = newgt.ProtoField.ftypes;
+    newgt.base             = newgt.ProtoField.base;
+    newgt.__wirebait_state = createRunnerState(); --TODO: this is not used
+    newgt.DissectorTable   = newgt.__wirebait_state.dissector_table;
     setfenv(dissector_chunk_func, newgt);
 
     --Loading the dissector the dissector by running dissector_chunk_func()
-    state = newgt.state; --TODO: find a way to not need this to be part of the global environment
+    __wirebait_state = newgt.__wirebait_state; --TODO: find a way to not need this to be part of the global environment
     dissector_chunk_func();
 
     ------------------------------------------------ private methods ---------------------------------------------------
@@ -131,7 +135,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         either be a Packet or a Tvb representing packet data.]]
     local function runDissector(packet_or_buffer, proto_handle, packet_no)
         assert(packet_or_buffer and proto_handle and packet_no);
-        assert(proto_handle == state.proto, "The proto handle found in the dissector table should match the proto handle stored in state.proto!");
+        assert(proto_handle == __wirebait_state.proto, "The proto handle found in the dissector table should match the proto handle stored in state.proto!");
 
         local packet = packet_or_buffer;
         local buffer = packet_or_buffer;
@@ -143,17 +147,17 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         end
 
         local root_tree = TreeItemClass.new(buffer);
-        local result = proto_handle.dissector(buffer, state.packet_info, root_tree);
-        if state.packet_info.desegment_len and state.packet_info.desegment_len > 0 then
+        local result = proto_handle.dissector(buffer, __wirebait_state.packet_info, root_tree);
+        if __wirebait_state.packet_info.desegment_len and __wirebait_state.packet_info.desegment_len > 0 then
             io.write("[ERROR] Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
         end
 
         if packet then --print packet info if available (not available when dissecting HEX data)
-            packet:printInfo(packet_no, state.packet_info.cols); io.write("\n");
+            packet:printInfo(packet_no, __wirebait_state.packet_info.cols); io.write("\n");
         end
 
         local packet_bytes_lines = createPrettyArrayOfByteLines(buffer);
-        local treeitems_array = state.packet_info.treeitems_array;
+        local treeitems_array = __wirebait_state.packet_info.treeitems_array;
         local size = math.max(#packet_bytes_lines, #treeitems_array);
         for i=1,size do
             local bytes_str = string.format("%-50s",packet_bytes_lines[i] or "")
@@ -177,19 +181,19 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
                     assert(Utils.typeof(buffer) == "Tvb");
                     local proto_handle = nil;
                     if frame:getIPProtocol() == PROTOCOL_TYPES.UDP then
-                        proto_handle = state.dissector_table.udp.port[frame:getSrcPort()] or state.dissector_table.udp.port[frame:getDstPort()];
+                        proto_handle = __wirebait_state.dissector_table.udp.port[frame:getSrcPort()] or __wirebait_state.dissector_table.udp.port[frame:getDstPort()];
                     else
                         assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP, "Unknown IP protocol '" .. tostring(frame:getIPProtocol()) .. "'");
-                        proto_handle = state.dissector_table.tcp.port[frame:getSrcPort()] or state.dissector_table.tcp.port[frame:getDstPort()];
+                        proto_handle = __wirebait_state.dissector_table.tcp.port[frame:getSrcPort()] or __wirebait_state.dissector_table.tcp.port[frame:getDstPort()];
                     end
-                    state.packet_info = PacketInfoClass.new(frame);
+                    __wirebait_state.packet_info = PacketInfoClass.new(frame);
                     if proto_handle then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n\n");
                         runDissector(frame, proto_handle, packet_no);
                         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
                     elseif not self.m_only_show_dissected_packets then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
-                        frame:printInfo(packet_no, state.packet_info.cols);
+                        frame:printInfo(packet_no, __wirebait_state.packet_info.cols);
                         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
                     end
                 end
@@ -203,7 +207,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
         io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
         local buffer = TvbClass.new(ByteArrayClass.new(hex_data_str));
-        runDissector(buffer, state.proto, 0);
+        runDissector(buffer, __wirebait_state.proto, 0);
         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
     end
 

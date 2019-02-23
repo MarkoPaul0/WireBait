@@ -25,5 +25,24 @@
     The only module that needs to be directly exposed to the user when using wirebait is the DissectorRunner.
     This module will itself load all other necessary modules before loading and invoking the tested dissector.
 ]]
+
+--[[
+    The method setfenc is only available until Lua 5.1, so we define it here if it is not available
+]]
+if not setfenv  then
+    function setfenv(fn, env)
+        local i = 1
+        repeat
+            local name = debug.getupvalue(fn, i)
+            if name == "_ENV" then
+                debug.upvaluejoin(fn, i, (function() return env end), 1)
+                break
+            end
+            i = i + 1
+        until name == "_ENV" or not name;
+        return fn
+    end
+end
+
 local WirebaitLib = require("wirebaitlib.dissector.DissectorRunner");
 return WirebaitLib;

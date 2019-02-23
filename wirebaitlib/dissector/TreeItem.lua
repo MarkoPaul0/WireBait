@@ -123,7 +123,7 @@ function TreeItem.new(protofield, buffer, parent)
 
     --[[ Checks if a protofield was registered]]
     local function checkProtofieldRegistered(protofield)
-        for k, v in pairs(state.proto.fields) do
+        for k, v in pairs(__wirebait_state.proto.fields) do
             if protofield == v then
                 return true;
             end
@@ -152,7 +152,7 @@ function TreeItem.new(protofield, buffer, parent)
             error("First argument in treeitem:add() should be a Proto or Profofield");
         end
 
-        table.insert(state.packet_info.treeitems_array, new_treeitem);
+        table.insert(__wirebait_state.packet_info.treeitems_array, new_treeitem);
         return new_treeitem;
     end
 
@@ -172,7 +172,7 @@ function TreeItem.new(protofield, buffer, parent)
         else
             error("First argument in treeitem:add() should be a Proto or Profofield");
         end
-        table.insert(state.packet_info.treeitems_array, new_treeitem);
+        table.insert(__wirebait_state.packet_info.treeitems_array, new_treeitem);
         return new_treeitem;
     end
 

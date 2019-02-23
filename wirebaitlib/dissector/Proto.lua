@@ -33,8 +33,8 @@ function Proto.new(abbr, description)
         name = description --ws api
     }
 
-    assert(state.proto == nil, "Wirebait currenlty only support 1 proto per dissector file!");
-    state.proto = proto;
+    assert(__wirebait_state.proto == nil, "Wirebait currenlty only support 1 proto per dissector file!");
+    __wirebait_state.proto = proto;
     return proto;
 end
 
