@@ -19,11 +19,18 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local ByteArray = {};
+local ByteArrayClass = {};
 
+--[[
+    ByteArray is meant to provide the functionality of the ByteArray type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark ByteArray](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_ByteArray)
+
+    To instantiate a Wirebait ByteArray, one needs to provide a string representing hexadecimal data. For instance:
+    local array = ByteArray.new("AB 0E 14");
+]]
 --TODO: add separator as argument, for now the hex string is assumed to have bytes separated by a single white spaces
--- for instance "AB 0E 3C"
-function ByteArray.new(data_as_hex_string)
+function ByteArrayClass.new(data_as_hex_string)
     assert(type(data_as_hex_string) == 'string', "Tvb should be based on an hexadecimal string!")
     data_as_hex_string = data_as_hex_string:gsub("%s+","") --removing white spaces
     assert(not data_as_hex_string:find('%X'), "String should be hexadecimal!")
@@ -34,13 +41,21 @@ function ByteArray.new(data_as_hex_string)
         m_data_as_hex_str = data_as_hex_string:upper()
     }
 
+    ------------------------------------------------ metamethods -------------------------------------------------------
+
     function byte_array.__concat(byte_array1, byte_array2)
-        return ByteArray.new(byte_array1.m_data_as_hex_str .. byte_array2.m_data_as_hex_str);
+        return ByteArrayClass.new(byte_array1.m_data_as_hex_str .. byte_array2.m_data_as_hex_str);
     end
 
     function byte_array.__eq(byte_array1, byte_array2)
         return (byte_array1.m_data_as_hex_str == byte_array2.m_data_as_hex_str);
     end
+
+    function byte_array:__tostring()
+        return self.m_data_as_hex_str;
+    end
+
+    ----------------------------------------------- public methods -----------------------------------------------------
 
     function byte_array:prepend(other_byte_array)
         self.m_data_as_hex_str = other_byte_array.m_data_as_hex_str .. self.m_data_as_hex_str;
@@ -64,6 +79,7 @@ function ByteArray.new(data_as_hex_string)
     end
 
     function byte_array:set_index(index, value)
+        --TODO: implement this method
         assert("false", "ByteArray:set_index() is not available yet!")
     end
 
@@ -76,16 +92,12 @@ function ByteArray.new(data_as_hex_string)
         return self.m_data_as_hex_str;
     end
 
-    function byte_array:__tostring()
-        return self.m_data_as_hex_str;
-    end
-
     function byte_array:subset(start, length)
         assert(start and start >= 0,         "Start position should be positive positive!");
         assert(length and length >= 0,       "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
         local sub_data_as_hex_str = self.m_data_as_hex_str:sub(2*start+1, 2*(start + length));
-        return ByteArray.new(sub_data_as_hex_str);
+        return ByteArrayClass.new(sub_data_as_hex_str);
     end
 
     function byte_array:tvb()
@@ -93,8 +105,9 @@ function ByteArray.new(data_as_hex_string)
         return Tvb.new(self); --TODO: modify tvb to be constructed from a byte array!
     end
 
+    --------------------------------- public methods (not part of Wireshark Lua API) -----------------------------------
+
     --TODO: add unit test for this method
-    --This function does not exist in wireshark, used by other primitive types such as UInt64
     function byte_array:toUInt32()
         assert(self:len() <= 4, "cannot call ByteArray:toUInt32() when ByteArray:len() > 4");
         --left pad with zeros to make 4 bytes
@@ -103,19 +116,17 @@ function ByteArray.new(data_as_hex_string)
     end
 
     --TODO: add unit test for this method
-    --this method is not part of the wireshark API
     function byte_array:swapByteOrder()
         assert(self:len() <= 8, "It does not make sense to swap byte order on more than 8 bytes at a time")
         local new_hex_str = "";
         for i=1,#self.m_data_as_hex_str/2 do
             new_hex_str = self.m_data_as_hex_str:sub(2*i-1,2*i) .. new_hex_str;
         end
-        return ByteArray.new(new_hex_str);
+        return ByteArrayClass.new(new_hex_str);
     end
 
     setmetatable(byte_array, byte_array);
-
     return byte_array;
 end
 
-return ByteArray;
+return ByteArrayClass;
