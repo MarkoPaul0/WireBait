@@ -23,7 +23,7 @@ local Proto = {}
 
 --[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
 function Proto.new(abbr, description)
-    assert(description and abbr, "Proto argument should not be nil!")
+    assert(description and abbr, "Proto argument should not be nil!");
     local proto = {
         _struct_type = "Proto";
         m_description = description,

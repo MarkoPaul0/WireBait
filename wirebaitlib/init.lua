@@ -36,21 +36,7 @@ local WirebaitLib = {
     --FieldInfo        = require("wirebaitlib.packet_info."),
     --Field            = require("wirebaitlib.packet_info."),
     pcap_reader      = require("wirebaitlib.packet_data.PcapReader"),
-    dissector_runner = require("wirebaitlib.dissector.DissectorRunner"),
-
-    state = { --[[ state to keep track of the dissector wirebait is testing ]]
-        dissector_filepath = nil,
-        proto = nil,
-        packet_info = { --TODO should be reset after each packet
-            cols={},
-            treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
-        },
-        dissector_table = {
-            udp = { port = nil },
-            tcp = { port = nil }
-        },
-        --field_extractors = {} --used to keep track of field extractors (i.e. wirebait.Field.new())
-    }-------------------end of wirebait.state --------------
+    dissector_runner = require("wirebaitlib.dissector.DissectorRunner")
 }
 
 return WirebaitLib;

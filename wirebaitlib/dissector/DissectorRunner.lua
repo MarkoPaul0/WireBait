@@ -53,15 +53,19 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
     state.dissector_table = DissectorTable.new();
     newgt._WIREBAIT_ON_ = true;
-    newgt.UInt64 = require("wirebaitlib.primitives.UInt64");
-    newgt.Int64 = require("wirebaitlib.primitives.Int64");
+
+    newgt.UInt64     = require("wirebaitlib.primitives.UInt64");
+    newgt.Int64      = require("wirebaitlib.primitives.Int64");
     newgt.ProtoField = require("wirebaitlib.dissector.ProtoField");
+    newgt.Proto      = require("wirebaitlib.dissector.Proto").new;
+    newgt.Field      = require("wirebaitlib.dissector.FieldExtractor").Field;
+    newgt.state      = state; --TODO: review this
+
     newgt.ftypes = newgt.ProtoField.ftypes;
     newgt.base = newgt.ProtoField.base;
-    newgt.Proto = require("wirebaitlib.dissector.Proto").new;
     newgt.DissectorTable = state.dissector_table;
-    newgt.Field = require("wirebaitlib.dissector.FieldExtractor").Field;
-    newgt.state = state; --TODO: review this
+
+
     local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
     if not dofile_func then
         error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");

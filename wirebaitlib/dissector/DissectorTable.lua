@@ -22,13 +22,13 @@
 local DissectorTable = {};
 
 function DissectorTable.new()
-    dissector_table = {
+    local dissector_table = {
         udp = { port = {} },
         tcp = { port = {} },
     }
 
     local function newPortTable()
-        port_table = {}
+        local port_table = {}
 
         function port_table:add(port, proto_handle)
             assert(port and proto_handle, "port and proto_handle cannot be nil!");

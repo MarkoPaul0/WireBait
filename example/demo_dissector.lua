@@ -44,7 +44,7 @@ end
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
-local p_demo    = Proto("demo", "Demo Protocol");
+local p_demo    = Proto("demo1", "Demo Protocol1");
 local f_bool    = ProtoField.bool("demo.bool", "Boolean");
 local f_uint8   = ProtoField.uint8("demo.uint8", "8-bit uint");
 local f_uint16  = ProtoField.uint16("demo.uint16", "16-bit uint");
