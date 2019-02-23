@@ -89,7 +89,7 @@ function ByteArray.new(data_as_hex_string)
     end
 
     function byte_array:tvb()
-        local Tvb =  require("wirebaitlib.packet_data.Tvb");
+        local Tvb = require("wirebaitlib.packet_data.Tvb");
         return Tvb.new(self); --TODO: modify tvb to be constructed from a byte array!
     end
 

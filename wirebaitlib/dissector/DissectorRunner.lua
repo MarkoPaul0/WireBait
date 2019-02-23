@@ -20,11 +20,10 @@
 ]]
 
 local DissectorTable = require("wirebaitlib.dissector.DissectorTable");
-local treeitem       = require("wirebaitlib.dissector.TreeItem");
+local TreeItem       = require("wirebaitlib.dissector.TreeItem");
 local Tvb            = require("wirebaitlib.packet_data.Tvb");
 local ByteArray      = require("wirebaitlib.primitives.ByteArray");
 local PcapReaderLib  = require("wirebaitlib.packet_data.PcapReader");
-
 local PacketInfo     = require("wirebaitlib.packet_info.PacketInfo");
 local utils          = require("wirebaitlib.primitives.Utils");
 
@@ -38,29 +37,25 @@ local PROTOCOL_TYPES = {
 };
 
 function RunnerState.new()
-  local runner_state = {
-    dissector_filepath = nil,
-    proto = nil,
-    packet_info = { --TODO should be reset after each packet
-      cols={},
-      treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
-    },
-    dissector_table = {
-      udp = { port = nil },
-      tcp = { port = nil }
-    }
-  }
+    local runner_state = {
+        dissector_filepath = nil,
+        proto = nil,
+        packet_info = { --TODO should be reset after each packet
+            cols={},
+            treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
+        },
+        dissector_table = DissectorTable.new();
+    };
   
-  function runner_state:clear()
-    self.dissector_filepath = nil;
-    self.proto = nil;
-    self.packet_info.cols = {};
-    self.packet_info.treeitems_array = {};
-    self.dissector_table.udp = { port = nil };
-    self.dissector_table.tcp = { port = nil };
-  end
+    function runner_state:reset()
+        self.dissector_filepath = nil;
+        self.proto = nil;
+        self.packet_info.cols = {};
+        self.packet_info.treeitems_array = {};
+        self.dissector_table = DissectorTable.new();
+    end
   
-  return runner_state;
+    return runner_state;
 end
 
 local DissectorRunner = {};
@@ -72,64 +67,59 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
     };
 
-    state = RunnerState.new();
-
-    --Setting up the environment before invoking dofile() on the dissector script
     local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
-
-    local newgt = {};
-    setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
-    newgt.state.dissector_table = DissectorTable.new();
-    newgt._WIREBAIT_ON_ = true;
-
-    newgt.UInt64     = require("wirebaitlib.primitives.UInt64");
-    newgt.Int64      = require("wirebaitlib.primitives.Int64");
-    newgt.ProtoField = require("wirebaitlib.dissector.ProtoField");
-    newgt.Proto      = require("wirebaitlib.dissector.Proto").new;
-    newgt.Field      = require("wirebaitlib.dissector.FieldExtractor").Field;
-    --newgt.state      = state; --TODO: review this
-
-    newgt.ftypes = newgt.ProtoField.ftypes;
-    newgt.base = newgt.ProtoField.base;
-    newgt.DissectorTable = newgt.state.dissector_table;
-
-
-
     if not dofile_func then
         error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
     end
+
+    --Setting up the environment before invoking dofile() on the dissector script
+    local newgt = {};
+    setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
+    newgt._WIREBAIT_ON_  = true;
+    newgt.UInt64         = require("wirebaitlib.primitives.UInt64");
+    newgt.Int64          = require("wirebaitlib.primitives.Int64");
+    newgt.ProtoField     = require("wirebaitlib.dissector.ProtoField");
+    newgt.Proto          = require("wirebaitlib.dissector.Proto").new;
+    newgt.Field          = require("wirebaitlib.dissector.FieldExtractor").Field;
+    newgt.ftypes         = newgt.ProtoField.ftypes;
+    newgt.base           = newgt.ProtoField.base;
+    newgt.state          = RunnerState.new();
+    newgt.DissectorTable = newgt.state.dissector_table;
     setfenv(dofile_func, newgt);
+
+    --Running the dissector
+    state = newgt.state; --TODO: find a way to not need this to be part of the global environment
     dofile_func();
 
-    local function formatBytesInArray(buffer, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
-        if buffer:len() == 0 then
+    local function formatBytesIntoArray(tvb, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
+        if tvb:len() == 0 then
             return {"<empty>"}
         end
-        bytes_per_col = bytes_per_col or 8;
-        cols_count = cols_count or 2;
-        local array_of_lines = {};
-        local str = "";
-        for i=1,buffer:len() do
-            str = str .. " " .. tostring(buffer(i-1,1));
+
+        bytes_per_col         = bytes_per_col or 8;
+        cols_count            = cols_count or 2;
+        local array_of_lines  = {};
+        local single_line_str = "";
+
+        for i=1,tvb:len() do
+            single_line_str = single_line_str .. " " .. tvb(i-1,1):bytes():toHex();
             if i % bytes_per_col == 0 then
-                if i % (cols_count * bytes_per_col) == 0 then
-                    table.insert(array_of_lines, str)
-                    str = ""
+                if (i % (cols_count * bytes_per_col) == 0) or (i == tvb:len()) then
+                    table.insert(array_of_lines, single_line_str)
+                    single_line_str = ""
                 else
-                    str = str .. "  ";
+                    single_line_str = single_line_str .. "  ";
                 end
             end
         end
-        if #str > 0 then
-            table.insert(array_of_lines, str)
-        end
+
         return array_of_lines;
     end
 
 
     local function runDissector(buffer, proto_handle, packet_no, packet)
         assert(buffer and proto_handle and packet_no);
-        local root_tree = treeitem.new(buffer);
+        local root_tree = TreeItem.new(buffer);
         assert(proto_handle == state.proto, "The proto handle found in the dissector table should match the proto handle stored in state.proto!");
         local result = proto_handle.dissector(buffer, state.packet_info, root_tree);
         if state.packet_info.desegment_len and state.packet_info.desegment_len > 0 then
@@ -141,7 +131,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         if packet then
             packet:printInfo(packet_no, state.packet_info.cols); io.write("\n");
         end
-        local packet_bytes_lines = formatBytesInArray(buffer);
+        local packet_bytes_lines = formatBytesIntoArray(buffer);
         local treeitems_array = state.packet_info.treeitems_array;
         local size = math.max(#packet_bytes_lines, #treeitems_array);
         for i=1,size do

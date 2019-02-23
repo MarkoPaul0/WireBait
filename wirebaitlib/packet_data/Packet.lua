@@ -171,8 +171,6 @@ function Packet.new (packet_buffer, pkt_timestamp)
         assert(self.ethernet.type == PROTOCOL_TYPES.IPV4, "Only IPv4 packets are supported!");
         local src = self:getSrcIP();
         local dst = self:getDstIP();
-        local src_port = self:getSrcPort();
-        local dst_port = self:getDstPort();
         local length = (self.ethernet.ipv4.udp.data or self.ethernet.ipv4.tcp.data):len();
         --[[Creating a UTC timestamp string.
         For instance: if the date is sept 1st 2017 2:02 am  the timestamp will be "2017-09-01 02:02:47.23864" ]]
