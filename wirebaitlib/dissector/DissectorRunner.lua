@@ -138,7 +138,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         if (Utils.typeof(packet_or_buffer) == "Packet") then
             buffer = packet:getData();
         else
-            assert(Utils.typeof(packet_or_buffer) == tvb);
+            assert(Utils.typeof(packet_or_buffer) == "Tvb");
             packet = nil;
         end
 
