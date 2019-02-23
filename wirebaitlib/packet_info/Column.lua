@@ -4,6 +4,8 @@
 --- DateTime: 2/15/19 11:31 PM
 ---
 
+local Column = {};
+
 function Column.new(txt)
     local column = {
         __type = "column";
@@ -57,3 +59,5 @@ function Column.new(txt)
 
     return column;
 end
+
+return Column;

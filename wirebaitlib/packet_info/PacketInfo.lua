@@ -4,51 +4,55 @@
 --- DateTime: 2/15/19 11:32 PM
 ---
 
+local Column = require("wirebaitlib.packet_info.Column");
+
+local PacketInfo = {};
+
 function PacketInfo.new(packet)
     local packet_info = {
         cols = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
-            __number = column.new(),
-            __abs_time = column.new(),
-            __utc_time = column.new(),
-            __cls_time = column.new(),
-            __rel_time = column.new(),
-            __date = column.new(),
-            __utc_date = column.new(),
-            __delta_time = column.new(),
-            __delta_time_displayed = column.new(),
-            __src = column.new(),
-            __src_res = column.new(),
-            __src_unres = column.new(),
-            __dl_src = column.new(),
-            __dl_src_res = column.new(),
-            __dl_src_unres = column.new(),
-            __net_src = column.new(),
-            __net_src_res = column.new(),
-            __net_src_unres = column.new(),
-            __dst = column.new(),
-            __dst_res = column.new(),
-            __dst_unres = column.new(),
-            __dl_dst = column.new(),
-            __dl_dst_res = column.new(),
-            __dl_dst_unres = column.new(),
-            __net_dst = column.new(),
-            __net_dst_res = column.new(),
-            __net_dst_unres = column.new(),
-            __src_port = column.new(),
-            __src_port_res = column.new(),
-            __src_port_unres = column.new(),
-            __dst_port = column.new(),
-            __dst_port_res = column.new(),
-            __dst_port_unres = column.new(),
-            __protocol = column.new(),
-            __info = column.new(),
-            __packet_len = column.new(),
-            __cumulative_bytes = column.new(),
-            __direction = column.new(),
-            __vsan = column.new(),
-            __tx_rate = column.new(),
-            __rssi = column.new(),
-            __dce_call = column.new()
+            __number               = Column.new(),
+            __abs_time             = Column.new(),
+            __utc_time             = Column.new(),
+            __cls_time             = Column.new(),
+            __rel_time             = Column.new(),
+            __date                 = Column.new(),
+            __utc_date             = Column.new(),
+            __delta_time           = Column.new(),
+            __delta_time_displayed = Column.new(),
+            __src                  = Column.new(),
+            __src_res              = Column.new(),
+            __src_unres            = Column.new(),
+            __dl_src               = Column.new(),
+            __dl_src_res           = Column.new(),
+            __dl_src_unres         = Column.new(),
+            __net_src              = Column.new(),
+            __net_src_res          = Column.new(),
+            __net_src_unres        = Column.new(),
+            __dst                  = Column.new(),
+            __dst_res              = Column.new(),
+            __dst_unres            = Column.new(),
+            __dl_dst               = Column.new(),
+            __dl_dst_res           = Column.new(),
+            __dl_dst_unres         = Column.new(),
+            __net_dst              = Column.new(),
+            __net_dst_res          = Column.new(),
+            __net_dst_unres        = Column.new(),
+            __src_port             = Column.new(),
+            __src_port_res         = Column.new(),
+            __src_port_unres       = Column.new(),
+            __dst_port             = Column.new(),
+            __dst_port_res         = Column.new(),
+            __dst_port_unres       = Column.new(),
+            __protocol             = Column.new(),
+            __info                 = Column.new(),
+            __packet_len           = Column.new(),
+            __cumulative_bytes     = Column.new(),
+            __direction            = Column.new(),
+            __vsan                 = Column.new(),
+            __tx_rate              = Column.new(),
+            __rssi                 = Column.new(),
+            __dce_call             = Column.new()
         },
         treeitems_array = {}
     }
@@ -78,3 +82,5 @@ function PacketInfo.new(packet)
     end
     return packet_info;
 end
+
+return PacketInfo;

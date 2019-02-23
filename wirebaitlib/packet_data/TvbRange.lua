@@ -41,8 +41,11 @@ function TvbRange.new(byte_array)
     end
 
     function tvb_range:tvb()
+        --TODO: add unit tests
         --TODO: create a tvb out of the TvbRange
-        assert(false, "Not available yet");
+        local Tvb = require("wirebaitlib.packet_data.Tvb");
+        return Tvb.new(self.m_data);
+        --assert(false, "Not available yet");
     end
 
     function tvb_range:uint()

@@ -23,6 +23,45 @@ local DissectorTable = require("wirebaitlib.dissector.DissectorTable");
 local treeitem       = require("wirebaitlib.dissector.TreeItem");
 local Tvb            = require("wirebaitlib.packet_data.Tvb");
 local ByteArray      = require("wirebaitlib.primitives.ByteArray");
+local PcapReaderLib  = require("wirebaitlib.packet_data.PcapReader");
+
+local PacketInfo     = require("wirebaitlib.packet_info.PacketInfo");
+local utils          = require("wirebaitlib.primitives.Utils");
+
+local RunnerState = {};
+
+--TODO: duplicate with Packet.lua
+local PROTOCOL_TYPES = {
+    IPV4 = 0x800,
+    UDP  = 0x11,
+    TCP  =  0x06
+};
+
+function RunnerState.new()
+  local runner_state = {
+    dissector_filepath = nil,
+    proto = nil,
+    packet_info = { --TODO should be reset after each packet
+      cols={},
+      treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
+    },
+    dissector_table = {
+      udp = { port = nil },
+      tcp = { port = nil }
+    }
+  }
+  
+  function runner_state:clear()
+    self.dissector_filepath = nil;
+    self.proto = nil;
+    self.packet_info.cols = {};
+    self.packet_info.treeitems_array = {};
+    self.dissector_table.udp = { port = nil };
+    self.dissector_table.tcp = { port = nil };
+  end
+  
+  return runner_state;
+end
 
 local DissectorRunner = {};
 
@@ -33,25 +72,14 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
     };
 
-    --TODO: only keep this in newgt
-    state = { --[[ state to keep track of the dissector wirebait is testing ]]
-        dissector_filepath = nil,
-        proto = nil,
-        packet_info = { --TODO should be reset after each packet
-            cols={},
-            treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
-        },
-        dissector_table = {
-            udp = { port = nil },
-            tcp = { port = nil }
-        },
-        --field_extractors = {} --used to keep track of field extractors (i.e. wirebait.Field.new())
-    }-------------------end of wirebait.state --------------
+    state = RunnerState.new();
 
     --Setting up the environment before invoking dofile() on the dissector script
-    local newgt = {}        -- create new environment
+    local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
+
+    local newgt = {};
     setmetatable(newgt, {__index = _G}) -- have the new environment inherits from the current one to garanty access to standard functions
-    state.dissector_table = DissectorTable.new();
+    newgt.state.dissector_table = DissectorTable.new();
     newgt._WIREBAIT_ON_ = true;
 
     newgt.UInt64     = require("wirebaitlib.primitives.UInt64");
@@ -59,14 +87,14 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     newgt.ProtoField = require("wirebaitlib.dissector.ProtoField");
     newgt.Proto      = require("wirebaitlib.dissector.Proto").new;
     newgt.Field      = require("wirebaitlib.dissector.FieldExtractor").Field;
-    newgt.state      = state; --TODO: review this
+    --newgt.state      = state; --TODO: review this
 
     newgt.ftypes = newgt.ProtoField.ftypes;
     newgt.base = newgt.ProtoField.base;
-    newgt.DissectorTable = state.dissector_table;
+    newgt.DissectorTable = newgt.state.dissector_table;
 
 
-    local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
+
     if not dofile_func then
         error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
     end
@@ -125,14 +153,14 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
 
     function plugin_tester:dissectPcap(pcap_filepath)
         assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
-        local pcap_reader = pcap_reader.new(pcap_filepath)
+        local pcap_reader = PcapReaderLib.new(pcap_filepath)
         local packet_no = 1;
         repeat
             local frame = pcap_reader:getNextEthernetFrame()
             if frame then
                 local buffer = frame.ethernet.ipv4.udp.data or frame.ethernet.ipv4.tcp.data;
                 if buffer then
-                    assert(typeof(buffer) == "buffer");
+                    assert(utils.typeof(buffer) == "Tvb");
                     local proto_handle = nil;
                     if frame:getIPProtocol() == PROTOCOL_TYPES.UDP then
                         proto_handle = state.dissector_table.udp.port[frame:getSrcPort()] or state.dissector_table.udp.port[frame:getDstPort()];
@@ -140,7 +168,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
                         assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP)
                         proto_handle = state.dissector_table.tcp.port[frame:getSrcPort()] or state.dissector_table.tcp.port[frame:getDstPort()];
                     end
-                    state.packet_info = newPacketInfo(frame);
+                    state.packet_info = PacketInfo.new(frame);
                     if proto_handle then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n\n");
                         runDissector(buffer, proto_handle, packet_no, frame);

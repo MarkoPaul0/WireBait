@@ -19,7 +19,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+
+local utils = require("wirebaitlib.primitives.Utils");
+
 local Packet = {};
+
+local PROTOCOL_TYPES = {
+    IPV4 = 0x800,
+    UDP  = 0x11,
+    TCP  =  0x06
+};
 
 --[[ Data structure holding a packet in the form of an ethernet frame, which is used by wirebait to hold packets read from pcap files.
      At initialization, all the member of the struct are set to nil, which leaves the structure actually empty. The point here
@@ -54,7 +63,7 @@ function Packet.new (packet_buffer, pkt_timestamp)
         }
     }
 
-    assert(packet_buffer and typeof(packet_buffer) == "buffer", "Packet cannot be constructed without a buffer!");
+    assert(packet_buffer and utils.typeof(packet_buffer) == "Tvb", "Packet cannot be constructed without a buffer!");
     --[[Ethernet layer parsing]]
     packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
     packet.ethernet.src_mac = packet_buffer(6,6):bytes();
@@ -72,15 +81,15 @@ function Packet.new (packet_buffer, pkt_timestamp)
             packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
             packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
             assert(packet_buffer:len() >= 42, "Packet buffer is of invalid size!")
-            packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42);
+            packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42):tvb();
         elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         --[[TCP layer parsing]]
             packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
             packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
-            local tcp_hdr_len = 4 * bwRshift(bwAnd(packet_buffer(46,1):uint(), 0xF0), 4);
+            local tcp_hdr_len = 4 * bit32.rshift(bit32.band(packet_buffer(46,1):uint(), 0xF0), 4);
             local tcp_payload_start_index = 34 + tcp_hdr_len;
             assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
-            packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index);
+            packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index):tvb();
         else
         --[[Unknown transport layer]]
             packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
@@ -91,12 +100,20 @@ function Packet.new (packet_buffer, pkt_timestamp)
         return self.ethernet.ipv4.protocol;
     end
 
+    --TODO: duplicated with TvbRange
+    --[[Prints an ip in octet format givent its little endian int32 representation]]
+    local function int32IPToString(le_int_ip)
+        local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
+                "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);
+        return ip_str;
+    end
+
     function packet:getSrcIP()
-        return printIP(self.ethernet.ipv4.src_ip);
+        return int32IPToString(self.ethernet.ipv4.src_ip);
     end
 
     function packet:getDstIP()
-        return printIP(self.ethernet.ipv4.dst_ip);
+        return int32IPToString(self.ethernet.ipv4.dst_ip);
     end
 
     function packet:getSrcPort()
