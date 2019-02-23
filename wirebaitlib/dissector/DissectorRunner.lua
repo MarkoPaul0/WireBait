@@ -39,12 +39,12 @@ local PROTOCOL_TYPES = {
 function RunnerState.new()
     local runner_state = {
         dissector_filepath = nil,
-        proto = nil,
-        packet_info = { --TODO should be reset after each packet
-            cols={},
+        proto              = nil,
+        packet_info = {
+            cols            = {},
             treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
         },
-        dissector_table = DissectorTable.new();
+        dissector_table = DissectorTable.new()
     };
   
     function runner_state:reset()
@@ -91,16 +91,24 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     state = newgt.state; --TODO: find a way to not need this to be part of the global environment
     dofile_func();
 
-    local function formatBytesIntoArray(tvb, bytes_per_col, cols_count) --[[returns formatted bytes in an array of lines of bytes. --TODO: clean this up]]
+    --[[ Given the Tvb of a packet, pretty prints the data into an array of strings. Each element
+         in that array represent a "pretty" line, containing col_counts blocks of bytes_per_col bytes.
+         If not provided byte_per_col = 8 and cols_count = 2.
+         In the example below, byte_per_col = 8 and cols_count = 2:
+            0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF
+            FF FF F2 F8 22 FD DD 04   FC E6 8A A6 80 00 00 00
+            00 00 00 01 57 69 72 65   62 61
+    ]]
+    local function createPrettyArrayOfByteLines(tvb, bytes_per_col, cols_count)
+        bytes_per_col = bytes_per_col or 8;
+        cols_count    = cols_count or 2;
+
         if tvb:len() == 0 then
             return {"<empty>"}
         end
 
-        bytes_per_col         = bytes_per_col or 8;
-        cols_count            = cols_count or 2;
         local array_of_lines  = {};
         local single_line_str = "";
-
         for i=1,tvb:len() do
             single_line_str = single_line_str .. " " .. tvb(i-1,1):bytes():toHex();
             if i % bytes_per_col == 0 then
@@ -117,21 +125,30 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     end
 
 
-    local function runDissector(buffer, proto_handle, packet_no, packet)
-        assert(buffer and proto_handle and packet_no);
-        local root_tree = TreeItem.new(buffer);
+    local function runDissector(packet_or_buffer, proto_handle, packet_no)
+        assert(packet_or_buffer and proto_handle and packet_no);
         assert(proto_handle == state.proto, "The proto handle found in the dissector table should match the proto handle stored in state.proto!");
+
+        local packet = packet_or_buffer;
+        local buffer = packet_or_buffer;
+        if (utils.typeof(packet_or_buffer) == "Packet") then
+            buffer = packet:getData();
+        else
+            assert(utils.typeof(packet_or_buffer) == tvb);
+            packet = nil;
+        end
+
+        local root_tree = TreeItem.new(buffer);
         local result = proto_handle.dissector(buffer, state.packet_info, root_tree);
         if state.packet_info.desegment_len and state.packet_info.desegment_len > 0 then
-            io.write(string.rep("WARNING! (please read below)\n", 4));
-            io.write("##################    WRIEBAIT DOES NOT SUPPORT TCP REASSEMBLY YET!!!!!!   ############################################\n");
-            io.write("Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
-            io.write("\n\n.");
+            io.write("[ERROR] Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
         end
-        if packet then
+
+        if packet then --print packet info if available (not available when dissecting HEX data)
             packet:printInfo(packet_no, state.packet_info.cols); io.write("\n");
         end
-        local packet_bytes_lines = formatBytesIntoArray(buffer);
+
+        local packet_bytes_lines = createPrettyArrayOfByteLines(buffer);
         local treeitems_array = state.packet_info.treeitems_array;
         local size = math.max(#packet_bytes_lines, #treeitems_array);
         for i=1,size do
@@ -155,13 +172,13 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
                     if frame:getIPProtocol() == PROTOCOL_TYPES.UDP then
                         proto_handle = state.dissector_table.udp.port[frame:getSrcPort()] or state.dissector_table.udp.port[frame:getDstPort()];
                     else
-                        assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP)
+                        assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP, "Unknown IP protocol '" .. tostring(frame:getIPProtocol()) .. "'");
                         proto_handle = state.dissector_table.tcp.port[frame:getSrcPort()] or state.dissector_table.tcp.port[frame:getDstPort()];
                     end
                     state.packet_info = PacketInfo.new(frame);
                     if proto_handle then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n\n");
-                        runDissector(buffer, proto_handle, packet_no, frame);
+                        runDissector(frame, proto_handle, packet_no);
                         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
                     elseif not self.m_only_show_dissected_packets then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");

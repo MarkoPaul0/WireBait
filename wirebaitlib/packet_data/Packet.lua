@@ -35,6 +35,7 @@ local PROTOCOL_TYPES = {
      is that you can visualize what the struct would look like once populated]]
 function Packet.new (packet_buffer, pkt_timestamp)
     local packet = {
+        _struct_type = "Packet",
         timestamp = {
             sec = pkt_timestamp.sec,
             u_sec = pkt_timestamp.u_sec,
@@ -60,7 +61,8 @@ function Packet.new (packet_buffer, pkt_timestamp)
                 other_data = nil, -- exist if pkt is not tcp nor udp
             },
             other_data = nil -- exist if pkt is not ip
-        }
+        },
+        data_ref = nil
     }
 
     assert(packet_buffer and utils.typeof(packet_buffer) == "Tvb", "Packet cannot be constructed without a buffer!");
@@ -70,11 +72,12 @@ function Packet.new (packet_buffer, pkt_timestamp)
     packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
     if packet.ethernet.type ~= PROTOCOL_TYPES.IPV4 then
         packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
+        packet.data_ref = packet.ethernet.other_data;
     else
         --[[IPV4 layer parsing]]
         packet.ethernet.ipv4.protocol = packet_buffer(23,1):uint();
-        packet.ethernet.ipv4.src_ip = packet_buffer(26,4):uint();
-        packet.ethernet.ipv4.dst_ip = packet_buffer(30,4):uint();
+        packet.ethernet.ipv4.src_ip   = packet_buffer(26,4):uint();
+        packet.ethernet.ipv4.dst_ip   = packet_buffer(30,4):uint();
 
         --[[UDP layer parsing]]
         if packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
@@ -82,6 +85,7 @@ function Packet.new (packet_buffer, pkt_timestamp)
             packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
             assert(packet_buffer:len() >= 42, "Packet buffer is of invalid size!")
             packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42):tvb();
+            packet.data_ref = packet.ethernet.ipv4.udp.data;
         elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
         --[[TCP layer parsing]]
             packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
@@ -90,10 +94,16 @@ function Packet.new (packet_buffer, pkt_timestamp)
             local tcp_payload_start_index = 34 + tcp_hdr_len;
             assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
             packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index):tvb();
+            packet.data_ref = packet.ethernet.ipv4.tcp.data;
         else
         --[[Unknown transport layer]]
             packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
+            packet.data_ref = packet.ethernet.ipv4.other_data;
         end
+    end
+
+    function packet:getData()
+        return self.data_ref;
     end
 
     function packet:getIPProtocol()
