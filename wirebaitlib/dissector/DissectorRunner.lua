@@ -19,13 +19,13 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local DissectorTable = require("wirebaitlib.dissector.DissectorTable");
-local TreeItem       = require("wirebaitlib.dissector.TreeItem");
-local Tvb            = require("wirebaitlib.packet_data.Tvb");
-local ByteArray      = require("wirebaitlib.primitives.ByteArray");
-local PcapReaderLib  = require("wirebaitlib.packet_data.PcapReader");
-local PacketInfo     = require("wirebaitlib.packet_info.PacketInfo");
-local utils          = require("wirebaitlib.primitives.Utils");
+local DissectorTableClass = require("wirebaitlib.dissector.DissectorTable");
+local TreeItemClass       = require("wirebaitlib.dissector.TreeItem");
+local TvbClass            = require("wirebaitlib.packet_data.Tvb");
+local ByteArrayClass      = require("wirebaitlib.primitives.ByteArray");
+local PcapReaderClass     = require("wirebaitlib.packet_data.PcapReader");
+local PacketInfoClass     = require("wirebaitlib.packet_info.PacketInfo");
+local Utils               = require("wirebaitlib.primitives.Utils");
 
 local RunnerState = {};
 
@@ -44,15 +44,16 @@ function RunnerState.new()
             cols            = {},
             treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
         },
-        dissector_table = DissectorTable.new()
+        dissector_table = DissectorTableClass.new()
     };
-  
+
+    --TODO: this is not used for now. Remove?
     function runner_state:reset()
         self.dissector_filepath = nil;
         self.proto = nil;
         self.packet_info.cols = {};
         self.packet_info.treeitems_array = {};
-        self.dissector_table = DissectorTable.new();
+        self.dissector_table = DissectorTableClass.new();
     end
   
     return runner_state;
@@ -67,8 +68,9 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
     };
 
-    local dofile_func = loadfile(plugin_tester.m_dissector_filepath);
-    if not dofile_func then
+    --dissector_chunk_func is a function, which when invoked will load the dissector (but not run it)
+    local dissector_chunk_func = loadfile(plugin_tester.m_dissector_filepath);
+    if not dissector_chunk_func then
         error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
     end
 
@@ -85,16 +87,17 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     newgt.base           = newgt.ProtoField.base;
     newgt.state          = RunnerState.new();
     newgt.DissectorTable = newgt.state.dissector_table;
-    setfenv(dofile_func, newgt);
+    setfenv(dissector_chunk_func, newgt);
 
-    --Running the dissector
+    --Loading the dissector the dissector by running dissector_chunk_func()
     state = newgt.state; --TODO: find a way to not need this to be part of the global environment
-    dofile_func();
+    dissector_chunk_func();
 
-    --[[ Given the Tvb of a packet, pretty prints the data into an array of strings. Each element
-         in that array represent a "pretty" line, containing col_counts blocks of bytes_per_col bytes.
-         If not provided byte_per_col = 8 and cols_count = 2.
-         In the example below, byte_per_col = 8 and cols_count = 2:
+    ------------------------------------------------ private methods ---------------------------------------------------
+
+    --[[ Given the Tvb of a packet, pretty prints the data into an array of strings. Each element in that array
+         represents a "pretty" line, containing col_counts blocks of bytes_per_col bytes. If not provided
+         byte_per_col = 8 and cols_count = 2, which are the values used in the example below:
             0E 07 DE 02 22 FC 03 19   75 5A 7F FF FF FF FF FF
             FF FF F2 F8 22 FD DD 04   FC E6 8A A6 80 00 00 00
             00 00 00 01 57 69 72 65   62 61
@@ -124,21 +127,22 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         return array_of_lines;
     end
 
-
+    --[[Running the dissector at proto_handle.dissector on the data provided in packet_or_buffer. packet_or_buffer can
+        either be a Packet or a Tvb representing packet data.]]
     local function runDissector(packet_or_buffer, proto_handle, packet_no)
         assert(packet_or_buffer and proto_handle and packet_no);
         assert(proto_handle == state.proto, "The proto handle found in the dissector table should match the proto handle stored in state.proto!");
 
         local packet = packet_or_buffer;
         local buffer = packet_or_buffer;
-        if (utils.typeof(packet_or_buffer) == "Packet") then
+        if (Utils.typeof(packet_or_buffer) == "Packet") then
             buffer = packet:getData();
         else
-            assert(utils.typeof(packet_or_buffer) == tvb);
+            assert(Utils.typeof(packet_or_buffer) == tvb);
             packet = nil;
         end
 
-        local root_tree = TreeItem.new(buffer);
+        local root_tree = TreeItemClass.new(buffer);
         local result = proto_handle.dissector(buffer, state.packet_info, root_tree);
         if state.packet_info.desegment_len and state.packet_info.desegment_len > 0 then
             io.write("[ERROR] Your dissector requested TCP reassembly starting with frame# " .. packet_no .. ". This is not supported yet, each individual frame will be dissected separately.");
@@ -158,16 +162,19 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         end
     end
 
+    ------------------------------------------------ public methods ----------------------------------------------------
+
+    --[[Running the loaded dissector on the pcap file at pcap_filetpah]]
     function plugin_tester:dissectPcap(pcap_filepath)
         assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
-        local pcap_reader = PcapReaderLib.new(pcap_filepath)
+        local pcap_reader = PcapReaderClass.new(pcap_filepath)
         local packet_no = 1;
         repeat
             local frame = pcap_reader:getNextEthernetFrame()
             if frame then
                 local buffer = frame.ethernet.ipv4.udp.data or frame.ethernet.ipv4.tcp.data;
                 if buffer then
-                    assert(utils.typeof(buffer) == "Tvb");
+                    assert(Utils.typeof(buffer) == "Tvb");
                     local proto_handle = nil;
                     if frame:getIPProtocol() == PROTOCOL_TYPES.UDP then
                         proto_handle = state.dissector_table.udp.port[frame:getSrcPort()] or state.dissector_table.udp.port[frame:getDstPort()];
@@ -175,7 +182,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
                         assert(frame:getIPProtocol() == PROTOCOL_TYPES.TCP, "Unknown IP protocol '" .. tostring(frame:getIPProtocol()) .. "'");
                         proto_handle = state.dissector_table.tcp.port[frame:getSrcPort()] or state.dissector_table.tcp.port[frame:getDstPort()];
                     end
-                    state.packet_info = PacketInfo.new(frame);
+                    state.packet_info = PacketInfoClass.new(frame);
                     if proto_handle then
                         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n\n");
                         runDissector(frame, proto_handle, packet_no);
@@ -191,10 +198,11 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         until frame == nil
     end
 
-    function plugin_tester:dissectHexData(hex_data)
+    --[[Running the loaded dissector on the provided hexadecimal string data]]
+    function plugin_tester:dissectHexData(hex_data_str)
         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
         io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
-        local buffer = Tvb.new(ByteArray.new(hex_data));
+        local buffer = TvbClass.new(ByteArrayClass.new(hex_data_str));
         runDissector(buffer, state.proto, 0);
         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
     end
