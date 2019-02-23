@@ -22,7 +22,7 @@
 local ByteArrayClass = {};
 
 --[[
-    ByteArray is meant to provide the functionality of the ByteArray type described in the Wireshark lua API
+    ByteArrayClass is meant to provide the functionality of the ByteArray type described in the Wireshark lua API
     documentation.
     [c.f. Wireshark ByteArray](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_ByteArray)
 

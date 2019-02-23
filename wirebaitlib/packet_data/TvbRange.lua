@@ -19,15 +19,22 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local utils  = require("wirebaitlib.primitives.Utils");
+local Utils  = require("wirebaitlib.primitives.Utils");
 local bw     = require("wirebaitlib.primitives.Bitwise");
 local UInt64 = require("wirebaitlib.primitives.UInt64");
 local Int64  = require("wirebaitlib.primitives.Int64");
 
 local TvbRangeClass = {};
 
+--[[
+    TvbRangeClass is meant to provide the functionality of the TvbRange type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark Tvb](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_TvbRange)
+
+    To instantiate a Wirebait TvbRange, one needs to provide a ByteArray containing the underlying packet data.
+]]
 function TvbRangeClass.new(byte_array)
-    assert(utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
+    assert(Utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 
     local tvb_range = {
         _struct_type = "TvbRange",
@@ -218,14 +225,14 @@ function TvbRangeClass.new(byte_array)
 
     function tvb_range:ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return utils.int32IPToString(self:int());
+        return Utils.int32IPToString(self:int());
     end
 
     ------------------------------------------ litte endian ipv4 conversion --------------------------------------------
 
     function tvb_range:le_ipv4()
         assert(self:len() == 4, "TvbRange must by 4 bytes long for TvbRange:le_ipv4() to work. (TvbRange size: " .. self:len() ..")");
-        return utils.int32IPToString(self:le_int());
+        return Utils.int32IPToString(self:le_int());
     end
 
     -------------------------------------- big endian ethernet address conversion --------------------------------------

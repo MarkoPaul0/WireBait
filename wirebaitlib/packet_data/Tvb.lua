@@ -24,6 +24,13 @@ local TvbRangeClass = require("wirebaitlib.packet_data.TvbRange");
 
 local TvbClass = {};
 
+--[[
+    TvbClass is meant to provide the functionality of the Tvb type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark Tvb](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_Tvb)
+
+    To instantiate a Wirebait TvbClass, one needs to provide a ByteArray containing the underlying packet data.
+]]
 function TvbClass.new(byte_array, offset)
     assert(Utils.typeof(byte_array) == 'ByteArray', "Tvb constructor needs a ByteArray!")
     local tvb = {
