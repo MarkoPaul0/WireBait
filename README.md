@@ -56,8 +56,8 @@ Note that WireBait does not interact at all with Wireshark.
 
 ## Quick start
 Getting started takes less than a minute:
-  1. Add **wirebait.lua** somewhere in your Lua path
-  2. Add the following snippet of code on top of the script you want to run/debug:
+  1. Add the **wirebaitlib/** directory to your Lua path
+  2. Add the following snippet of code on top of the dissector you want to run/debug:
 ```lua
     if disable_lua == nil and not _WIREBAIT_ON_ then
       local wirebait = require("wirebait");
