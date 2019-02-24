@@ -37,7 +37,9 @@ local UtilsLib = {};
             case _struct_type is returned
 ]]
 function UtilsLib.typeof(obj)
-    assert(obj, "A nil value has no type!");
+    if not obj then
+        return "nil";
+    end
     local obj_type = type(obj);
     if (obj_type == "table" and obj._struct_type) then
         assert(type(obj._struct_type) == "string" and #obj._struct_type > 0, "Wirebait objects should have a _struct_type field as a non empty string!");

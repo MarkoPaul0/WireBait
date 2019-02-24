@@ -31,17 +31,38 @@ local Utils = require("wirebaitlib.primitives.Utils");
 ]]
 local TreeItemClass = {};
 
-function TreeItemClass.new(protofield, buffer, parent)
-    --assert(Utils.typeof(protofield) == "ProtoField", "Expected ProtoField but got " .. Utils.typeof(protofield));
-    --assert(Utils.typeof(buffer) == "Tvb", "Expected Tvb");
-    --assert(not parent or Utils.typeof(parent) == "TreeItem", "Expected TreeItem");
+--[[
+TODO: this class needs to be cleaned up and unit tested
+TODO: this class needs to be cleaned up and unit tested
+TODO: this class needs to be cleaned up and unit tested
+]]
+
+function TreeItemClass.new(protofield_or_buffer, buffer, parent)
+    assert(protofield_or_buffer or buffer, "TreeItem constructor requires at least 1 argument!");
+    assert(not parent or Utils.typeof(parent) == "TreeItem", "Expected TreeItem");
     local tree_item = {
         _struct_type = "TreeItem",
-        m_protofield = protofield,
+        m_protofield = protofield_or_buffer,
         m_depth      = parent and parent.m_depth + 1 or 0,
-        m_tvb        = buffer, --TODO: assert type is tvb, --TODO: this is not used
+        m_tvb        = buffer, --TODO: this is not used
         m_text       = nil
     }
+
+    ----------------------------------------------- initialization -----------------------------------------------------
+
+    if (tree_item.m_protofield and Utils.typeof(tree_item.m_protofield) == "Tvb") then
+        tree_item.m_protofield = nil
+        tree_item.m_tvb = protofield_or_buffer;
+    end
+    if (Utils.typeof(tree_item.m_tvb) == "TvbRange") then
+        tree_item.m_tvb = tree_item.m_tvb:tvb();
+    end
+    --post initialization checks
+    assert(not tree_item.m_protofield
+            or Utils.typeof(tree_item.m_protofield) == "ProtoField"
+            or Utils.typeof(tree_item.m_protofield) == "Proto",
+            "Expected Protofield but got " .. Utils.typeof(tree_item.m_protofield))
+    assert(Utils.typeof(tree_item.m_tvb) == "Tvb", "Expected Tvb but got " .. Utils.typeof(tree_item.m_tvb));
 
     ----------------------------------------------- private methods -----------------------------------------------------
 
@@ -53,7 +74,8 @@ function TreeItemClass.new(protofield, buffer, parent)
     --[[ Private function adding a proto to the provided treeitem ]]
     local function addProto(tree, proto, buffer_or_value, texts)
         assert(buffer_or_value, "When adding a protofield, either a tvb range, or a value must be provided!");
-        if type(buffer_or_value) == "string" or type(buffer_or_value) == "number" then
+        local value = nil;
+        if Utils.typeof(buffer_or_value) == "string" or Utils.typeof(buffer_or_value) == "number" then
             --[[if no buffer provided, value will be appended to the treeitem, and no bytes will be highlighted]]
             value = buffer_or_value;
         elseif Utils.typeof(buffer_or_value) == "TvbRange" then
@@ -72,7 +94,7 @@ function TreeItemClass.new(protofield, buffer, parent)
         end
         assert(buffer or value, "Bug in this function, buffer and value cannot be both nil!");
 
-        local child_tree = TreeItemClass.new(protofield, buffer, tree);
+        local child_tree = TreeItemClass.new(proto, buffer, tree);
         if texts then --texts override the value displayed in the tree including the header defined in the protofield
             child_tree.m_text = tostring(prefix(tree.m_depth) .. table.concat(texts, " "));
         else
@@ -129,7 +151,6 @@ function TreeItemClass.new(protofield, buffer, parent)
         return addProtoField(tree, protofield, buffer, texts)
     end
 
-    --[[ Checks if a protofield was registered]]
     local function checkProtofieldRegistered(protofield)
         for k, v in pairs(__wirebait_state.proto.fields) do
             if protofield == v then

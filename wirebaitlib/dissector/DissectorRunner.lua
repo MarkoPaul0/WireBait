@@ -36,11 +36,11 @@ local Utils               = require("wirebaitlib.primitives.Utils");
 
     // Constructor
     <DissectorRunnerClass> DissectorRunnerClass.new(<table> options_table)
-    options_table should contain the following:
+    options_table can contain the following (both paramters are optional):
     - options_table.dissector_filepath should contain the path to the dissector which will be invoked to dissect packet
-    data.
+    data. If not provided, the calling script is considered to be the dissector.
     - options_table.only_show_dissected_packets is a boolean that determines if the output of the dissection should
-    contain packets that were dissected.
+    contain packets that were dissected. If not provided, value will be true.
 
     // Public Methods
     // Uses the dissector loaded at construction time to dissect the data in the pcap file at the provided path
@@ -91,7 +91,7 @@ function DissectorRunnerClass.new(options_table) --[[options_table uses named ar
     options_table = options_table or {};
     local dissector_runner = {
         m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
-        m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
+        m_only_show_dissected_packets = options_table.only_show_dissected_packets or true
     };
 
     --dissector_chunk_func is a function, which when invoked will load the dissector (but not run it)
