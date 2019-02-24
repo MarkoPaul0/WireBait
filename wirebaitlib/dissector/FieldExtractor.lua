@@ -19,6 +19,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--TODO: this class is a work in progress
+
 local FieldExtractor = { FieldInfo = {}, Field = {} };
 
 function FieldExtractor.FieldInfo.new(protofield)

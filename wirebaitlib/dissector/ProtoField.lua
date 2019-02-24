@@ -22,11 +22,14 @@
 local bw     = require("wirebaitlib.primitives.Bitwise");
 local UInt64 = require("wirebaitlib.primitives.UInt64");
 
+--[[
+    ProtoFieldClass is meant to provide the functionality of the ProtoField type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark Proto](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Proto.html#lua_class_ProtoField)
+]]
 local ProtoFieldClass = { base = {NONE=0, DEC=1, HEX=2, OCT=3, DEC_HEX=4, HEX_DEC=5}}
-
 --ProtoField.base --[[c.f. [Wireshark Repo](https://github.com/wireshark/wireshark/blob/537705a8b20ee89bf1f713bc0c9959cf21b26900/test/lua/globals_2.2.txt) ]]
 
---[[ Equivalent of [wireshark ProtoField](https://wiki.wireshark.org/LuaAPI/Proto#ProtoField) ]]
 function ProtoFieldClass.new(name, abbr, ftype, value_string, fbase, mask, desc)
     assert(name and abbr and ftype, "ProtoField name, abbr, and type must not be nil!");
     assert(type(name) == "string" and type(abbr) == "string" and type(ftype) == "string", "ProtoField name, abbr, and type must be strings!");

@@ -19,10 +19,17 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local Proto = {}
+--[[
+    ProtoClass is meant to provide the functionality of the Proto type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark Proto](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Proto.html#lua_class_Proto)
 
---[[ Equivalent of [wireshark Proto](https://wiki.wireshark.org/LuaAPI/Proto#Proto) ]]
-function Proto.new(abbr, description)
+    //Constructor
+    <ProtoClass> ProtoClass.new(<string> abbr, <string> description)
+]]
+local ProtoClass = {}
+
+function ProtoClass.new(abbr, description)
     assert(description and abbr, "Proto argument should not be nil!");
     local proto = {
         _struct_type = "Proto";
@@ -38,4 +45,4 @@ function Proto.new(abbr, description)
     return proto;
 end
 
-return Proto;
+return ProtoClass;

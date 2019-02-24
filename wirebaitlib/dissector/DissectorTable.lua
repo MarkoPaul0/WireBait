@@ -19,6 +19,14 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--[[
+    DissectorTableClass is meant to provide the functionality of the DissectorTable type described in the Wireshark lua
+    API documentation.
+    [c.f. Wireshark DissectorTable](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Proto.html#lua_class_DissectorTable)
+
+    IMPORTANT NOTE: the DissectorTableClass is for now a minimum viable version of all the functionality described in
+    the Wireshark Lua API.
+]]
 local DissectorTableClass = {};
 
 function DissectorTableClass.new()
@@ -26,6 +34,8 @@ function DissectorTableClass.new()
         udp = { port = {} },
         tcp = { port = {} },
     }
+
+    ----------------------------------------------- private methods ----------------------------------------------------
 
     local function newPortTable()
         local port_table = {};
@@ -40,9 +50,18 @@ function DissectorTableClass.new()
         return port_table;
     end
 
+    ----------------------------------------------- initialization -----------------------------------------------------
+
     dissector_table.udp.port = newPortTable();
     dissector_table.tcp.port = newPortTable();
 
+    ----------------------------------------------- public methods -----------------------------------------------------
+
+    --[[
+        This function allows users to gain access to the dissector_table data by providing a string path. For instance
+        DissectorTable.get("udp.port")
+        returns the object at dissector_table.udp.port
+    ]]
     function dissector_table.get(path)
         local obj = dissector_table;
         path:gsub("%a+", function(split_path) obj = obj[split_path] end)
