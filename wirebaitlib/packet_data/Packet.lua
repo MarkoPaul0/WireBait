@@ -22,6 +22,14 @@
 
 local Utils = require("wirebaitlib.primitives.Utils");
 
+--[[
+    Packet class is meant to hold packet data, and allows wirebait to extract packet information when printing the
+    output of a dissection.
+    To instantiate a PacketClass instance, on needs to provide the underlying Tvb and the packet timestamp.
+
+    //Constructor
+    <PacketClass> PacketClass.new(<Tvb> packet_buffer, <Timestamp> pkt_timestamp)
+]]
 local PacketClass = {};
 
 local PROTOCOL_TYPES = {

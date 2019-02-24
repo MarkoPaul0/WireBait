@@ -19,8 +19,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local ByteArrayClass = {};
-
 --[[
     ByteArrayClass is meant to provide the functionality of the ByteArray type described in the Wireshark lua API
     documentation.
@@ -28,7 +26,12 @@ local ByteArrayClass = {};
 
     To instantiate a Wirebait ByteArray, one needs to provide a string representing hexadecimal data. For instance:
     local array = ByteArray.new("AB 0E 14");
+
+    //Constructor
+    <ByteArrayClass> ByteArrayClass.new(<string> data_as_hex_string)
 ]]
+local ByteArrayClass = {};
+
 --TODO: add separator as argument, for now the hex string is assumed to have bytes separated by a single white spaces
 function ByteArrayClass.new(data_as_hex_string)
     assert(type(data_as_hex_string) == 'string', "Tvb should be based on an hexadecimal string!")

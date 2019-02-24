@@ -19,9 +19,14 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--[[
+    Library providing common methods used throughout Wirebait.
+]]
 local UtilsLib = {};
 
 --[[
+    <string> UtilsLib.typeof(<AnyType> obj)
+
     Returns the type of obj in the form of a string.
     In the context of Wirebait, there are 3 types of data structure:
         1)  primitive types other than tables. In that case utils.typeof() simply
@@ -41,7 +46,12 @@ function UtilsLib.typeof(obj)
     return obj_type;
 end
 
---[[Prints an ip in octet format givent its little endian int32 representation]]
+
+--[[
+    <string> UtilsLib.int32IPToString(<number> le_int_ip)
+
+    Prints an ip in octet format given its little endian int32 representation.
+]]
 function UtilsLib.int32IPToString(le_int_ip)
     local ip_str = bit32.rshift(bit32.band(le_int_ip, 0xFF000000), 24) .. "." .. bit32.rshift(bit32.band(le_int_ip, 0x00FF0000), 16) ..
             "." .. bit32.rshift(bit32.band(le_int_ip, 0x0000FF00), 8) .. "." .. bit32.band(le_int_ip, 0x000000FF);

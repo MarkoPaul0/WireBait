@@ -19,6 +19,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
+--[[
+    ColumnClass is meant to provide the functionality of the Column type described in the Wireshark lua API
+    documentation.
+    [c.f. Wireshark ColumnClass](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Pinfo.html#lua_class_Column)
+
+    To instantiate a Wirebait Column, one needs to provide a string corresponding to the column info.
+
+    //Constructor
+    <ColumnClass> ColumnClass.new(<string> txt)
+]]
 local ColumnClass = {};
 
 function ColumnClass.new(txt)

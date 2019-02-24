@@ -24,15 +24,15 @@ local bw     = require("wirebaitlib.primitives.Bitwise");
 local UInt64 = require("wirebaitlib.primitives.UInt64");
 local Int64  = require("wirebaitlib.primitives.Int64");
 
-local TvbRangeClass = {};
-
 --[[
     TvbRangeClass is meant to provide the functionality of the TvbRange type described in the Wireshark lua API
     documentation.
-    [c.f. Wireshark Tvb](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_TvbRange)
+    [c.f. Wireshark TvbRange](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Tvb.html#lua_class_TvbRange)
 
     To instantiate a Wirebait TvbRange, one needs to provide a ByteArray containing the underlying packet data.
 ]]
+local TvbRangeClass = {};
+
 function TvbRangeClass.new(byte_array)
     assert(Utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 

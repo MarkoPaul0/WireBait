@@ -23,12 +23,16 @@ local ByteArrayClass = require("wirebaitlib.primitives.ByteArray");
 local PacketClass    = require("wirebaitlib.packet_data.Packet");
 local TvbClass       = require("wirebaitlib.packet_data.Tvb");
 
-local PcapReaderClass = {}
-
 --[[
     This class takes care of reading a pcap file, and delivers the data in the form of ethernet packets. When the end of
     the file is reached, this class returns nil, and no more packets will be delivered.
+    To instantiate a PcapReader instance, one needs to provide a path to a pcap file.
+
+    //Constructor
+    <PcapReaderClass> PcapReaderClass.new(<string> pcap_filepath)
 ]]
+local PcapReaderClass = {};
+
 function PcapReaderClass.new(filepath)
     assert(filepath and type(filepath) == "string" and #filepath > 0, "A valid filepath must be provided!");
     local pcap_reader = {

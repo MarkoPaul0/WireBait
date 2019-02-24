@@ -19,16 +19,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ]]
 
-local DissectorTable = {};
+local DissectorTableClass = {};
 
-function DissectorTable.new()
+function DissectorTableClass.new()
     local dissector_table = {
         udp = { port = {} },
         tcp = { port = {} },
     }
 
     local function newPortTable()
-        local port_table = {}
+        local port_table = {};
 
         function port_table:add(port, proto_handle)
             assert(port and proto_handle, "port and proto_handle cannot be nil!");
@@ -52,4 +52,4 @@ function DissectorTable.new()
     return dissector_table;
 end
 
-return DissectorTable;
+return DissectorTableClass;

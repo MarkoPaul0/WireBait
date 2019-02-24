@@ -24,6 +24,23 @@ local bw        = require("wirebaitlib.primitives.Bitwise");
 local ByteArray = require("wirebaitlib.primitives.ByteArray");
 local utils     = require("wirebaitlib.primitives.Utils");
 
+--[[
+    As of now, Lua does not support 64 bit integers. This class is meant to overcome that by providing a 64-bit signed
+    integer arithmetic functionalities. An instance of this class can be instantiated using 2 32-bit integers.
+    Alternatively, an instance call also be created from a ByteArray.
+
+    //Constructor:
+    <Int64> Int64.new(<number> num, <number> high_num)
+
+    //Static method creating an Int64 instance with min value
+    <Int64> Int64.min()
+
+    //Static method creating an Int64 instance with max value
+    <Int64> Int64.max()
+
+    //Static method creating an Int64 instance from a ByteArray
+    <Int64> Int64.fromByteArray(<ByteArrayClass> byte_array)
+]]
 local Int64 = {};
 
 local UINT32_MAX = 0xFFFFFFFF;-- 32 bit word
@@ -247,19 +264,6 @@ function Int64.fromByteArray(byte_array)
     local num = tonumber(byte_array:subset(4,4):toHex(),16);
     return Int64.new(num, high_num);
 end
-
---[[
-function Int64.fromHex(hex_str)
-    assert(hex_str and type(hex_str) == "string", "Argurment #1 should be a string!");
-    assert(#hex_str > 0, "hexStringToUint64() requires strict positive number of bytes!");
-    assert(#hex_str <= 16, "hexStringToUint64() cannot convert more thant 8 bytes to a uint value!");
-    hex_str = string.format("%016s",hex_str):gsub(" ","0")
-    assert(hex_str:find("%X") == nil, "String contains non hexadecimal characters!");
-    local high_num = tonumber(string.sub(hex_str, 1,8),16);
-    local num = tonumber(string.sub(hex_str, 9,16),16);
-    return Int64.new(num, high_num);
-end
-]]
 
 function Int64.max()
     return Int64.new(UINT32_MAX, 0x7FFFFFFF);

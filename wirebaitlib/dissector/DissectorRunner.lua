@@ -27,7 +27,31 @@ local PcapReaderClass     = require("wirebaitlib.packet_data.PcapReader");
 local PacketInfoClass     = require("wirebaitlib.packet_info.PacketInfo");
 local Utils               = require("wirebaitlib.primitives.Utils");
 
-local RunnerState = {};
+--[[
+    The DissectorRunnerClass is the main component users interact with when using Wirebait. It loads all of the
+    necessary Wirebait components in order to run a dissector on user-specified data.
+    A DissectorRunnerClass instance can run a dissector on either a pcap file or a string representing packet data in
+    hexadecimal format. To create a DissectorRunner, one needs to provide a table with various parameters, including the
+    path to the tested dissector.
+
+    // Constructor
+    <DissectorRunnerClass> DissectorRunnerClass.new(<table> options_table)
+    options_table should contain the following:
+    - options_table.dissector_filepath should contain the path to the dissector which will be invoked to dissect packet
+    data.
+    - options_table.only_show_dissected_packets is a boolean that determines if the output of the dissection should
+    contain packets that were dissected.
+
+    // Public Methods
+    // Uses the dissector loaded at construction time to dissect the data in the pcap file at the provided path
+    <void> DissectorRunnerClass:dissectPcap(<string> pcap_filepath)
+
+    // Uses the dissector loaded at construction time to dissect the packet data represented by a string in hexadecimal
+    // format. Note that this data should only represent the payload meant to be dissected by a dissector, ommiting any
+    // encapsulating layer data.
+    <void> DissectorRunnerClass:dissectHexData(<string> hex_data)
+]]
+local DissectorRunnerClass = {};
 
 --TODO: duplicate with Packet.lua
 local PROTOCOL_TYPES = {
@@ -59,23 +83,21 @@ local function createRunnerState()
         self.packet_info.treeitems_array = {};
         self.dissector_table = DissectorTableClass.new();
     end
-  
+
     return runner_state;
 end
 
-local DissectorRunner = {};
-
-function DissectorRunner.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
+function DissectorRunnerClass.new(options_table) --[[options_table uses named arguments]] --TODO: document a comprehensive list of named arguments
     options_table = options_table or {};
-    local plugin_tester = {
+    local dissector_runner = {
         m_dissector_filepath = options_table.dissector_filepath or arg[0], --if dissector_filepath is not provided, takes the path to the script that was launched
         m_only_show_dissected_packets = options_table.only_show_dissected_packets or false
     };
 
     --dissector_chunk_func is a function, which when invoked will load the dissector (but not run it)
-    local dissector_chunk_func = loadfile(plugin_tester.m_dissector_filepath);
+    local dissector_chunk_func = loadfile(dissector_runner.m_dissector_filepath);
     if not dissector_chunk_func then
-        error("File '" .. plugin_tester.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
+        error("File '" .. dissector_runner.m_dissector_filepath .. "' could not be found, or you don't have permissions!");
     end
 
     --Setting up the environment before invoking dofile() on the dissector script
@@ -169,8 +191,8 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     ------------------------------------------------ public methods ----------------------------------------------------
 
     --[[Running the loaded dissector on the pcap file at pcap_filetpah]]
-    function plugin_tester:dissectPcap(pcap_filepath)
-        assert(pcap_filepath, "plugin_tester:dissectPcap() requires 1 argument: a path to a pcap file!");
+    function dissector_runner:dissectPcap(pcap_filepath)
+        assert(pcap_filepath, "DissectorRunner:dissectPcap() requires 1 argument: a path to a pcap file!");
         local pcap_reader = PcapReaderClass.new(pcap_filepath)
         local packet_no = 1;
         repeat
@@ -203,7 +225,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
     end
 
     --[[Running the loaded dissector on the provided hexadecimal string data]]
-    function plugin_tester:dissectHexData(hex_data_str)
+    function dissector_runner:dissectHexData(hex_data_str)
         io.write("\n\n------------------------------------------------------------------------------------------------------------------------------[[\n");
         io.write("Dissecting hexadecimal data (no pcap provided)\n\n");
         local buffer = TvbClass.new(ByteArrayClass.new(hex_data_str));
@@ -211,7 +233,7 @@ function DissectorRunner.new(options_table) --[[options_table uses named argumen
         io.write("]]------------------------------------------------------------------------------------------------------------------------------\n");
     end
 
-    return plugin_tester;
+    return dissector_runner;
 end
 
-return DissectorRunner;
+return DissectorRunnerClass;

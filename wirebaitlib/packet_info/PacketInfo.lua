@@ -21,6 +21,16 @@
 
 local ColumnClass = require("wirebaitlib.packet_info.Column");
 
+--[[
+    PacketInfoClass is meant to provide the functionality described in the Wireshark lua API documentation.
+    [c.f. Wireshark Packet Information](https://www.wireshark.org/docs/wsdg_html_chunked/lua_module_Pinfo.html)
+
+    To instantiate a Wirebait PacketInfoClass, one needs to provide a Packet instance for which the info will be
+    extracted.
+
+    //Constructor
+    <PacketInfoClass> PacketInfoClass.new(<Packet> packet)
+]]
 local PacketInfoClass = {};
 
 function PacketInfoClass.new(packet)

@@ -23,6 +23,23 @@ local bw        = require("wirebaitlib.primitives.Bitwise");
 local utils     = require("wirebaitlib.primitives.Utils");
 local ByteArray = require("wirebaitlib.primitives.ByteArray");
 
+--[[
+    As of now, Lua does not support 64 bit integer. This class is meant to overcome that by providing a 64-bit unsigned
+    integer arithmetic functionalities. An instance of this class can be instantiated using 2 32-bit unsigned integers.
+    Alternatively, an instance call also be created from a ByteArray.
+
+    //Constructor:
+    <UInt64> UInt64.new(<number> num, <number> high_num)
+
+    //Static method creating an UInt64 instance with min value
+    <UInt64> UInt64.min()
+
+    //Static method creating an UInt64 instance with max value
+    <UInt64> UInt64.max()
+
+    //Static method creating an UInt64 instance from a ByteArray
+    <UInt64> UInt64.fromByteArray(<ByteArrayClass> byte_array)
+]]
 local UInt64 = {};
 
 local UINT32_MAX = 0xFFFFFFFF;
@@ -32,12 +49,13 @@ function UInt64.new(num, high_num)
     assert(num and type(num) == "number" and num == math.floor(num) and num >= 0 and num <= UINT32_MAX, "UInt64.new(num), num must be a positive 32 bit integer!");
     assert(not high_num or (type(high_num) == "number" and high_num == math.floor(high_num) and high_num >= 0 and high_num <= UINT32_MAX), "UInt64.new(num, high_num): when provided, high_num must be a positive 32 bit integer!");
     local uint_64 = {
-        _struct_type = "UInt64",
-        m_high_word = high_num or 0,
-        m_low_word = num,
-        m_decimal_value_str = "",
+        _struct_type        = "UInt64",
+        m_high_word         = high_num or 0,
+        m_low_word          = num,
+        m_decimal_value_str = ""
     }
 
+    --TODO: there has to be a better, easier, simpler way than having to use this. Look back at it when you have time.
     local POW_OF_2_STRS = {
         [53] = "9007199254740992",    -- 2^53
         [54] = "18014398509481984",   -- 2^54
@@ -51,6 +69,8 @@ function UInt64.new(num, high_num)
         [62] = "4611686018427387904", -- 2^62
         [63] = "9223372036854775808"  -- 2^63
     }
+
+    ----------------------------------------------- private methods ----------------------------------------------------
 
     --[[Function adding two strings reprensting unsigned integers in base 10. The result is also a string
       e.g. decimalStrAddition("10","14") returns "24"]]
@@ -102,12 +122,6 @@ function UInt64.new(num, high_num)
         end
     end
 
-    uint_64.m_decimal_value_str = decimalStrFromWords(uint_64.m_low_word, uint_64.m_high_word);
-
-    function uint_64:__tostring()
-        return uint_64.m_decimal_value_str;
-    end
-
     --[[Given a number of an UInt64, returns the two 4-byte words that make up that number]]
     local function getWords(num_or_uint) --PRIVATE METHOD
         assert(num_or_uint and utils.typeof(num_or_uint) == "UInt64" or utils.typeof(num_or_uint) == "number", "Argument needs to be a number or a UInt64!");
@@ -122,6 +136,16 @@ function UInt64.new(num, high_num)
             high_word = bw.And(bw.Rshift(num_or_uint, 32), WORD_MASK);
         end
         return low_word, high_word;
+    end
+
+    ----------------------------------------------- initialization -----------------------------------------------------
+
+    uint_64.m_decimal_value_str = decimalStrFromWords(uint_64.m_low_word, uint_64.m_high_word);
+
+    ------------------------------------------------- metamethods ------------------------------------------------------
+
+    function uint_64:__tostring()
+        return uint_64.m_decimal_value_str;
     end
 
     function uint_64.__lt(uint_or_num1, uint_or_num2)
@@ -222,6 +246,8 @@ function UInt64.new(num, high_num)
         end
     end
 
+    ------------------------------------------------ public methods ----------------------------------------------------
+
     function uint_64:lshift(shift) --[[left shift operation]]
         return self:__shl(shift);
     end
@@ -287,10 +313,10 @@ function UInt64.new(num, high_num)
 end
 
 
+-------------------------------------------------- static methods ------------------------------------------------------
 --TODO: enfore byte_array size to 8 bytes?
-
 --TODO: add endianness to function name
-
+--[[ Creates a UInt64 instance from the first 8 bytes of the provided ByteArray]]
 function UInt64.fromByteArray(byte_array)
     assert(byte_array and utils.typeof(byte_array) == "ByteArray", "Argurment #1 should be a ByteArray!");
     assert(byte_array:len() > 0, "ByteArray cannot be empty!");
@@ -307,10 +333,12 @@ function UInt64.fromByteArray(byte_array)
     return UInt64.new(num, high_num);
 end
 
+--[[Returns a UInt64 instance of maximum value]]
 function UInt64.max()
     return UInt64.new(UINT32_MAX, UINT32_MAX);
 end
 
+--[[Returns a UInt64 instance of value 0]]
 function UInt64.min()
     return UInt64.new(0, 0);
 end
