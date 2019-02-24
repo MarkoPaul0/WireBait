@@ -33,15 +33,14 @@ local Int64  = require("wirebaitlib.primitives.Int64");
 ]]
 local TvbRangeClass = {};
 
-function TvbRangeClass.new(byte_array)
+function TvbRangeClass.new(byte_array, offset)
     assert(Utils.typeof(byte_array) == 'ByteArray', "TvbRange constructor needs a ByteArray!")
 
     local tvb_range = {
         _struct_type = "TvbRange",
-        m_byte_array = byte_array
+        m_byte_array = byte_array,
+        m_offset     = offset or 0;
     }
-
-    local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
     ------------------------------------------------ metamethods -------------------------------------------------------
 
@@ -71,9 +70,8 @@ function TvbRangeClass.new(byte_array)
     end
 
     function tvb_range:tvb()
-        --TODO: add unit tests
         local TvbClass = require("wirebaitlib.packet_data.Tvb");
-        return TvbClass.new(self.m_byte_array);
+        return TvbClass.new(self.m_byte_array, self.m_offset);
     end
 
     function tvb_range:range(start, length)
@@ -81,7 +79,7 @@ function TvbRangeClass.new(byte_array)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        return TvbRangeClass.new(self.m_byte_array:subset(start,length));
+        return TvbRangeClass.new(self.m_byte_array:subset(start,length), self.m_offset + start);
     end
 
     ----------------------------------------- big endian uint conversion -----------------------------------------------
@@ -248,6 +246,8 @@ function TvbRangeClass.new(byte_array)
     end
 
     ------------------------------------------ big endian string conversion --------------------------------------------
+
+    local escape_replacements = {["\0"]="\\0", ["\t"]="\\t", ["\n"]="\\n", ["\r"]="\\r", }
 
     function tvb_range:string()
         local str = ""

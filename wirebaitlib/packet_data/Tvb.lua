@@ -36,7 +36,7 @@ function TvbClass.new(byte_array, offset)
     local tvb = {
         _struct_type = "Tvb",
         m_byte_array = byte_array,
-        m_offset = offset or 0; --TODO: offset is not used for anything here
+        m_offset     = offset or 0;
     }
 
     ------------------------------------------------ metamethods -------------------------------------------------------
@@ -66,7 +66,8 @@ function TvbClass.new(byte_array, offset)
 
     --TODO: work on this!
     function tvb:reported_length_remaining()
-        assert(false, "Tvb:reported_length_remaining() is not available yet");
+        --assert(false, "Tvb:reported_length_remaining() is not available yet");
+        return tvb:len();
     end
 
     function tvb:bytes()
@@ -82,7 +83,7 @@ function TvbClass.new(byte_array, offset)
         length = length or self:len() - start; --add unit test for the case where no length was provided
         assert(length >= 0, "Length should be positive!");
         assert(start + length <= self:len(), "Index get out of bounds!")
-        return TvbRangeClass.new(self.m_byte_array:subset(start, length), offset)
+        return TvbRangeClass.new(self.m_byte_array:subset(start, length), start + self.m_offset)
     end
 
     setmetatable(tvb, tvb)

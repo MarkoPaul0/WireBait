@@ -43,6 +43,7 @@ unit_tests:addTest("Testing Tvb construction", function()
     local tvb_range = Tvb.new(b);
     tester.assert(tvb_range.m_byte_array, b, "Wrong underlying data");
     tester.assert(tvb_range:len(), 4, "Wrong size after construction")
+    tester.assert(tvb_range:offset(), 0, "Wrong offset after construction")
 end);
 
 unit_tests:addTest("Testing Tvb:len()", function()
@@ -57,24 +58,35 @@ end)
 unit_tests:addTest("Testing Tvb:offset()", function()
     tester.assert(Tvb.new(ByteArray.new("4845")):offset(), 0, "Wrong offset");
     tester.assert(Tvb.new(ByteArray.new("4845"), 1):offset(), 1, "Wrong offset");
+    tester.assert(Tvb.new(ByteArray.new("4845"), 9):offset(), 9, "Wrong offset");
 end)
 
 unit_tests:addTest("Testing Tvb:range()", function()
-    local tvb = Tvb.new(ByteArray.new("0102030405060708"));
+    local offset = 2
+    local tvb = Tvb.new(ByteArray.new("0102030405060708"), offset);
     tester.assert(tvb:range(0,1)._struct_type, "TvbRange", "Tvb:range() should return a TvbRange!");
     tester.assert(tvb:range(0,1).m_byte_array, ByteArray.new("01"), "Tvb:range() failed!");
+    tester.assert(tvb:range(0,1):offset(), 2, "Wrong offset after Tvb:range()!");
     tester.assert(tvb:range(0,3).m_byte_array, ByteArray.new("010203"), "Tvb:range() failed!");
+    tester.assert(tvb:range(0,3):offset(), 2, "Wrong offset after Tvb:range()!");
     tester.assert(tvb:range(2,2).m_byte_array, ByteArray.new("0304"), "Tvb:range() failed!");
+    tester.assert(tvb:range(2,3):offset(), 4, "Wrong offset after Tvb:range()!");
     tester.assert(tvb:range(4).m_byte_array, ByteArray.new("05060708"), "Tvb:range() failed!");
+    tester.assert(tvb:range(4):offset(), 6, "Wrong offset after Tvb:range()!");
 end)
 
 unit_tests:addTest("Testing Tvb()", function()
-    local tvb = Tvb.new(ByteArray.new("0102030405060708"));
-    tester.assert(tvb:range(0,1)._struct_type, "TvbRange", "Tvb:range() should return a TvbRange!");
-    tester.assert(tvb(0,1).m_byte_array, ByteArray.new("01"), "Tvb:range() failed!");
-    tester.assert(tvb(0,3).m_byte_array, ByteArray.new("010203"), "Tvb:range() failed!");
-    tester.assert(tvb(2,2).m_byte_array, ByteArray.new("0304"), "Tvb:range() failed!");
-    tester.assert(tvb(4).m_byte_array, ByteArray.new("05060708"), "Tvb:range() failed!");
+    local offset = 2
+    local tvb = Tvb.new(ByteArray.new("0102030405060708"), offset);
+    tester.assert(tvb:range(0,1)._struct_type, "TvbRange", "Tvb:__call() should return a TvbRange!");
+    tester.assert(tvb:range(0,1).m_byte_array, ByteArray.new("01"), "Tvb:__call() failed!");
+    tester.assert(tvb:range(0,1):offset(), 2, "Wrong offset after Tvb:__call()!");
+    tester.assert(tvb:range(0,3).m_byte_array, ByteArray.new("010203"), "Tvb:__call() failed!");
+    tester.assert(tvb:range(0,3):offset(), 2, "Wrong offset after Tvb:__call()!");
+    tester.assert(tvb:range(2,2).m_byte_array, ByteArray.new("0304"), "Tvb:__call() failed!");
+    tester.assert(tvb:range(2,3):offset(), 4, "Wrong offset after Tvb:__call()!");
+    tester.assert(tvb:range(4).m_byte_array, ByteArray.new("05060708"), "Tvb:__call() failed!");
+    tester.assert(tvb:range(4):offset(), 6, "Wrong offset after Tvb:__call()!");
 end)
 
 unit_tests:addTest("Testing Tvb:__tostring()", function()

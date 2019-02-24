@@ -28,6 +28,7 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("tests.tester")
 
+local Tvb       = require("wirebaitlib.packet_data.Tvb");
 local TvbRange  = require("wirebaitlib.packet_data.TvbRange");
 local ByteArray = require("wirebaitlib.primitives.ByteArray");
 
@@ -43,10 +44,28 @@ unit_tests:addTest("Testing TvbRange construction", function()
     local tvb_range = TvbRange.new(b);
     tester.assert(tvb_range.m_byte_array, b, "Wrong underlying data");
     tester.assert(tvb_range:len(), 4, "Wrong size after construction")
+    tester.assert(tvb_range:offset(), 0, "Wrong offset after construction")
 end);
 
 unit_tests:addTest("Testing TvbRange:len()", function()
     tester.assert(TvbRange.new(ByteArray.new("4845")):len(), 2, "Wrong byte length");
+end)
+
+unit_tests:addTest("Testing TvbRange:offset()", function()
+    tester.assert(TvbRange.new(ByteArray.new("4845")):offset(), 0, "Wrong offset");
+    tester.assert(TvbRange.new(ByteArray.new("4845"), 1):offset(), 1, "Wrong offset");
+    tester.assert(TvbRange.new(ByteArray.new("4845"), 2):offset(), 2, "Wrong offset");
+    tester.assert(TvbRange.new(ByteArray.new("4845"), 7):offset(), 7, "Wrong offset");
+end)
+
+unit_tests:addTest("Testing TvbRange:tvb()", function()
+    local byte_array = ByteArray.new("48450104FF081013AB0004C8");
+    local tvb1 = TvbRange.new(byte_array):tvb();
+    tester.assert(tvb1:bytes(), byte_array, "Wrong underlying data of Tvb returned by TvbRange:tvb()");
+    tester.assert(tvb1:offset(), 0, "Wrong offset of Tvb returned by TvbRange:tvb()");
+    local tvb2 = TvbRange.new(byte_array, 52):tvb();
+    tester.assert(tvb2:bytes(), byte_array, "Wrong underlying data of Tvb returned by TvbRange:tvb()");
+    tester.assert(tvb2:offset(), 52, "Wrong offset of Tvb returned by TvbRange:tvb()");
 end)
 
 unit_tests:addTest("Testing TvbRange:uint() (Big-Endian)", function()

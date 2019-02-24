@@ -54,7 +54,7 @@ function FieldExtractor.Field.new(field_path) --Field Extractors
         display = nil;
     };
 
-    for k, v in pairs(state.proto.fields) do
+    for k, v in pairs(__wirebait_state.proto.fields) do
         if v.m_abbr == field_path then
             field.m_info = FieldExtractor.FieldInfo.new(v);
             field.name = v.m_abbr;
