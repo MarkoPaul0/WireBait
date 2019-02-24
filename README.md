@@ -60,7 +60,7 @@ Getting started takes less than a minute:
   2. Add the following snippet of code on top of the dissector you want to run/debug:
 ```lua
     if disable_lua == nil and not _WIREBAIT_ON_ then
-      local wirebait = require("wirebait");
+      local wirebait = require("wirebaitlib");
       local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
       dissector_tester:dissectPcap("path_to_your_pcap_file.pcap");  --dissecting data from a pcap file
       dissector_tester:dissectHexData("72ABE636AFC86572");	    --dissecting data from a hex string	
