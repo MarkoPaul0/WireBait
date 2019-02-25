@@ -112,6 +112,8 @@ function PacketClass.new (packet_buffer, pkt_timestamp)
             packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
             packet.data_ref = packet.ethernet.ipv4.other_data;
         end
+        --Offset reset to 0 because the dissector should not see any offset
+        packet.data_ref.m_offset = 0;
     end
 
     ----------------------------------------------- public methods -----------------------------------------------------
