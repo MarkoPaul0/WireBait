@@ -175,7 +175,7 @@ function PacketClass.new (packet_buffer, pkt_timestamp)
         assert(self.ethernet.type == PROTOCOL_TYPES.IPV4, "Only IPv4 packets are supported!");
         local function ellipsis(value, char_count)
             local val_str = tostring(value);
-            return #val_str and (val_str:sub(0,char_count-3) .. "..") or val_str;
+            return #val_str > char_count and (val_str:sub(0,char_count-3) .. "..") or val_str;
         end
         local src    = self:getSrcIP();
         local dst    = self:getDstIP();

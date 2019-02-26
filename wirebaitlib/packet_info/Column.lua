@@ -31,53 +31,82 @@
 ]]
 local ColumnClass = {};
 
-function ColumnClass.new(txt)
+function ColumnClass.new(text, modifiable)
+    assert(not text or type(text) == "string");
     local column = {
         _struct_type = "Column";
-        m_text = txt or "";
-        m_fence = false;
+        m_text = text or "";
+        m_fence_idx = 0;
+        m_modifiable = modifiable or false; --most columns are not modifiable
     };
 
     ------------------------------------------------ metamethods -------------------------------------------------------
-
+    
     function column:__tostring()
         return self.m_text;
     end
 
     function column.__concat(op1, op2)
-        return tostring(op1) .. tostring(op2);
+        return op1.m_text, op2.m_text;
     end
 
     ----------------------------------------------- public methods -----------------------------------------------------
 
     function column:set(text)
-        if not self.m_fence then
+        if not self.m_modifiable then
+            return;
+        end
+        if self.m_fence_idx > 0 then
+            assert(self.m_fence_idx <= self.m_text:len());
+            self.m_text = self.m_text:sub(1, self.m_fence_idx) .. text;
+        else
             self.m_text = text;
         end
     end
 
     function column:clear()
-        if not self.m_fence then
+        if not self.m_modifiable then
+            return;
+            end
+        if self.m_fence_idx > 0 then
+            assert(self.m_fence_idx <= self.m_text:len());
+            self.m_text = self.m_text:sub(1, self.m_fence_idx);
+        else
             self.m_text = "";
         end
     end
 
     function column:append(text)
+        if not self.m_modifiable then
+            return;
+        end
         self.m_text = self.m_text .. text;
     end
 
     function column:prepend(text)
-        if not self.m_fence then
+        if not self.m_modifiable then
+            return;
+        end
+        if self.m_fence_idx > 0 then
+            assert(self.m_fence_idx <= self.m_text:len());
+            self.m_text = self.m_text:sub(1, self.m_fence_idx) .. text .. self.m_text:sub(self.m_fence_idx + 1, self.m_text:len())
+        else
             self.m_text = text .. self.m_text;
         end
     end
 
     function column:fence()
-        self.m_fence = true;
+        if not self.m_modifiable then
+            return;
+        end
+        self.m_fence_idx = self.m_text:len();
     end
 
     function column:clear_fence()
-        self.m_fence = false;
+        if not self.m_modifiable then
+            return;
+        end
+        self.m_fence_idx = 0;
     end
 
     setmetatable(column, column);
