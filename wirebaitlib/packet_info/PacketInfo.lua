@@ -46,116 +46,117 @@ function PacketInfoClass.new(packet)
     local packet_info = {
         _struct_type = "PacketInfo",
         __pinfo = {
-            visited          = -1, --set if packet has already been visited
-            number           = -1, --packet number in the current file
-            len              = -1, --frame len
-            caplen           = -1, --captured frame len
-            abs_ts           = -1, --when packet was captured
-            rel_ts           = -1, --number of seconds since the beginning of the capture
-            delta_ts         = -1, --number of seconds since last packet
-            delta_dis_ts     = -1, --number of seconds since last displayed packet
-            curr_proto       = packet:protocol(), --protocol we are dissecting
-            can_desegment    = -1, --Set if this segment could be desegmented.
-            desegment_len    = -1, --Estimated number of additional bytes required for completing the PDU.
-            desegment_offset = -1, --Offset in the tvbuff at which the dissector will continue processing when next called
-            fragmented       = -1, --If the protocol is only a fragment
-            in_error_pkt     = -1, --we're inside an error pkt
-            match_uint       = -1, --Matched uint for calling subdissector from table
-            match_string     = -1, --Matched string for calling subdissector from table.
-            port_type        = -1, --Type of Port of .src_port and .dst_port
-            src_port         = packet:getSrcPort(), --Source Port of this Packet
-            dst_port         = packet:getDstPort(), --Destination Port of this Packet
-            dl_src           = -1, --Data Link Source Address of this Packet
-            dl_dst           = -1, --Data Link Destination Address of this Packet
-            net_src          = -1, --Network Layer Source Address of this Packet
-            net_dst          = -1, --Network Layer Destination Address of this Packet
-            src              = packet:getSrcIP(), --Source Address of this Packet
-            dst              = packet:getDstIP(), --Destination Address of this Packet
-            match            = -1, --Port/Data we are matching
+            __visited          = -1, --set if packet has already been visited
+            __number           = -1, --packet number in the current file
+            __len              = -1, --frame len
+            __caplen           = -1, --captured frame len
+            __abs_ts           = -1, --when packet was captured
+            __rel_ts           = -1, --number of seconds since the beginning of the capture
+            __delta_ts         = -1, --number of seconds since last packet
+            __delta_dis_ts     = -1, --number of seconds since last displayed packet
+            __curr_proto       = packet:protocol(), --protocol we are dissecting
+            __can_desegment    = -1, --Set if this segment could be desegmented.
+            __desegment_len    = -1, --Estimated number of additional bytes required for completing the PDU.
+            __desegment_offset = -1, --Offset in the tvbuff at which the dissector will continue processing when next called
+            __fragmented       = -1, --If the protocol is only a fragment
+            __in_error_pkt     = -1, --we're inside an error pkt
+            __match_uint       = -1, --Matched uint for calling subdissector from table
+            __match_string     = -1, --Matched string for calling subdissector from table.
+            __port_type        = -1, --Type of Port of .src_port and .dst_port
+            __src_port         = packet:getSrcPort(), --Source Port of this Packet
+            __dst_port         = packet:getDstPort(), --Destination Port of this Packet
+            __dl_src           = -1, --Data Link Source Address of this Packet
+            __dl_dst           = -1, --Data Link Destination Address of this Packet
+            __net_src          = -1, --Network Layer Source Address of this Packet
+            __net_dst          = -1, --Network Layer Destination Address of this Packet
+            __src              = packet:getSrcIP(), --Source Address of this Packet
+            __dst              = packet:getDstIP(), --Destination Address of this Packet
+            __match            = -1, --Port/Data we are matching
         },
-        cols = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
-            number               = ColumnClass.new(),
-            abs_time             = ColumnClass.new(),
-            utc_time             = ColumnClass.new(),
-            cls_time             = ColumnClass.new(),
-            rel_time             = ColumnClass.new(),
-            date                 = ColumnClass.new(),
-            utc_date             = ColumnClass.new(),
-            delta_time           = ColumnClass.new(),
-            delta_time_displayed = ColumnClass.new(),
-            src                  = ColumnClass.new(packet:getSrcIP()),
-            src_res              = ColumnClass.new(),
-            src_unres            = ColumnClass.new(),
-            dl_src               = ColumnClass.new(),
-            dl_src_res           = ColumnClass.new(),
-            dl_src_unres         = ColumnClass.new(),
-            net_src              = ColumnClass.new(),
-            net_src_res          = ColumnClass.new(),
-            net_src_unres        = ColumnClass.new(),
-            desegment_len        = ColumnClass.new(),
-            dst                  = ColumnClass.new(packet:getDstIP()),
-            dst_res              = ColumnClass.new(),
-            dst_unres            = ColumnClass.new(),
-            dl_dst               = ColumnClass.new(),
-            dl_dst_res           = ColumnClass.new(),
-            dl_dst_unres         = ColumnClass.new(),
-            net_dst              = ColumnClass.new(),
-            net_dst_res          = ColumnClass.new(),
-            net_dst_unres        = ColumnClass.new(),
-            src_port             = ColumnClass.new(tostring(packet:getSrcPort())),
-            src_port_res         = ColumnClass.new(),
-            src_port_unres       = ColumnClass.new(),
-            dst_port             = ColumnClass.new(tostring(packet:getDstPort())),
-            dst_port_res         = ColumnClass.new(),
-            dst_port_unres       = ColumnClass.new(),
-            protocol             = ColumnClass.new(packet:protocol(), --[[modifiable=]]true),
-            info                 = ColumnClass.new("", --[[modifiable=]]true),
-            packet_len           = ColumnClass.new(),
-            cumulative_bytes     = ColumnClass.new(),
-            direction            = ColumnClass.new(),
-            vsan                 = ColumnClass.new(),
-            tx_rate              = ColumnClass.new(),
-            rssi                 = ColumnClass.new(),
-            dce_call             = ColumnClass.new()
+        columns = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
+            __number               = ColumnClass.new(),
+            __abs_time             = ColumnClass.new(),
+            __utc_time             = ColumnClass.new(),
+            __cls_time             = ColumnClass.new(),
+            __rel_time             = ColumnClass.new(),
+            __date                 = ColumnClass.new(),
+            __utc_date             = ColumnClass.new(),
+            __delta_time           = ColumnClass.new(),
+            __delta_time_displayed = ColumnClass.new(),
+            __src                  = ColumnClass.new(packet:getSrcIP()),
+            __src_res              = ColumnClass.new(),
+            __src_unres            = ColumnClass.new(),
+            __dl_src               = ColumnClass.new(),
+            __dl_src_res           = ColumnClass.new(),
+            __dl_src_unres         = ColumnClass.new(),
+            __net_src              = ColumnClass.new(),
+            __net_src_res          = ColumnClass.new(),
+            __net_src_unres        = ColumnClass.new(),
+            __desegment_len        = ColumnClass.new(),
+            __dst                  = ColumnClass.new(packet:getDstIP()),
+            __dst_res              = ColumnClass.new(),
+            __dst_unres            = ColumnClass.new(),
+            __dl_dst               = ColumnClass.new(),
+            __dl_dst_res           = ColumnClass.new(),
+            __dl_dst_unres         = ColumnClass.new(),
+            __net_dst              = ColumnClass.new(),
+            __net_dst_res          = ColumnClass.new(),
+            __net_dst_unres        = ColumnClass.new(),
+            __src_port             = ColumnClass.new(tostring(packet:getSrcPort())),
+            __src_port_res         = ColumnClass.new(),
+            __src_port_unres       = ColumnClass.new(),
+            __dst_port             = ColumnClass.new(tostring(packet:getDstPort())),
+            __dst_port_res         = ColumnClass.new(),
+            __dst_port_unres       = ColumnClass.new(),
+            __protocol             = ColumnClass.new(packet:protocol(), --[[modifiable=]]true),
+            __info                 = ColumnClass.new("", --[[modifiable=]]true),
+            __packet_len           = ColumnClass.new(),
+            __cumulative_bytes     = ColumnClass.new(),
+            __direction            = ColumnClass.new(),
+            __vsan                 = ColumnClass.new(),
+            __tx_rate              = ColumnClass.new(),
+            __rssi                 = ColumnClass.new(),
+            __dce_call             = ColumnClass.new()
         },
-        columns = cols,
 
         --TODO: move this somewhere else?
         treeitems_array = {}
     }
-    
+
+    packet_info.cols = packet_info.columns;
     --TODO: finish proper initialization
-    packet_info.cols.info:set(packet_info.__pinfo.src_port .. " → " .. packet_info.__pinfo.dst_port .. "  Len=" .. packet:len());
+    packet_info.columns.__info:set(packet_info.__pinfo.__src_port .. " → " .. packet_info.__pinfo.__dst_port .. "  Len=" .. string.format("%d", packet:len()));
 
     ------------------------------------------------ metamethods -------------------------------------------------------
 
     --[[
         A user may col packet_info.cols.src_port, which will not
     ]]
-    packet_info.cols.__index = function(self, key)
+    packet_info.columns.__index = function(self, key)
         return rawget(self, "__"..key);
     end
 
-    packet_info.cols.__newindex = function(self, key, val)
+    packet_info.columns.__newindex = function(self, key, val)
+      if not self[key] then
+        error("PacketInfo has not column '" .. key .. "'");
+      end
+      self[key]:set(val);
         --columns cannot be replaced, so here we just do nothing and ignore the assignment
     end
     
     packet_info.__index = function(self, key)
-        if key == "cols" then
-          return self.cols;
-        end
-        return rawget(self, "__pinfo")[key];
+        return rawget(self, "__pinfo")["__"..key];
     end
 
     packet_info.__newindex = function(self, key, val)
-        if not self.__pinfo[key] then
-            error("'pinfo." .. key .. "' does not exist!");
+        if not self[key] then
+            error("'__pinfo.__" ..  key .. "' does not exist!");
         end
         --TODO: only allow modifications of modifiable items
-        self.__pinfo[key] = val;
+        self.__pinfo["__" .. key] = val;
     end
 
-    setmetatable(packet_info.cols, packet_info.cols);
+    setmetatable(packet_info.columns, packet_info.columns);
     setmetatable(packet_info, packet_info);
 
     return packet_info;

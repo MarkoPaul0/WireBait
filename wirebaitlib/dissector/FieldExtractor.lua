@@ -39,7 +39,7 @@ function FieldExtractor.FieldInfo.new(protofield)
     end
 
     function field_info:__call()
-        return self.m_protofield:getDisplayValueFromBuffer(self.m_protofield.m_last_buffer);
+        return self.m_protofield:getValueFromBuffer(self.m_protofield.m_last_buffer);
         --error("TODO: FieldInfo:__call()");
     end
 
