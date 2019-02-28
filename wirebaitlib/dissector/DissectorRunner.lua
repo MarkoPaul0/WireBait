@@ -108,7 +108,7 @@ function DissectorRunnerClass.new(options_table) --[[options_table uses named ar
     newgt.Int64            = require("wirebaitlib.primitives.Int64");
     newgt.ProtoField       = require("wirebaitlib.dissector.ProtoField");
     newgt.Proto            = require("wirebaitlib.dissector.Proto").new;
-    newgt.Field            = require("wirebaitlib.dissector.FieldExtractor").Field;
+    newgt.Field            = require("wirebaitlib.dissector.Field");
     newgt.ftypes           = newgt.ProtoField.ftypes;
     newgt.base             = newgt.ProtoField.base;
     newgt.__wirebait_state = createRunnerState(); --TODO: this is not used

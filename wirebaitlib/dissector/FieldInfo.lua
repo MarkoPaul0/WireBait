@@ -21,62 +21,49 @@
 
 --TODO: this class is a work in progress
 
-local FieldExtractor = { FieldInfo = {}, Field = {} };
+local FieldInfoClass = {};
 
-function FieldExtractor.FieldInfo.new(protofield)
+function FieldInfoClass.new(protofield)
     assert(protofield);
     local field_info = {
         m_protofield = protofield;
     }
 
+    ------------------------------------------------ metamethods -------------------------------------------------------
+
     function field_info:__len()
-        --print("[WARNING] FieldInfo:__len() is not supported yet! Contact MarkoPaul0, the Wirebait developer.");
-        return 0;
+        error("FieldInfo:__len() is not supported yet!");
     end
 
     function field_info:__unm()
-        error("FieldInfo:__unm() is not supported yet! Contact MarkoPaul0, the Wirebait developer.");
+        error("FieldInfo:__unm() is not supported yet!");
     end
 
     function field_info:__call()
         return self.m_protofield:getValueFromBuffer(self.m_protofield.m_last_buffer);
-        --error("TODO: FieldInfo:__call()");
+    end
+
+    function field_info:__tostring()
+        return self.m_protofield:getDisplayValueFromBuffer(self.m_protofield.m_last_buffer);
+    end
+
+    function field_info.__le()
+        error("FieldInfo.__le() is not supported yet");
+    end
+
+    function field_info.__lt()
+        error("FieldInfo.__lt() is not supported yet");
+    end
+
+    function field_info.__eq()
+        error("FieldInfo.__eq() is not supported yet");
     end
 
     setmetatable(field_info, field_info)
+
     return field_info;
 end
 
-function FieldExtractor.Field.new(field_path) --Field Extractors
-    local field = {
-        m_info = nil;
-        name = nil;
-        display = nil;
-    };
 
-    for k, v in pairs(__wirebait_state.proto.fields) do
-        if v.m_abbr == field_path then
-            field.m_info = FieldExtractor.FieldInfo.new(v);
-            field.name = v.m_abbr;
-            field.display = v.m_name;
-            field['type'] = v.m_type;
-        end
-    end
-    if not field.m_info then
-        error("The dissector has no defined field '" .. field_path .. "' the field extractor could find!");
-    end
 
-    function field:__tostring()
-        return self.name;
-    end
-
-    function field:__call()
-        return self.m_info;
-    end
-
-    setmetatable(field, field)
-    --table.insert(state.field_extractors, field);
-    return field;
-end
-
-return FieldExtractor;
+return FieldInfoClass;
