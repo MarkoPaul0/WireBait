@@ -66,9 +66,11 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
 
     ----------------------------------------------- private methods -----------------------------------------------------
 
+    local PREFIX_MARK = "└─ ";
+
     local function prefix(depth)
         assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
-        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. "└─ ";
+        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. PREFIX_MARK;
     end
 
     --[[ Private function adding a proto to the provided treeitem ]]
@@ -233,7 +235,7 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
     end
 
     function tree_item:set_generated()
-        io.write("WIREBAIT WARNING: TreeItem:set_generated() is not supported by wirebait yet.");
+        self.m_text = self.m_text:gsub(PREFIX_MARK, PREFIX_MARK .. "[") .. "]";
     end
 
     function tree_item:set_hidden()
