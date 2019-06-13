@@ -4,15 +4,17 @@ language: lua
 branches:
   only:
   - master
+  - travis_test
+  - fixing_travis
 
 before_install:
   - sudo apt-get update
 
 install:
-  - apt-get install lua5.2
+  - sudo apt-get install lua5.2
 
 script:
-  - ./tests/runall_tests.lua
+  - lua ./tests/runall_tests.lua
 
 after_success:
   - echo "The job was a success"
