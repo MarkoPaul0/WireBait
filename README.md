@@ -5,6 +5,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/MarkoPaul0/WireBait.svg?style=flat-square&maxAge=300)
 ![GitHub (pre-)release](https://img.shields.io/github/release/MarkoPaul0/WireBait/all.svg?style=flat-square)
 ![GitHub (pre-)release](https://img.shields.io/github/commits-since/MarkoPaul0/WireBait/latest.svg?style=flat-square)
+![Travis CI](https://travis-ci.com/MarkoPaul0/WireBait.svg?branch=master)
 <!--
 ![GitHub release](https://img.shields.io/github/release/MarkoPaul0/WireBait/all.svg?style=flat-square)
 -->
