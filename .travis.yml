@@ -1,6 +1,23 @@
 language: lua
 
-# safelist
-#branches:
-#  only:
-#  - master
+# Only master is affected
+branches:
+  only:
+  - master
+
+before_install:
+  - echo "We need to install lua"
+
+install:
+  - echo "We should install lua here"
+
+script:
+  - echo "Now we should run unit tests"
+
+after_success:
+  - echo "The job was a success"
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always
