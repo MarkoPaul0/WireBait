@@ -13,7 +13,7 @@ env:
 
 before_install:
   - sudo apt-get update
-  - sudo LUA_VERSION=$LUA
+  - sudo export LUA_VERSION=$LUA
 
 install:
   - sudo echo "Lua version: $LUA_VERSION"
