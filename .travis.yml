@@ -1,4 +1,6 @@
 # Only master is affected
+language: lua
+
 branches:
   only:
   - master
@@ -6,8 +8,8 @@ branches:
 
 # Running builds in parallel for lua 5.2 and 5.3
 env:
-  - LUA_VERSION=5.2
-  - LUA_VERSION=5.3
+- LUA_VERSION=5.2
+- LUA_VERSION=5.3
 
 before_install:
   - sudo apt-get update
