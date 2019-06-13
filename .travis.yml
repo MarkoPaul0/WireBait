@@ -1,11 +1,7 @@
-language: lua
-
 # Only master is affected
 branches:
   only:
   - master
-  - travis_test
-  - fixing_travis
 
 before_install:
   - sudo apt-get update
