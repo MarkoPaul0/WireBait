@@ -16,7 +16,7 @@ before_install:
   - LUA_VERSION=$LUA
 
 install:
-  - sudo apt-get install ${LUA}
+  - sudo apt-get install ${LUA_VERSION}
 
 script:
   - lua ./tests/runall_tests.lua
