@@ -1,23 +1,25 @@
-language: lua
-
 # Only master is affected
 branches:
   only:
   - master
   - travis_test
-  - fixing_travis
+
+# Running builds in parallel for lua 5.2 and 5.3
+env:
+  - LUA_VERSION=5.2
+  - LUA_VERSION=5.3
 
 before_install:
   - sudo apt-get update
 
 install:
-  - sudo apt-get install lua5.2
+  - sudo apt-get install $LUA_VERSION
 
 script:
   - lua ./tests/runall_tests.lua
 
 after_success:
-  - echo "The job was a success"
+  - echo "Wirebait job was a success!"
 
 notifications:
   email:
