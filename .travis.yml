@@ -8,15 +8,16 @@ branches:
 
 # Running builds in parallel for lua 5.2 and 5.3
 env:
-- LUA=5.2
-- LUA=5.3
+  global:
+  - LUA=5.2
+  - LUA=5.3
 
 before_install:
   - sudo apt-get update
   - LUA_VERSION=$LUA
 
 install:
-  - sudo apt-get install ${LUA_VERSION}
+  - sudo apt-get install $LUA
 
 script:
   - lua ./tests/runall_tests.lua
