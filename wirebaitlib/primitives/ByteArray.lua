@@ -58,6 +58,10 @@ function ByteArrayClass.new(data_as_hex_string)
         return self.m_data_as_hex_str;
     end
 
+    function byte_array:__call(start, length)
+        return self:subset(start, length)
+    end
+
     ----------------------------------------------- public methods -----------------------------------------------------
 
     function byte_array:prepend(other_byte_array)
