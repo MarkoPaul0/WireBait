@@ -6,13 +6,13 @@ branches:
   - master
 
 before_install:
-  - echo "We need to install lua"
+  - sudo apt-get update
 
 install:
-  - echo "We should install lua here"
+  - apt-get install lua5.2
 
 script:
-  - echo "Now we should run unit tests"
+  - ./tests/runall_tests.lua
 
 after_success:
   - echo "The job was a success"
