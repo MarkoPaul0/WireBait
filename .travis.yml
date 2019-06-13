@@ -1,0 +1,6 @@
+language: lua
+
+# safelist
+#branches:
+#  only:
+#  - master
