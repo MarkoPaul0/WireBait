@@ -16,8 +16,6 @@ before_install:
   - LUA_VERSION=$LUA
 
 install:
-  - sudo echo "Test!!123"
-  - sudo echo "Sudoer Lua version: $LUA_VERSION"
   - sudo apt-get install $LUA_VERSION
 
 script:
