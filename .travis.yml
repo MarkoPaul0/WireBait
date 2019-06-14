@@ -13,7 +13,7 @@ env:
 
 before_install:
   - sudo apt-get update
-  - LUA_VERSION=$LUA
+# - LUA_VERSION=$LUA
 
 install:
   - sudo apt-get install $LUA
