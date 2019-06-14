@@ -9,8 +9,8 @@ branches:
 # Running builds in parallel for lua 5.2 and 5.3
 env:
   global:
-  - LUA=Lua5.2
-  - LUA=Lua5.3
+  - LUA=lua5.2
+  - LUA=lua5.3
 
 before_install:
   - sudo apt-get update
