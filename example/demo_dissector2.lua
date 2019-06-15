@@ -24,7 +24,7 @@
     --]]--
 
 --[[Use this snipet of code to test your dissector. You can test your dissector without wireshark by running the dissector script directly!]]
-if disable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
+if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then  --disable_lua == nil checks if this script is being run from wireshark.
   local wirebait = require("wirebaitlib");
   local dissector_tester = wirebait.new({dissector_filepath="example/demo_dissector2.lua", only_show_dissected_packets=true});
 
