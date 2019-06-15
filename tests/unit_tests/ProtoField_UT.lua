@@ -22,6 +22,7 @@
 local is_standalone_test = not tester; --if only this file is being tested (not part of run all)
 local tester = tester or require("tests.tester")
 local ProtoField = require("wirebaitlib.dissector.ProtoField");
+local ByteArray = require("wirebaitlib.primitives.ByteArray");
 
 --[[ All variables here need to be kept local, however the unit test framework will run
 each individual test function added with UnitTestsSet:addTest() in its own environment,
@@ -244,6 +245,25 @@ unit_tests:addTest("Wirebait protofield construction with string(abbr, name)", f
     tester.assert(proto_field.m_mask, nil, "Wrong mask!")
     tester.assert(proto_field.m_description, nil, "Wrong description!")
   end);
+
+unit_tests:addTest("Wirebait protofield uint32 with mask", function()
+    local proto_field = ProtoField.uint32("smp.someField", "Some Field", ProtoField.base.DEC, nil, 0x30)
+    tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
+    tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
+    tester.assert(proto_field.m_type, "FT_UINT32", "Wrong type!")
+    tester.assert(proto_field.m_value_string, nil, "Wrong value_string!")
+    tester.assert(proto_field.m_base, ProtoField.base.DEC, "Wrong base!")
+    tester.assert(proto_field.m_mask, 0x30, "Wrong mask!")
+    tester.assert(proto_field.m_description, nil, "Wrong description!")
+
+    local tvb_range = ByteArray.new("FF00FFFF"):tvb():range(0);
+    tester.assert(proto_field:getMaskPrefix(tvb_range), ".... .... .... .... .... .... ..11 .... = ", "Bit mask application failed!");
+    proto_field.m_mask = 0xF0000030;
+    tester.assert(proto_field:getMaskPrefix(tvb_range), "1111 .... .... .... .... .... ..11 .... = ", "Bit mask application failed!");
+    proto_field.m_mask = 0xF8129030;
+    tester.assert(proto_field:getMaskPrefix(tvb_range), "1111 1... ...0 ..0. 1..1 .... ..11 .... = ", "Bit mask application failed!");
+  end);
+
 
 if is_standalone_test then
   tester.test(unit_tests);
