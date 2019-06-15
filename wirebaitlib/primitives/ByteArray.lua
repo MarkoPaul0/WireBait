@@ -91,7 +91,7 @@ function ByteArrayClass.new(data_as_hex_string)
     end
 
     function byte_array:len()
-        return self.m_data_as_hex_str:len() / 2;
+        return math.floor(self.m_data_as_hex_str:len() / 2);
     end
 
     --TODO: in wireshark, this method expects 2 arguments
