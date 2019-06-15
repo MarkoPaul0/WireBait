@@ -31,6 +31,11 @@ local Utils = require("wirebaitlib.primitives.Utils");
 ]]
 local TreeItemClass = {};
 
+local NODE_STR="└─ ";
+if package.config:sub(1,1) == "\\" then -- The separator is "\\" on windows and "/" on anything else
+  NODE_STR = "|__ "; -- Windows cannot print unicode chars correctly and I haven't been able to get around that
+end
+
 --[[
 TODO: this class needs to be cleaned up and unit tested
 TODO: this class needs to be cleaned up and unit tested
@@ -68,7 +73,7 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
 
     local function prefix(depth)
         assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
-        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. "└─ ";
+        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. NODE_STR;
     end
 
     --[[ Private function adding a proto to the provided treeitem ]]
