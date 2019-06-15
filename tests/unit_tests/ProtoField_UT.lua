@@ -247,15 +247,7 @@ unit_tests:addTest("Wirebait protofield construction with string(abbr, name)", f
   end);
 
 unit_tests:addTest("Wirebait protofield uint32 with mask", function()
-    local proto_field = ProtoField.uint32("smp.someField", "Some Field", ProtoField.base.DEC, nil, 0x30)
-    tester.assert(proto_field.m_name, "Some Field", "Wrong name!")
-    tester.assert(proto_field.m_abbr, "smp.someField", "Wrong filter!")
-    tester.assert(proto_field.m_type, "FT_UINT32", "Wrong type!")
-    tester.assert(proto_field.m_value_string, nil, "Wrong value_string!")
-    tester.assert(proto_field.m_base, ProtoField.base.DEC, "Wrong base!")
-    tester.assert(proto_field.m_mask, 0x30, "Wrong mask!")
-    tester.assert(proto_field.m_description, nil, "Wrong description!")
-
+    local proto_field = ProtoField.uint32("smp.someField", "Some Field", ProtoField.base.DEC, nil, 0x30);
     local tvb_range = ByteArray.new("FF00FFFF"):tvb():range(0);
     tester.assert(proto_field:getMaskPrefix(tvb_range), ".... .... .... .... .... .... ..11 .... = ", "Bit mask application failed!");
     proto_field.m_mask = 0xF0000030;
@@ -263,6 +255,15 @@ unit_tests:addTest("Wirebait protofield uint32 with mask", function()
     proto_field.m_mask = 0xF8129030;
     tester.assert(proto_field:getMaskPrefix(tvb_range), "1111 1... ...0 ..0. 1..1 .... ..11 .... = ", "Bit mask application failed!");
   end);
+
+unit_tests:addTest("Wirebait protofield uint32 with value map translation", function()
+    local value_map = {[0] = "unknown", [3] = "foo", [4] = "bar"};
+    local proto_field = ProtoField.uint32("smp.someField", "Some Field", ProtoField.base.DEC, value_map, 0x30)
+    local tvb_range = ByteArray.new("FF00FFFF"):tvb():range(0);
+    tester.assert(proto_field:getDisplayValueFromBuffer(tvb_range), "foo (3)", "Invalid display value!");
+    proto_field.m_mask = 0x08120000;
+    tester.assert(proto_field:getDisplayValueFromBuffer(tvb_range), "bar (4)", "Invalid display value!");
+end);
 
 
 if is_standalone_test then

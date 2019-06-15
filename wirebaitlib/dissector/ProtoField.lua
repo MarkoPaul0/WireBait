@@ -106,9 +106,29 @@ function ProtoFieldClass.new(name, abbr, ftype, value_string, fbase, mask, desc)
         str_value = displayed_masked_value .. " = ";
         return str_value;
     end
+    
+    --[[ Turns ..11...0..1...10 into 110110 and get its int value]]
+    local function getValueFromAggregatedMaskedBits(masked_value, mask)
+        local result = 0;
+        local shift = 0;
+        local current_bit = 1
+        while current_bit <= masked_value do
+            if bw.And(masked_value, current_bit) > 0 then
+                result = result + bw.Lshift(1, shift);
+                shift = shift + 1;
+            elseif bw.And(mask, current_bit) > 0 then
+                shift = shift + 1;
+            end
+            current_bit = bw.Lshift(current_bit, 1);
+        end
+        return result;
+    end
 
     function protofield:getDisplayValueFromBuffer(buffer)
         local value = self:getValueFromBuffer(buffer);
+        if self.m_mask then
+            value = getValueFromAggregatedMaskedBits(value, self.m_mask);
+        end
         local str_value = tostring(value);
         local value_string = nil;
         self.m_last_buffer = buffer;
