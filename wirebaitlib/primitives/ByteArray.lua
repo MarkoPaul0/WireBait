@@ -47,6 +47,9 @@ function ByteArrayClass.new(data_as_hex_string)
     ------------------------------------------------ metamethods -------------------------------------------------------
 
     function byte_array.__concat(byte_array1, byte_array2)
+        if type(byte_array1) == 'string' or type(byte_array2) == 'string' then
+          return tostring(byte_array1) .. tostring(byte_array2);
+        end
         return ByteArrayClass.new(byte_array1.m_data_as_hex_str .. byte_array2.m_data_as_hex_str);
     end
 

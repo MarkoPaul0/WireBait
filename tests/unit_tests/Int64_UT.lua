@@ -101,7 +101,9 @@ unit_tests:addTest("Testing wirebait Int64.new(low_num, TOO LARGE high_num)", fu
   end);
 
 unit_tests:addTest("Testing wirebait Int64.fromByteArray(00) = 0", function()
-    local int_64 = Int64.fromByteArray(ByteArray.new("00"));
+    local b = ByteArray.new("00");
+    local int_64 = Int64.fromByteArray(b);
+    tester.assert(b:toHex(), "00", "fromByteArray() mutated the input byte array!");
     tester.assert(int_64.m_low_word, 0, "Wrong low_word value!");
     tester.assert(int_64.m_high_word, 0, "Wrong high_word value!");
     tester.assert(tostring(int_64), "0", "Wrong decimal string value!");
