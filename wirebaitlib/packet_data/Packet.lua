@@ -34,9 +34,9 @@ local PacketClass = {};
 
 local PROTOCOL_TYPES = {
     IPV4 = 0x800,
-    IPV6 = 0x86dd,
+    IPV6 = 0x86DD,
     UDP  = 0x11,
-    TCP  =  0x06
+    TCP  = 0x06
 };
 
 --[[

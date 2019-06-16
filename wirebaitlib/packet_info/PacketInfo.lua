@@ -29,6 +29,9 @@ local ColumnClass = require("wirebaitlib.packet_info.Column");
     extracted.
 
     //Constructor
+    <PacketInfoClass> PacketInfoClass.newEmpty(<Packet> packet)
+    
+    //Constructor line newEmpty() except that packet cannot be empty or nil
     <PacketInfoClass> PacketInfoClass.new(<Packet> packet)
 ]]
 local PacketInfoClass = {};
@@ -43,6 +46,10 @@ local MODIFIABLE_COLUMNS = {info=true, protocol=true};
 
 function PacketInfoClass.new(packet)
     assert(packet, "Packet.Info.new() requires a Packet")
+    return PacketInfoClass.newEmpty(packet);
+end
+
+function PacketInfoClass.newEmpty(packet)
     local packet_info = {
         _struct_type = "PacketInfo",
         __pinfo = {
@@ -54,7 +61,7 @@ function PacketInfoClass.new(packet)
             __rel_ts           = -1, --number of seconds since the beginning of the capture
             __delta_ts         = -1, --number of seconds since last packet
             __delta_dis_ts     = -1, --number of seconds since last displayed packet
-            __curr_proto       = packet:protocol(), --protocol we are dissecting
+            __curr_proto       = not packet and 0 or packet:protocol(), --protocol we are dissecting
             __can_desegment    = -1, --Set if this segment could be desegmented.
             __desegment_len    = -1, --Estimated number of additional bytes required for completing the PDU.
             __desegment_offset = -1, --Offset in the tvbuff at which the dissector will continue processing when next called
@@ -63,14 +70,14 @@ function PacketInfoClass.new(packet)
             __match_uint       = -1, --Matched uint for calling subdissector from table
             __match_string     = -1, --Matched string for calling subdissector from table.
             __port_type        = -1, --Type of Port of .src_port and .dst_port
-            __src_port         = packet:getSrcPort(), --Source Port of this Packet
-            __dst_port         = packet:getDstPort(), --Destination Port of this Packet
+            __src_port         = not packet and 0 or packet:getSrcPort(), --Source Port of this Packet
+            __dst_port         = not packet and 0 or packet:getDstPort(), --Destination Port of this Packet
             __dl_src           = -1, --Data Link Source Address of this Packet
             __dl_dst           = -1, --Data Link Destination Address of this Packet
             __net_src          = -1, --Network Layer Source Address of this Packet
             __net_dst          = -1, --Network Layer Destination Address of this Packet
-            __src              = packet:getSrcIP(), --Source Address of this Packet
-            __dst              = packet:getDstIP(), --Destination Address of this Packet
+            __src              = not packet and 0 or packet:getSrcIP(), --Source Address of this Packet
+            __dst              = not packet and 0 or packet:getDstIP(), --Destination Address of this Packet
             __match            = -1, --Port/Data we are matching
         },
         columns = { --[[ c.f. [wireshark pinfo.cols](https://wiki.wireshark.org/LuaAPI/Pinfo) ]]
@@ -83,7 +90,7 @@ function PacketInfoClass.new(packet)
             __utc_date             = ColumnClass.new(),
             __delta_time           = ColumnClass.new(),
             __delta_time_displayed = ColumnClass.new(),
-            __src                  = ColumnClass.new(packet:getSrcIP()),
+            __src                  = ColumnClass.new(not packet and "" or packet:getSrcIP()),
             __src_res              = ColumnClass.new(),
             __src_unres            = ColumnClass.new(),
             __dl_src               = ColumnClass.new(),
@@ -93,7 +100,7 @@ function PacketInfoClass.new(packet)
             __net_src_res          = ColumnClass.new(),
             __net_src_unres        = ColumnClass.new(),
             __desegment_len        = ColumnClass.new(),
-            __dst                  = ColumnClass.new(packet:getDstIP()),
+            __dst                  = ColumnClass.new(not packet and "" or packet:getDstIP()),
             __dst_res              = ColumnClass.new(),
             __dst_unres            = ColumnClass.new(),
             __dl_dst               = ColumnClass.new(),
@@ -102,13 +109,13 @@ function PacketInfoClass.new(packet)
             __net_dst              = ColumnClass.new(),
             __net_dst_res          = ColumnClass.new(),
             __net_dst_unres        = ColumnClass.new(),
-            __src_port             = ColumnClass.new(tostring(packet:getSrcPort())),
+            __src_port             = ColumnClass.new(tostring(not packet and "" or packet:getSrcPort())),
             __src_port_res         = ColumnClass.new(),
             __src_port_unres       = ColumnClass.new(),
-            __dst_port             = ColumnClass.new(tostring(packet:getDstPort())),
+            __dst_port             = ColumnClass.new(tostring(not packet and "" or packet:getDstPort())),
             __dst_port_res         = ColumnClass.new(),
             __dst_port_unres       = ColumnClass.new(),
-            __protocol             = ColumnClass.new(packet:protocol(), --[[modifiable=]]true),
+            __protocol             = ColumnClass.new(not packet and "" or packet:protocol(), --[[modifiable=]]true),
             __info                 = ColumnClass.new("", --[[modifiable=]]true),
             __packet_len           = ColumnClass.new(),
             __cumulative_bytes     = ColumnClass.new(),
@@ -125,7 +132,7 @@ function PacketInfoClass.new(packet)
 
     packet_info.cols = packet_info.columns;
     --TODO: finish proper initialization
-    packet_info.columns.__info:set(packet_info.__pinfo.__src_port .. " → " .. packet_info.__pinfo.__dst_port .. "  Len=" .. string.format("%d", packet:len()));
+    packet_info.columns.__info:set(packet_info.__pinfo.__src_port .. " → " .. packet_info.__pinfo.__dst_port .. "  Len=" .. string.format("%d", not packet and 0 or packet:len()));
 
     ------------------------------------------------ metamethods -------------------------------------------------------
 

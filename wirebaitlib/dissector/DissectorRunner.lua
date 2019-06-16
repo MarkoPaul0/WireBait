@@ -68,22 +68,9 @@ local function createRunnerState()
     local runner_state = {
         dissector_filepath = nil,
         proto              = nil,
-        packet_info = {
-            cols            = {},
-            treeitems_array = {} --treeitems are added to that array so they can be displayed after the whole packet is dissected
-        },
-        dissector_table = DissectorTableClass.new()
+        packet_info        = PacketInfoClass.newEmpty();
+        dissector_table    = DissectorTableClass.new()
     };
-
-    --TODO: this is not used for now. Remove?
-    function runner_state:reset()
-        self.dissector_filepath = nil;
-        self.proto = nil;
-        self.packet_info.cols = {};
-        self.packet_info.treeitems_array = {};
-        self.dissector_table = DissectorTableClass.new();
-    end
-
     return runner_state;
 end
 
