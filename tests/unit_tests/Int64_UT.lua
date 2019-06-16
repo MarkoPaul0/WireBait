@@ -310,6 +310,19 @@ unit_tests:addTest("Testing wirebait Int64, ~0xFFCDEDF1/0xFFFF = 112589989371693
     tester.assert(tostring(int_64), "281470685024782", "Wrong NOT result!");
   end);
 
+unit_tests:addTest("Testing wirebait Int64.__eq()", function()
+    tester.assert(Int64.new(0) == Int64.new(0), true, "Int64.__eq() failure!");
+    tester.assert(Int64.new(1952) == Int64.new(1952), true, "Int64.__eq() failure!");
+    tester.assert(Int64.new(1,1) == Int64.new(1,1), true, "Int64.__eq() failure!");
+    tester.assert(Int64.new(2852,1490) == Int64.new(2852,1490), true, "Int64.__eq() failure!");
+    tester.assert(Int64.max() == Int64.max(0), true, "Int64.__eq() failure!");
+    tester.assert(Int64.min() == Int64.min(0), true, "Int64.__eq() failure!");
+
+    tester.assert(Int64.min() == Int64.max(0), false, "Int64.__eq() failure!");
+    tester.assert(Int64.min() == 0, false, "Int64.__eq() failure!");
+    tester.assert(Int64.new(1) == Int64.new(0), false, "Int64.__eq() failure!");
+    tester.assert(Int64.new(2852,1) == Int64.new(1490), false, "Int64.__eq() failure!");
+end);
 
 if is_standalone_test then
   tester.test(unit_tests);

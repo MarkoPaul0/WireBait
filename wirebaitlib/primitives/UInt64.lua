@@ -45,9 +45,7 @@ local UInt64Class = {};
 ---------------------------------------------- private static variables ------------------------------------------------
 local UINT32_MAX = 0xFFFFFFFF;
 local WORD_MASK = UINT32_MAX;
-
---TODO: there has to be a better, easier, simpler way than having to use this. Look back at it when you have time.
-local POW_OF_2_STRS = {
+local POW_OF_2_STRS = { --TODO: there has to be a better, easier, simpler way than having to use this. Look back at it when you have time.
     [53] = "9007199254740992",    -- 2^53
     [54] = "18014398509481984",   -- 2^54
     [55] = "36028797018963968",   -- 2^55
@@ -59,7 +57,7 @@ local POW_OF_2_STRS = {
     [61] = "2305843009213693952", -- 2^61
     [62] = "4611686018427387904", -- 2^62
     [63] = "9223372036854775808"  -- 2^63
-}
+};
 
 
 ------------------------------------------------- private methods ------------------------------------------------------
@@ -325,7 +323,7 @@ end
 
 
 -------------------------------------------------- static methods ------------------------------------------------------
---TODO: enfore byte_array size to 8 bytes?
+--TODO: enforce byte_array size to 8 bytes?
 --TODO: add endianness to function name
 --[[ Creates a UInt64 instance from the first 8 bytes of the provided ByteArray]]
 function UInt64Class.fromByteArray(byte_array)
