@@ -187,7 +187,7 @@ local ftypes = {  --[[c.f. [wireshark protield types](https://github.com/wiresha
     GUID      = "FT_GUID"
 }
 
-ProtoFieldClass.ftypes = fttypes;
+ProtoFieldClass.ftypes = ftypes;
 
 function ProtoFieldClass.none(abbr, name, desc)                       return ProtoFieldClass.new(name, abbr, ftypes.NONE,    nil, nil, nil, desc) end
 function ProtoFieldClass.bool(abbr, name, fbase, value_string, ...)   return ProtoFieldClass.new(name, abbr, ftypes.BOOLEAN, value_string, fbase, ...) end

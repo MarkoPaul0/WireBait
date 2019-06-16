@@ -49,7 +49,7 @@ function FieldClass.new(fieldname)
         end
     end
     if not field.m_field_info then
-        error("The dissector has no defined field '" .. field_path .. "' the field extractor could find!");
+        error("The dissector has no defined field '" .. fieldname .. "' the field extractor could find!");
     end
 
     ------------------------------------------------ metamethods -------------------------------------------------------

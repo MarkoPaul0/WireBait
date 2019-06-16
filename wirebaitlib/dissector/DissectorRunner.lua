@@ -96,10 +96,14 @@ function DissectorRunnerClass.new(options_table) --[[options_table uses named ar
     newgt.ProtoField       = require("wirebaitlib.dissector.ProtoField");
     newgt.Proto            = require("wirebaitlib.dissector.Proto").new;
     newgt.Field            = require("wirebaitlib.dissector.Field");
+    newgt.ProtoExpert      = newgt.ProtoField; --TODO: a proto expert class needed?
+    newgt.expert           = { severity = {CHAT = {"0"}, NOTE = {"1"}, ERROR = {"2"}, WARN = {"3"}},
+                               group    = {REQUEST_CODE = "0", RESPONSE_CODE = "1", COMMENTS_GROUP = "2", MALFORMED = "3"} };
     newgt.ftypes           = newgt.ProtoField.ftypes;
     newgt.base             = newgt.ProtoField.base;
     newgt.__wirebait_state = createRunnerState(); --TODO: this is not used
     newgt.DissectorTable   = newgt.__wirebait_state.dissector_table;
+    newgt.get_version      = function() return "2.6.4" end
     setfenv(dissector_chunk_func, newgt);
 
     --Loading the dissector the dissector by running dissector_chunk_func()
@@ -183,6 +187,9 @@ function DissectorRunnerClass.new(options_table) --[[options_table uses named ar
         local pcap_reader = PcapReaderClass.new(pcap_filepath)
         local packet_no = 1;
         repeat
+            if packet_no > 0 then
+              print("About to read packet " .. packet_no)
+            end
             local frame = pcap_reader:getNextEthernetFrame()
             if frame then
                 local buffer = frame.ethernet.ipv4.udp.data or frame.ethernet.ipv4.tcp.data;
