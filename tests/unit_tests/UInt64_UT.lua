@@ -22,6 +22,7 @@ local is_standalone_test = not tester; --if only this file is being tested (not 
 local tester = tester or require("tests.tester")
 
 local UInt64 = require("wirebaitlib.primitives.UInt64")
+local Int64 = require("wirebaitlib.primitives.Int64")
 local ByteArray = require("wirebaitlib.primitives.ByteArray")
 
 --[[IMPORTANT NOTE: a simple and easy way to come up with test cases when testing uint64 addition is to use wolfram alpha
@@ -308,6 +309,20 @@ unit_tests:addTest("Testing wirebait UInt64, ~0xFFCDEDF1/0xFFFF = 11258998937169
     local uint_64 = UInt64.new(0xFFCDEDF1, 0xFFFF0000):bnot();
     tester.assert(tostring(uint_64), "281470685024782", "Wrong NOT result!");
   end);
+
+unit_tests:addTest("Testing wirebait UInt64.__eq()", function()
+    tester.assert(UInt64.new(0) == UInt64.new(0), true, "UInt64.__eq() failure!");
+    tester.assert(UInt64.new(1952) == UInt64.new(1952), true, "UInt64.__eq() failure!");
+    tester.assert(UInt64.new(1,1) == UInt64.new(1,1), true, "UInt64.__eq() failure!");
+    tester.assert(UInt64.new(2852,1490) == UInt64.new(2852,1490), true, "UInt64.__eq() failure!");
+    tester.assert(UInt64.max() == UInt64.max(0), true, "UInt64.__eq() failure!");
+    tester.assert(UInt64.min() == UInt64.min(0), true, "UInt64.__eq() failure!");
+
+    tester.assert(UInt64.min() == UInt64.max(0), false, "UInt64.__eq() failure!");
+    tester.assert(UInt64.min() == 0, false, "UInt64.__eq() failure!");
+    tester.assert(UInt64.new(1) == UInt64.new(0), false, "UInt64.__eq() failure!");
+    tester.assert(UInt64.new(2852,1) == UInt64.new(1490), false, "UInt64.__eq() failure!");
+end);
 
 
 if is_standalone_test then
