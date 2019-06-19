@@ -221,31 +221,38 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
     function tree_item:set_text(text)
         text:gsub("\n", " ");
         self.m_text = text
+        return self;
     end
 
     function tree_item:append_text(text)
         text:gsub("\n", " ");
         self.m_text = self.m_text .. text
+        return self;
     end
 
     function tree_item:set_len(length)
         io.write("WIREBAIT WARNING: TreeItem:set_length() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_generated()
         io.write("WIREBAIT WARNING: TreeItem:set_generated() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_hidden()
         io.write("WIREBAIT WARNING: TreeItem:set_hidden() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_expert_flags()
         io.write("WIREBAIT WARNING: TreeItem:set_expert_flags() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_expert_info()
         io.write("WIREBAIT WARNING: TreeItem:set_expert_info() is not supported by wirebait yet.");
+        return self;
     end
 
     return tree_item;
