@@ -241,7 +241,7 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
     end
 
     function tree_item:set_generated()
-        io.write("WIREBAIT WARNING: TreeItem:set_generated() is not supported by wirebait yet.");
+        self.m_text = self.m_text:gsub(NODE_STR, NODE_STR .. "[") .. "]";
         return self;
     end
 
