@@ -58,7 +58,7 @@ function FieldClass.new(fieldname)
         return self.name;
     end
 
-    --TODO: enfore the fact that fields cannot be used outside of dissector or tap
+    --TODO: enforce the fact that fields cannot be used outside of dissector or tap
     function field:__call()
         return self.m_field_info;
     end

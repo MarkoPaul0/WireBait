@@ -71,6 +71,13 @@ unit_tests:addTest("Testing ByteArray:__concat()", function()
     tester.assert(b3.m_data_as_hex_str, "01020304", "Concatenated ByteArray does not contain expected data");
 end);
 
+unit_tests:addTest("Testing ByteArray:__concat() with string", function()
+    local b = ByteArray.new("0304");
+    local string = "0x" .. b;
+    tester.assert(b.m_data_as_hex_str, "0304", "Concatenated ByteArray was mutated!");
+    tester.assert(string, "0x0304");
+end);
+
 unit_tests:addTest("Testing ByteArray:prepend()", function()
     local b1 = ByteArray.new("0102");
     local b2 = ByteArray.new("0304");

@@ -322,14 +322,18 @@ function UInt64.fromByteArray(byte_array)
     assert(byte_array:len() > 0, "ByteArray cannot be empty!");
     assert(byte_array:len() <= 8, "ByteArray cannot contain more than 8 bytes!");
 
+    local array = nil;
     if (byte_array:len() < 8) then
-        local b = ByteArray.new("");
-        b:set_size(8 - byte_array:len());
-        byte_array:prepend(b)
+        array = ByteArray.new(byte_array:toHex()); -- We need to make a copy otherwise we would modify the provided array
+        local prefix_array = ByteArray.new("");
+        prefix_array:set_size(8 - byte_array:len());
+        array:prepend(prefix_array);
+    else 
+      array = byte_array; -- Here we don't have to make a copy
     end
 
-    local high_num = tonumber(byte_array:subset(0,4):toHex(),16);
-    local num = tonumber(byte_array:subset(4,4):toHex(),16);
+    local high_num = tonumber(array:subset(0,4):toHex(),16);
+    local num = tonumber(array:subset(4,4):toHex(),16);
     return UInt64.new(num, high_num);
 end
 

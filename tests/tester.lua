@@ -115,6 +115,9 @@ function tester.printReport()
   print("Tests fails: " .. tester.fail_count .. warning_appendix)
   assert(tester.test_count == (tester.success_count + tester.fail_count), "Tests counts do not add up!")
   print("----------------------------------------------")
+  if tester.fail_count > 0 then
+    os.exit(1);
+  end
 end
 
 return tester;

@@ -31,6 +31,11 @@ local Utils = require("wirebaitlib.primitives.Utils");
 ]]
 local TreeItemClass = {};
 
+local NODE_STR="└─ ";
+if package.config:sub(1,1) == "\\" then -- The separator is "\\" on windows and "/" on anything else
+  NODE_STR = "|__ "; -- Windows cannot print unicode chars correctly and I haven't been able to get around that
+end
+
 --[[
 TODO: this class needs to be cleaned up and unit tested
 TODO: this class needs to be cleaned up and unit tested
@@ -66,11 +71,9 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
 
     ----------------------------------------------- private methods -----------------------------------------------------
 
-    local PREFIX_MARK = "└─ ";
-
     local function prefix(depth)
         assert(depth >= 0, "Tree depth cannot be negative (" .. depth .. ")!");
-        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. PREFIX_MARK;
+        return depth == 0 and "" or string.rep(" ", 3*(depth - 1)) .. NODE_STR;
     end
 
     --[[ Private function adding a proto to the provided treeitem ]]
@@ -223,31 +226,38 @@ function TreeItemClass.new(protofield_or_buffer, buffer, parent)
     function tree_item:set_text(text)
         text:gsub("\n", " ");
         self.m_text = text
+        return self;
     end
 
     function tree_item:append_text(text)
         text:gsub("\n", " ");
         self.m_text = self.m_text .. text
+        return self;
     end
 
     function tree_item:set_len(length)
         io.write("WIREBAIT WARNING: TreeItem:set_length() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_generated()
-        self.m_text = self.m_text:gsub(PREFIX_MARK, PREFIX_MARK .. "[") .. "]";
+        self.m_text = self.m_text:gsub(NODE_STR, NODE_STR .. "[") .. "]";
+        return self;
     end
 
     function tree_item:set_hidden()
         io.write("WIREBAIT WARNING: TreeItem:set_hidden() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_expert_flags()
         io.write("WIREBAIT WARNING: TreeItem:set_expert_flags() is not supported by wirebait yet.");
+        return self;
     end
 
     function tree_item:set_expert_info()
         io.write("WIREBAIT WARNING: TreeItem:set_expert_info() is not supported by wirebait yet.");
+        return self;
     end
 
     return tree_item;

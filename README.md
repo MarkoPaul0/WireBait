@@ -5,6 +5,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/MarkoPaul0/WireBait.svg?style=flat-square&maxAge=300)
 ![GitHub (pre-)release](https://img.shields.io/github/release/MarkoPaul0/WireBait/all.svg?style=flat-square)
 ![GitHub (pre-)release](https://img.shields.io/github/commits-since/MarkoPaul0/WireBait/latest.svg?style=flat-square)
+![Travis CI](https://travis-ci.com/MarkoPaul0/WireBait.svg?branch=master)
 <!--
 ![GitHub release](https://img.shields.io/github/release/MarkoPaul0/WireBait/all.svg?style=flat-square)
 -->
@@ -59,7 +60,7 @@ Getting started takes less than a minute:
   1. Add the **wirebaitlib/** directory to your Lua path
   2. Add the following snippet of code on top of the dissector you want to run/debug:
 ```lua
-    if disable_lua == nil and not _WIREBAIT_ON_ then
+    if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then
       local wirebait = require("wirebaitlib");
       local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
       dissector_tester:dissectPcap("path_to_your_pcap_file.pcap");  --dissecting data from a pcap file

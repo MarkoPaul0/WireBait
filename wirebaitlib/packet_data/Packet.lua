@@ -34,6 +34,7 @@ local PacketClass = {};
 
 local PROTOCOL_TYPES = {
     IPV4 = 0x800,
+    IPV6 = 0x86dd,
     UDP  = 0x11,
     TCP  =  0x06
 };
@@ -82,38 +83,56 @@ function PacketClass.new (packet_buffer, pkt_timestamp)
     packet.ethernet.dst_mac = packet_buffer(0,6):bytes();
     packet.ethernet.src_mac = packet_buffer(6,6):bytes();
     packet.ethernet.type = packet_buffer(12,2):uint(); --e.g 0x0800 for IP
-    if packet.ethernet.type ~= PROTOCOL_TYPES.IPV4 then
-        packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
-        packet.data_ref = packet.ethernet.other_data;
-    else
+
+    local offset = 0;
+    if packet.ethernet.type == PROTOCOL_TYPES.IPV4 then
         --[[IPV4 layer parsing]]
         packet.ethernet.ipv4.protocol = packet_buffer(23,1):uint();
         packet.ethernet.ipv4.src_ip   = packet_buffer(26,4):uint();
         packet.ethernet.ipv4.dst_ip   = packet_buffer(30,4):uint();
+        offset = 34;
+    elseif packet.ethernet.type == PROTOCOL_TYPES.IPV6 then
+        --[[IPV6 layer parsing]]
+        packet.ethernet.ipv4.protocol = packet_buffer(20,1):uint();
+        packet.ethernet.ipv4.src_ip   = 0; --packet_buffer(26,4):uint();
+        packet.ethernet.ipv4.dst_ip   = 0; --packet_buffer(30,4):uint();
+        offset = 54;
+    end
 
+    if packet.ethernet.type == PROTOCOL_TYPES.IPV4 or packet.ethernet.type == PROTOCOL_TYPES.IPV6 then
         --[[UDP layer parsing]]
         if packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.UDP then
-            packet.ethernet.ipv4.udp.src_port = packet_buffer(34,2):uint();
-            packet.ethernet.ipv4.udp.dst_port = packet_buffer(36,2):uint();
-            assert(packet_buffer:len() >= 42, "Packet buffer is of invalid size!")
-            packet.ethernet.ipv4.udp.data = packet_buffer(42,packet_buffer:len() - 42):tvb();
+            packet.ethernet.ipv4.udp.src_port = packet_buffer(offset,2):uint();
+            offset = offset + 2;
+            packet.ethernet.ipv4.udp.dst_port = packet_buffer(offset,2):uint();
+            offset = offset + 6; -- Skipping some data
+            assert(packet_buffer:len() >= offset, "Packet buffer is of invalid size!")
+            packet.ethernet.ipv4.udp.data = packet_buffer(offset,packet_buffer:len() - offset):tvb();
             packet.data_ref = packet.ethernet.ipv4.udp.data;
         elseif packet.ethernet.ipv4.protocol == PROTOCOL_TYPES.TCP then
-        --[[TCP layer parsing]]
-            packet.ethernet.ipv4.tcp.src_port = packet_buffer(34,2):uint();
-            packet.ethernet.ipv4.tcp.dst_port = packet_buffer(36,2):uint();
-            local tcp_hdr_len = 4 * bit32.rshift(bit32.band(packet_buffer(46,1):uint(), 0xF0), 4);
-            local tcp_payload_start_index = 34 + tcp_hdr_len;
+            --[[TCP layer parsing]]
+            local tcp_start_index = offset;
+            packet.ethernet.ipv4.tcp.src_port = packet_buffer(offset,2):uint();
+            offset = offset + 2;
+            packet.ethernet.ipv4.tcp.dst_port = packet_buffer(offset,2):uint();
+            offset = offset + 10; -- Skipping some data
+            local tcp_hdr_len = 4 * bit32.rshift(bit32.band(packet_buffer(offset,1):uint(), 0xF0), 4);
+            offset = offset + 1;
+            local tcp_payload_start_index = tcp_start_index + tcp_hdr_len;
             assert(packet_buffer:len() >= tcp_payload_start_index, "Packet buffer is of invalid size!")
             packet.ethernet.ipv4.tcp.data = packet_buffer(tcp_payload_start_index, packet_buffer:len() - tcp_payload_start_index):tvb();
             packet.data_ref = packet.ethernet.ipv4.tcp.data;
         else
-        --[[Unknown transport layer]]
-            packet.ethernet.ipv4.other = packet_buffer(14,packet_buffer:len() - 14);
+            --[[Unknown transport layer]]
+            packet.ethernet.ipv4.other_data = packet_buffer(offset,packet_buffer:len() - offset);
             packet.data_ref = packet.ethernet.ipv4.other_data;
         end
         --Offset reset to 0 because the dissector should not see any offset
         packet.data_ref.m_offset = 0;
+    else
+        --[[ Skipping non IP packet]]
+        packet.ethernet.other = packet_buffer(14,packet_buffer:len() - 14);
+        packet.data_ref = packet.ethernet.other_data;
     end
 
     ----------------------------------------------- public methods -----------------------------------------------------

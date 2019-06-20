@@ -1,0 +1,26 @@
+# Only master is affected
+branches:
+  only:
+  - master
+
+# Running builds in parallel for lua 5.2 and 5.3
+env:
+- LUA_VERSION=lua5.2
+#- LUA_VERSION=lua5.3 Somehow this package is not found on travis build environment
+
+before_install:
+  - sudo apt-get update
+
+install:
+  - sudo apt-get install $LUA_VERSION
+
+script:
+  - lua ./tests/runall_tests.lua
+
+after_success:
+  - echo "The job was a success"
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always

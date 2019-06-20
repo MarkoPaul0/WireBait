@@ -38,7 +38,7 @@ end
 function Bitwise.Lshift(int1, int2)
     assert(int1 and type(int1) == "number" and math.floor(int1) == int1, "Expecting integer");
     assert(int2 and type(int2) == "number" and math.floor(int2) == int2, "Expecting integer");
-    return int1 * math.pow(2,int2);
+    return math.floor(int1 * math.pow(2,int2));
 end
 
 function Bitwise.Rshift(int1, int2)

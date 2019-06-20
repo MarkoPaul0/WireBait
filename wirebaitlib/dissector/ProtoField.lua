@@ -49,6 +49,7 @@ function ProtoFieldClass.new(name, abbr, ftype, value_string, fbase, mask, desc)
     }
 
     function protofield:getValueFromBuffer(buffer)
+        local mask = protofield.m_mask;
         local extractValueFuncByType = {
             FT_NONE     = function (buf) return "" end,
             FT_BOOLEAN  = function (buf) return buf:uint64() > 0 end,
@@ -80,14 +81,15 @@ function ProtoFieldClass.new(name, abbr, ftype, value_string, fbase, mask, desc)
     --[[If the protofield has a mask, the mask is applied to the buffer and the value is printed as bits.
     For instance a mask of 10010001 applied to a buffer of 11101111 will give the result "1..0...1"]]
     function protofield:getMaskPrefix(buffer)
+        assert(buffer:len() > 0, "buffer is empty!");
         if not self.m_mask then
             return "";
         end
         local value = self:getValueFromBuffer(buffer);
         local str_value = tostring(value);
-        local current_bit = 1;
+        local current_bit = bw.Lshift(1, buffer:len()*8 - 1);
         local displayed_masked_value = "";
-        while current_bit <= self.m_mask do
+        while current_bit > 0 do
             if bw.And(self.m_mask, current_bit) == 0 then
                 displayed_masked_value = displayed_masked_value .. ".";
             else
@@ -97,15 +99,36 @@ function ProtoFieldClass.new(name, abbr, ftype, value_string, fbase, mask, desc)
                     displayed_masked_value = displayed_masked_value .. "0";
                 end
             end
-            current_bit = bw.Lshift(current_bit, 1);
+            current_bit = bw.Rshift(current_bit, 1);
         end
         displayed_masked_value = string.format("%".. buffer:len()*8 .."s", displayed_masked_value):gsub(" ",".");
+        displayed_masked_value = displayed_masked_value:gsub("....", "%1 "):sub(1, -2);
         str_value = displayed_masked_value .. " = ";
         return str_value;
+    end
+    
+    --[[ Turns ..11...0..1...10 into 110110 and get its int value]]
+    local function getValueFromAggregatedMaskedBits(masked_value, mask)
+        local result = 0;
+        local shift = 0;
+        local current_bit = 1
+        while current_bit <= masked_value do
+            if bw.And(masked_value, current_bit) > 0 then
+                result = result + bw.Lshift(1, shift);
+                shift = shift + 1;
+            elseif bw.And(mask, current_bit) > 0 then
+                shift = shift + 1;
+            end
+            current_bit = bw.Lshift(current_bit, 1);
+        end
+        return result;
     end
 
     function protofield:getDisplayValueFromBuffer(buffer)
         local value = self:getValueFromBuffer(buffer);
+        if self.m_mask then
+            value = getValueFromAggregatedMaskedBits(value, self.m_mask);
+        end
         local str_value = tostring(value);
         local value_string = nil;
         self.m_last_buffer = buffer;
