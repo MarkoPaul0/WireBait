@@ -60,15 +60,18 @@ Getting started takes less than a minute:
   1. Add the **wirebaitlib/** directory to your Lua path
   2. Add the following snippet of code on top of the dissector you want to run/debug:
 ```lua
-    if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then
-      local wirebait = require("wirebaitlib");
-      local dissector_tester = wirebait.plugin_tester.new({only_show_dissected_packets=true});
-      dissector_tester:dissectPcap("path_to_your_pcap_file.pcap");  --dissecting data from a pcap file
-      dissector_tester:dissectHexData("72ABE636AFC86572");	    --dissecting data from a hex string	
-      return
-    end
+if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then
+  local wirebait = require("wirebaitlib");
+  local dissector_tester = wirebait.new({only_show_dissected_packets=true});
+  dissector_tester:dissectHexData("72ABE636AFC86572") -- To dissect hex data from a string (no pcap needed) 
+  dissector_tester:dissectPcap("path_to_your_pcap_file.pcap") -- To dissect packets from a pcap file
+  return
+end
 ```
-  3. Edit the code snippet to have your dissector read the *hexadecimal data* **and/or** *pcap file* of your choice
+  3. Edit the code snippet and decide if your dissector should read *hexadecimal data* **and/or** a *pcap file* of your choice. Note that you can add this snippet in a file other than your dissector file. In this case you'll have to add an additional argument in the constructor of the dissector tester, specifying the path to your dissector file, just like so:
+  ```lua
+  local dissector_tester = wirebait.new({dissector_filepath="path_to_your_dissector.lua", only_show_dissected_packets=true});
+  ```
   4. Execute your dissector script. Enjoy :smiley: **And please, feel free to give me feedback!**
   
  <a name="examples"/>
