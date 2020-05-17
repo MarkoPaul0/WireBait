@@ -57,8 +57,9 @@ Note that WireBait does not interact at all with Wireshark.
 
 ## Quick start
 Getting started takes less than a minute:
-  1. Add the **wirebaitlib/** directory to your Lua path
-  2. Add the following snippet of code on top of the dissector you want to run/debug:
+  1. Make sure your Lua interpreter is 5.2 (in **Zerobrane Studio** go to **Project > Lua Interpreter** and select **Lua 5.2**)
+  2. Add the **wirebaitlib/** directory to your Lua path
+  3. Add the following snippet of code on top of the dissector you want to run/debug:
 ```lua
 if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then
   local wirebait = require("wirebaitlib");
@@ -68,11 +69,11 @@ if disable_lua == nil and enable_lua == nil and not _WIREBAIT_ON_ then
   return
 end
 ```
-  3. Edit the code snippet and decide if your dissector should read *hexadecimal data* **and/or** a *pcap file* of your choice. Note that you can add this snippet in a file other than your dissector file. In this case you'll have to add an additional argument in the constructor of the dissector tester, specifying the path to your dissector file, just like so:
+  4. Edit the code snippet and decide if your dissector should read *hexadecimal data* **and/or** a *pcap file* of your choice. Note that you can add this snippet in a file other than your dissector file. In this case you'll have to add an additional argument in the constructor of the dissector tester, specifying the path to your dissector file, just like so:
   ```lua
   local dissector_tester = wirebait.new({dissector_filepath="path_to_your_dissector.lua", only_show_dissected_packets=true});
   ```
-  4. Execute your dissector script. Enjoy :smiley: **And please, feel free to give me feedback!**
+  5. Execute your dissector script. Enjoy :smiley: **And please, feel free to give me feedback!**
   
  <a name="examples"/>
  
