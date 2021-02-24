@@ -10,6 +10,8 @@
 ![GitHub release](https://img.shields.io/github/release/MarkoPaul0/WireBait/all.svg?style=flat-square)
 -->
 
+## **UPDATE: this repo is no longer supported. The concept is interesting, but bringing it to life would take time I don't want to allocate.** I'll leave this repo outthere for people to experiment.
+
 Lua library to facilitate the development of [Wireshark](https://www.wireshark.org/) dissectors by enabling users to run them against packet data without Wireshark. The packet data can come from a hexadecimal string or a *.pcap* file.
 The goal here is to provide a tool reducing development time when creating a new dissector.
 
